@@ -1,0 +1,38 @@
+[project]
+name = "cantoLLM"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "torch>=2.1.0",
+    "numpy==1.26.4",
+    "tokenizers>=0.20.0",
+    "huggingface_hub>=0.20.0",
+    "safetensors>=0.4.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.1.0",
+    "pytest>=7.0.0",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+# CUDA configuration (commented out for Mac Silicon)
+# [[tool.uv.index]]
+# name = "pytorch-cu118"
+# url = "https://download.pytorch.org/whl/cu118"
+# explicit = true
+#
+# [tool.uv.sources]
+# torch = { index = "pytorch-cu118" }
