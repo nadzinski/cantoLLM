@@ -170,6 +170,42 @@ class Qwen3Tokenizer:
     # Chat template helpers
     # ------------------------------------------------------------------
 
+    def encode_conversation(self, messages: list[dict], system: str | None = None) -> list[int]:
+        """Encode an Anthropic-style messages array into token IDs.
+
+        Builds a full ChatML string from the message history and encodes it.
+
+        Args:
+            messages: List of {"role": "user"|"assistant", "content": "..."} dicts.
+            system: Optional system prompt.
+
+        Returns:
+            List of token IDs ready for model input.
+        """
+        parts = []
+
+        if system:
+            parts.append(f"<|im_start|>system\n{system}<|im_end|>\n")
+
+        for msg in messages:
+            role = msg["role"]
+            content = msg["content"]
+            if isinstance(content, list):
+                # Content block array -> extract text
+                content = "\n".join(
+                    block["text"] for block in content
+                    if isinstance(block, dict) and block.get("type") == "text"
+                )
+            parts.append(f"<|im_start|>{role}\n{content}<|im_end|>\n")
+
+        # Generation prompt for assistant
+        if self.add_generation_prompt:
+            parts.append("<|im_start|>assistant\n")
+            if not self.enable_thinking:
+                parts.append("<think>\n\n</think>\n\n")
+
+        return self.encode("".join(parts), chat_wrapped=False)
+
     def _wrap_chat(self, user_msg: str) -> str:
         """Wrap a user message in ChatML format.
 

@@ -44,3 +44,4 @@ model_data/
 
 # Misc
 .DS_Store
+.agents/
