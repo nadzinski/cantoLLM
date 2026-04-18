@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from qwen3.model import Qwen3
-from qwen3.weights import VALID_SIZES, load_weights_into_model
+from cantollm.models.qwen3.model import Qwen3
+from cantollm.models.qwen3.weights import VALID_SIZES, load_weights_into_model
 
 
 def make_config():
@@ -126,7 +126,7 @@ def test_load_weights_missing_key_raises():
 
 def test_download_weights_rejects_invalid_size():
     """download_weights should reject sizes not in VALID_SIZES."""
-    from qwen3.weights import download_weights
+    from cantollm.models.qwen3.weights import download_weights
 
     with pytest.raises(ValueError, match="Invalid model size"):
         download_weights(model_size="99B")

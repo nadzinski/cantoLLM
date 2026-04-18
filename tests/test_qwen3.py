@@ -1,6 +1,6 @@
 import torch
 
-from qwen3.model import Qwen3
+from cantollm.models.qwen3.model import Qwen3
 
 
 def make_config():

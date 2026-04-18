@@ -1,7 +1,7 @@
 import torch
 
-from qwen3.model import GroupedQueryAttention
-from qwen3.rope import precompute_freqs_cis
+from cantollm.models.qwen3.model import GroupedQueryAttention
+from cantollm.models.rope import precompute_freqs_cis
 
 MAX_SEQ_LEN = 128
 

@@ -10,14 +10,11 @@ import torch
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from qwen3.conversation import Conversation
-from qwen3.decoder import StreamingDecoder
-from qwen3.generator import TokenGenerator
-from qwen3.model import Qwen3
-from qwen3.presenter import Colors, TerminalPresenter
-from qwen3.speculative import SpeculativeGenerator
-from qwen3.tokenizer import Qwen3Tokenizer
-from qwen3.weights import download_weights, load_weights_into_model
+from cantollm.generator import TokenGenerator
+from cantollm.models.qwen3.model import Qwen3
+from cantollm.models.qwen3.tokenizer import Qwen3Tokenizer
+from cantollm.models.qwen3.weights import download_weights, load_weights_into_model
+from cantollm.speculative import SpeculativeGenerator
 
 # Reconfigure stdout to use UTF-8 encoding for emoji support
 sys.stdout.reconfigure(encoding="utf-8")
@@ -132,37 +129,14 @@ def create_tokenizer(local_dir: str) -> Qwen3Tokenizer:
     )
 
 
-def run_repl(conversation: Conversation):
-    """Run the interactive chat REPL."""
-    print("\nType 'quit' or 'exit' to end, 'reset' to start fresh.\n")
-
-    while True:
-        try:
-            prompt = input(f"{Colors.USER}You: {Colors.RESET}").strip()
-        except (KeyboardInterrupt, EOFError):
-            print(f"{Colors.RESET}\nGoodbye!")
-            break
-
-        if not prompt:
-            continue
-
-        if prompt.lower() in ("quit", "exit"):
-            print("Goodbye!")
-            break
-
-        if prompt.lower() == "reset":
-            conversation.reset()
-            print("Conversation reset.\n")
-            continue
-
-        conversation.generate_response(prompt)
-
-
 # ── Subcommand: serve ───────────────────────────────────────────────
 
 def cmd_serve(args):
     """Start the inference server."""
-    from qwen3.server import InferenceServer, run_server
+    import uvicorn
+
+    from cantollm.api import create_app
+    from cantollm.engine import SequentialEngine
 
     device = select_device()
 
@@ -199,23 +173,23 @@ def cmd_serve(args):
             return TokenGenerator(model=model, device=device,
                                   temperature=temperature, top_p=top_p)
 
-    inference_server = InferenceServer(
-        model=model if not args.speculative else main_model,
-        tokenizer=tokenizer,
-        generator_factory=generator_factory,
-        config=config,
-        device=device,
-        model_name=model_name,
-    )
+    engine = SequentialEngine(generator_factory=generator_factory, config=config)
+    app = create_app(engine=engine, tokenizer=tokenizer, model_name=model_name)
 
-    run_server(args.host, args.port, inference_server)
+    print(f"\nCantoLLM server starting on http://{args.host}:{args.port}")
+    print("  POST /v1/messages  — Anthropic-compatible Messages API")
+    print("  GET  /health       — Health check")
+    print("  GET  /docs         — OpenAPI docs")
+    print(f"\nModel: {model_name}\n")
+
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
 
 # ── Subcommand: chat ────────────────────────────────────────────────
 
 def cmd_chat(args):
     """Start the chat client REPL."""
-    from qwen3.client import run_client
+    from cantollm.clients.client import run_client
 
     run_client(
         base_url=args.url,
@@ -226,62 +200,22 @@ def cmd_chat(args):
     )
 
 
-# ── Subcommand: legacy ─────────────────────────────────────────────
+# ── Subcommand: bench ───────────────────────────────────────────────
 
-def cmd_legacy(args):
-    """Run the original direct-inference REPL."""
-    device = select_device()
+def cmd_bench(args):
+    """Run concurrent requests against a running server."""
+    from cantollm.clients.bench import run_bench
 
-    if args.speculative:
-        main_size = args.main_model or args.model
-        draft_size = args.draft_model or "0.6B"
-        main_config = MODEL_CONFIGS[main_size]
-        draft_config = MODEL_CONFIGS[draft_size]
-
-        draft_model, draft_dir = load_model(draft_size, draft_config, device)
-        main_model, _ = load_model(main_size, main_config, device)
-        tokenizer = create_tokenizer(draft_dir)
-
-        draft_gen = TokenGenerator(
-            model=draft_model, device=device,
-            temperature=args.temperature, top_p=args.top_p,
-        )
-        main_gen = TokenGenerator(
-            model=main_model, device=device,
-            temperature=args.temperature, top_p=args.top_p,
-        )
-        generator = SpeculativeGenerator(
-            draft=draft_gen, main=main_gen,
-            num_layers=main_config["num_transformers"],
-            draft_num_layers=draft_config["num_transformers"],
-        )
-        config = main_config
-        label = f"Qwen3 {main_size} + {draft_size} draft (speculative)"
-    else:
-        model_size = args.model
-        config = MODEL_CONFIGS[model_size]
-        model, local_dir = load_model(model_size, config, device)
-        tokenizer = create_tokenizer(local_dir)
-
-        generator = TokenGenerator(
-            model=model, device=device,
-            temperature=args.temperature, top_p=args.top_p,
-        )
-        label = f"Qwen3 {model_size}"
-
-    decoder = StreamingDecoder(tokenizer)
-    presenter = TerminalPresenter(tokenizer)
-
-    conversation = Conversation(
-        generator=generator,
-        decoder=decoder,
-        presenter=presenter,
-        tokenizer=tokenizer,
-        config=config,
+    run_bench(
+        url=args.url,
+        prompts_path=args.prompts,
+        concurrency=args.concurrency,
+        max_tokens=args.max_tokens,
+        temperature=args.temperature,
+        top_p=args.top_p,
+        verbose=args.verbose,
+        output_path=args.output,
     )
-
-    print(f"\n{label} ready!")
-    run_repl(conversation)
 
 
 # ── Argument parsing ────────────────────────────────────────────────
@@ -332,10 +266,24 @@ def parse_args():
     chat_parser.add_argument("--show-thinking", action="store_true",
                              help="Show model thinking blocks (default: hidden)")
 
-    # legacy
-    legacy_parser = subparsers.add_parser("legacy", help="Original direct-inference REPL")
-    _add_model_args(legacy_parser)
-    _add_speculative_args(legacy_parser)
+    # bench
+    bench_parser = subparsers.add_parser("bench", help="Fire concurrent requests at a running server")
+    bench_parser.add_argument("--url", default="http://localhost:8000",
+                              help="Server URL (default: http://localhost:8000)")
+    bench_parser.add_argument("--prompts", required=True,
+                              help="File of prompts, one per line (# for comments)")
+    bench_parser.add_argument("--concurrency", "-c", type=int, default=4,
+                              help="Number of concurrent workers (default: 4)")
+    bench_parser.add_argument("--max-tokens", type=int, default=2048,
+                              help="Max tokens per response (default: 2048)")
+    bench_parser.add_argument("--temperature", "-t", type=float, default=0.7,
+                              help="Sampling temperature (default: 0.7)")
+    bench_parser.add_argument("--top-p", type=float, default=0.9,
+                              help="Top-p sampling threshold (default: 0.9)")
+    bench_parser.add_argument("--verbose", "-v", action="store_true",
+                              help="Print per-request start/ttft/done events")
+    bench_parser.add_argument("--output", "-o", default=None,
+                              help="Write full results (including generated text) as JSON to this path")
 
     return parser.parse_args(), parser
 
@@ -353,8 +301,8 @@ def main():
             cmd_serve(args)
         case "chat":
             cmd_chat(args)
-        case "legacy":
-            cmd_legacy(args)
+        case "bench":
+            cmd_bench(args)
 
 
 if __name__ == "__main__":

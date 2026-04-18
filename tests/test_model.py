@@ -1,6 +1,6 @@
 import torch
 
-from qwen3.model import FeedForward, RootMeanSquareNorm
+from cantollm.models.qwen3.model import FeedForward, RootMeanSquareNorm
 
 
 def test_rmsnorm_basic():

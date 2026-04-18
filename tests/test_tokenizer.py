@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from qwen3.tokenizer import IncrementalDecoder, Qwen3Tokenizer, _SPECIAL_TOKENS
+from cantollm.models.qwen3.tokenizer import IncrementalDecoder, Qwen3Tokenizer, _SPECIAL_TOKENS
 
 
 # ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ def _make_tokenizer(
 
     mock_hf.decode.side_effect = fake_decode
 
-    with patch("qwen3.tokenizer.Tokenizer") as MockTokenizer:
+    with patch("cantollm.models.qwen3.tokenizer.Tokenizer") as MockTokenizer:
         MockTokenizer.from_file.return_value = mock_hf
         tok = Qwen3Tokenizer(
             tokenizer_file_path="fake.json",

@@ -1,0 +1,4 @@
+Hi there, how are you?
+What is 534 + 993?
+What's the capital of Bolivia?
+Can you describe what a B-Tree is in databases?

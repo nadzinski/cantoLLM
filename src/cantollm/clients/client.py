@@ -2,8 +2,7 @@
 
 import http.client
 import json
-import os
-import sys
+import shutil
 import threading
 import time
 import urllib.parse
@@ -26,7 +25,7 @@ class WordWrapper:
 
     def __init__(self, initial_col: int = 0):
         self._col = initial_col
-        self._width = os.get_terminal_size().columns
+        self._width = shutil.get_terminal_size().columns
         self._buf = ""
 
     def write(self, text: str):
@@ -82,13 +81,14 @@ class ChatClient:
 
     def __init__(self, base_url: str, temperature: float = 0.7, top_p: float = 0.9,
                  max_tokens: int = 2048, model: str = "qwen3",
-                 show_thinking: bool = False):
+                 show_thinking: bool = False, quiet: bool = False):
         self.base_url = base_url.rstrip("/")
         self.temperature = temperature
         self.top_p = top_p
         self.max_tokens = max_tokens
         self.model = model
         self.show_thinking = show_thinking
+        self.quiet = quiet
         self.messages: list[dict] = []
 
     def reset(self):
@@ -142,9 +142,12 @@ class ChatClient:
         """Streaming request via http.client for line-by-line SSE control."""
         parsed = urllib.parse.urlparse(self.base_url)
         host = parsed.hostname
-        port = parsed.port or 80
-
-        conn = http.client.HTTPConnection(host, port)
+        if parsed.scheme == "https":
+            port = parsed.port or 443
+            conn = http.client.HTTPSConnection(host, port)
+        else:
+            port = parsed.port or 80
+            conn = http.client.HTTPConnection(host, port)
         spinner_stop = threading.Event()
         thinking_count = [0]  # Mutable container shared with spinner thread
 
@@ -159,8 +162,12 @@ class ChatClient:
                 i += 1
                 spinner_stop.wait(0.08)
 
-        spinner_thread = threading.Thread(target=spin, daemon=True)
-        spinner_thread.start()
+        spinner_thread = None
+        if not self.quiet:
+            spinner_thread = threading.Thread(target=spin, daemon=True)
+            spinner_thread.start()
+
+        start_time = time.perf_counter()
 
         try:
             data = json.dumps(body).encode()
@@ -170,22 +177,35 @@ class ChatClient:
 
             if resp.status != 200:
                 spinner_stop.set()
-                spinner_thread.join()
-                print(f"\r{' ' * 40}\r", end="", flush=True)
+                if spinner_thread:
+                    spinner_thread.join()
                 error_body = resp.read().decode()
                 try:
                     error = json.loads(error_body)
                     msg = error.get("error", {}).get("message", error_body)
                 except json.JSONDecodeError:
                     msg = error_body
-                print(f"\n{Colors.GRAY}Error: {msg}{Colors.RESET}")
                 self.messages.pop()
+                if self.quiet:
+                    return {"error": f"HTTP {resp.status}: {msg}",
+                            "start_time": start_time,
+                            "end_time": time.perf_counter(),
+                            "first_token_time": None,
+                            "usage": {}, "stop_reason": None}
+                print(f"\r{' ' * 40}\r", end="", flush=True)
+                print(f"\n{Colors.GRAY}Error: {msg}{Colors.RESET}")
                 return None
 
-            return self._parse_sse_stream(resp, spinner_stop, thinking_count)
+            result = self._parse_sse_stream(resp, spinner_stop, thinking_count)
+            if result is not None:
+                result.setdefault("start_time", start_time)
+                result.setdefault("end_time", time.perf_counter())
+                result.setdefault("error", None)
+            return result
         finally:
             spinner_stop.set()
-            spinner_thread.join()
+            if spinner_thread:
+                spinner_thread.join()
             conn.close()
 
     def _parse_sse_stream(self, resp, spinner_stop, thinking_count) -> dict | None:
@@ -196,6 +216,7 @@ class ChatClient:
         stop_reason = None
         spinner_stopped = False
         wrapper = None
+        first_token_time = None
 
         current_event = None
         current_data = None
@@ -206,10 +227,11 @@ class ChatClient:
             nonlocal spinner_stopped, wrapper
             if not spinner_stopped:
                 spinner_stop.set()
-                # Clear spinner line and print the assistant label
-                print(f"\r{' ' * 40}\r{Colors.GREEN}{prefix}{Colors.RESET}",
-                      end="", flush=True)
-                wrapper = WordWrapper(initial_col=len(prefix))
+                if not self.quiet:
+                    # Clear spinner line and print the assistant label
+                    print(f"\r{' ' * 40}\r{Colors.GREEN}{prefix}{Colors.RESET}",
+                          end="", flush=True)
+                    wrapper = WordWrapper(initial_col=len(prefix))
                 spinner_stopped = True
 
         for line_bytes in resp:
@@ -236,7 +258,7 @@ class ChatClient:
                         block = data.get("content_block", {})
                         if block.get("type") == "thinking":
                             in_thinking = True
-                            if self.show_thinking:
+                            if self.show_thinking and not self.quiet:
                                 stop_spinner()
                                 print(f"{Colors.GRAY}<think>", end="", flush=True)
 
@@ -245,19 +267,24 @@ class ChatClient:
                         delta_type = delta.get("type")
                         if delta_type == "thinking_delta":
                             thinking_count[0] += 1
-                            if self.show_thinking:
+                            if first_token_time is None:
+                                first_token_time = time.perf_counter()
+                            if self.show_thinking and not self.quiet:
                                 stop_spinner()
                                 print(delta.get("thinking", ""), end="", flush=True)
                         elif delta_type == "text_delta":
+                            if first_token_time is None:
+                                first_token_time = time.perf_counter()
                             stop_spinner()
                             text = delta.get("text", "")
                             assistant_text.append(text)
-                            wrapper.write(text)
+                            if not self.quiet:
+                                wrapper.write(text)
 
                     case "content_block_stop":
                         if in_thinking:
                             in_thinking = False
-                            if self.show_thinking:
+                            if self.show_thinking and not self.quiet:
                                 print(f"</think>{Colors.GREEN}", end="", flush=True)
 
                     case "message_delta":
@@ -282,7 +309,8 @@ class ChatClient:
         if text:
             self.messages.append({"role": "assistant", "content": text})
 
-        return {"usage": usage, "stop_reason": stop_reason}
+        return {"usage": usage, "stop_reason": stop_reason,
+                "first_token_time": first_token_time}
 
 
 def run_client(base_url: str, temperature: float = 0.7, top_p: float = 0.9,
@@ -309,7 +337,7 @@ def run_client(base_url: str, temperature: float = 0.7, top_p: float = 0.9,
     print(f"  Server:      {base_url}")
     print(f"  Temperature: {temperature}  Top-p: {top_p}  Max tokens: {max_tokens}")
     print(f"{sep}")
-    print(f"  Type 'quit' or 'exit' to end, 'reset' to clear history.\n")
+    print("  Type 'quit' or 'exit' to end, 'reset' to clear history.\n")
 
     while True:
         try:

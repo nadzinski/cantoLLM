@@ -1,10 +1,11 @@
+import threading
 from collections.abc import Iterator
 
 import torch
 
-from qwen3.generator import TokenGenerator
-from qwen3.kv_cache import KVCache
-from qwen3.stats import SpeculativeStats
+from cantollm.generator import TokenGenerator
+from cantollm.kv_cache import KVCache
+from cantollm.stats import SpeculativeStats
 
 
 class SpeculativeGenerator:
@@ -161,8 +162,13 @@ class SpeculativeGenerator:
         draft_input = input_ids
         main_prefix = input_ids
         tokens_yielded = 0
+        stop_event = getattr(self.main, "stop_event", None)
+        if not isinstance(stop_event, threading.Event):
+            stop_event = None
 
         while tokens_yielded < max_tokens:
+            if stop_event is not None and stop_event.is_set():
+                return
             draft_tokens, draft_probs = self.generate_draft_tokens(
                 draft_input, self.speculative_tokens, stop_token_ids
             )

@@ -114,6 +114,8 @@ class Qwen3Tokenizer:
             else self.pad_token_id
         )
         self.stop_token_ids: set[int] = {self.eos_token_id, self.pad_token_id}
+        self.thinking_start_id: int | None = self._special_to_id.get("<think>")
+        self.thinking_end_id: int | None = self._special_to_id.get("</think>")
 
         # Public config flags.
         self.apply_chat_template = apply_chat_template

@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from qwen3.rope import apply_rotary_emb, precompute_freqs_cis
+from cantollm.models.rope import apply_rotary_emb, precompute_freqs_cis
 
 
 class RootMeanSquareNorm(nn.Module):

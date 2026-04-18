@@ -11,7 +11,7 @@ matrix). They test the public contract:
 import torch
 import pytest
 
-from qwen3.rope import apply_rotary_emb, precompute_freqs_cis
+from cantollm.models.rope import apply_rotary_emb, precompute_freqs_cis
 
 
 # ---------------------------------------------------------------------------

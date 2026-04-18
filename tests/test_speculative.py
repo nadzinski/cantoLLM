@@ -3,8 +3,8 @@ from unittest.mock import MagicMock, patch
 import torch
 import pytest
 
-from qwen3.speculative import SpeculativeGenerator
-from qwen3.kv_cache import KVCache
+from cantollm.speculative import SpeculativeGenerator
+from cantollm.kv_cache import KVCache
 
 
 def make_mock_generator(temperature=0.7, top_p=0.9):

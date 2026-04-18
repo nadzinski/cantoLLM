@@ -2,8 +2,8 @@ from collections.abc import Iterator
 
 import torch
 
-from qwen3.kv_cache import KVCache
-from qwen3.stats import SpeculativeStats
+from cantollm.kv_cache import KVCache
+from cantollm.stats import SpeculativeStats
 
 
 class TokenGenerator:
@@ -20,6 +20,9 @@ class TokenGenerator:
         self.device = device
         self.temperature = temperature
         self.top_p = top_p
+        # Optional cooperative cancel flag. When set, generate() returns between
+        # steps. Checked per token; torch forward itself can't be interrupted.
+        self.stop_event = None  # type: ignore[assignment]
 
     def reset(self):
         """Reset generator state. No-op for standard generation."""
@@ -127,6 +130,8 @@ class TokenGenerator:
         if max_tokens <= 0:
             return
 
+        stop_event = self.stop_event
+
         # Process input and get first token
         logits = self.forward(input_ids, cache, cache.position)
         token_id, _ = self.sample(logits[:, -1])
@@ -138,6 +143,8 @@ class TokenGenerator:
 
         # Generate remaining tokens
         for _ in range(max_tokens - 1):
+            if stop_event is not None and stop_event.is_set():
+                return
             logits = self.forward([token_id], cache, cache.position)
             token_id, _ = self.sample(logits[:, -1])
             token_id = token_id.item()
