@@ -46,11 +46,17 @@ class SequentialEngine:
         rid = req.request_id
 
         def put_threadsafe(item):
-            # Use call_soon_threadsafe + put_nowait. For a bounded queue this
-            # can raise QueueFull on the loop thread — acceptable as a hard
-            # backpressure signal, but in practice the consumer here drains
-            # fast enough and the queue is sized generously.
-            loop.call_soon_threadsafe(queue.put_nowait, item)
+            # Real backpressure: schedule `queue.put(item)` on the loop and
+            # block the worker thread until it completes. If the consumer
+            # stops draining, the finally below drains the queue so this can
+            # unblock and the backend can observe stop_event.
+            future = asyncio.run_coroutine_threadsafe(queue.put(item), loop)
+            try:
+                future.result()
+            except BaseException:
+                # Loop is shutting down mid-put; worker will see stop_event
+                # on its next iteration and exit.
+                pass
 
         def run():
             tokens_emitted = 0
@@ -94,6 +100,14 @@ class SequentialEngine:
         finally:
             stop_event.set()
             self._active.pop(req.request_id, None)
+            # Drain the queue so a producer blocked on put() can unblock;
+            # the backend checks stop_event between steps and will then
+            # return, after which run()'s finally pushes a terminator.
+            while not worker_task.done():
+                try:
+                    await asyncio.wait_for(queue.get(), timeout=0.05)
+                except asyncio.TimeoutError:
+                    continue
             # Keep a reference until the thread really exits so we don't get
             # "Task was destroyed" warnings on client disconnect.
             try:
