@@ -141,8 +141,10 @@ class Qwen3Tokenizer:
             chat_wrapped = self.apply_chat_template
 
         # Quick path: the entire (stripped) text is a single special token.
+        # Skip when chat_wrapped=True — we still want to wrap the token in a
+        # chat template rather than return the raw id.
         stripped = text.strip()
-        if "\n" not in stripped and stripped in self._special_to_id:
+        if not chat_wrapped and "\n" not in stripped and stripped in self._special_to_id:
             return [self._special_to_id[stripped]]
 
         if chat_wrapped:

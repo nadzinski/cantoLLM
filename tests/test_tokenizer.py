@@ -145,6 +145,19 @@ class TestEncode:
         assert _FAKE_VOCAB["<|im_start|>"] not in ids
         assert _FAKE_VOCAB["<|im_end|>"] not in ids
 
+    def test_special_token_shortcut_respects_chat_wrapped(self):
+        """A single-special-token input must still be wrapped when chat_wrapped=True.
+
+        Regression: the quick-path shortcut used to fire before the
+        chat_wrapped check, returning the raw id instead of the wrapped form.
+        """
+        tok = _make_tokenizer(apply_chat_template=False)
+        ids = tok.encode("<|im_start|>", chat_wrapped=True)
+        # Wrapping emits multiple <|im_start|> / <|im_end|> pairs (user turn +
+        # generation prompt), so the result must be longer than a single id.
+        assert len(ids) > 1
+        assert ids.count(_FAKE_VOCAB["<|im_start|>"]) >= 2
+
 
 # ---------------------------------------------------------------------------
 # Chat template
