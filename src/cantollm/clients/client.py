@@ -228,6 +228,7 @@ class ChatClient:
         spinner_stopped = False
         wrapper = None
         first_token_time = None
+        error_message: str | None = None
 
         current_event = None
         current_data = None
@@ -303,6 +304,13 @@ class ChatClient:
                         stop_reason = delta.get("stop_reason")
                         usage.update(data.get("usage", {}))
 
+                    case "error":
+                        err = data.get("error", {})
+                        error_message = err.get("message", "unknown error")
+                        current_event = None
+                        current_data = None
+                        break
+
                     case "message_stop":
                         current_event = None
                         current_data = None
@@ -314,6 +322,18 @@ class ChatClient:
         stop_spinner()
         if wrapper:
             wrapper.flush()
+
+        if error_message is not None:
+            # Mid-stream server error: drop the user message we optimistically
+            # appended so history doesn't get poisoned with a turn the server
+            # never completed.
+            if self.messages and self.messages[-1]["role"] == "user":
+                self.messages.pop()
+            if not self.quiet:
+                print(f"\n{Colors.GRAY}Error: {error_message}{Colors.RESET}")
+            return {"usage": usage, "stop_reason": None,
+                    "first_token_time": first_token_time,
+                    "error": error_message}
 
         # Store assistant response in history (text only, not thinking)
         text = "".join(assistant_text)
