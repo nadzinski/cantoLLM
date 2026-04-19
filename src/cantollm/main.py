@@ -10,11 +10,11 @@ import torch
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from cantollm.generator import TokenGenerator
 from cantollm.models.qwen3.model import Qwen3
 from cantollm.models.qwen3.tokenizer import Qwen3Tokenizer
 from cantollm.models.qwen3.weights import download_weights, load_weights_into_model
-from cantollm.speculative import SpeculativeGenerator
+from cantollm.speculative import SpeculativeBackend
+from cantollm.standard import StandardBackend
 
 # Reconfigure stdout to use UTF-8 encoding for emoji support
 sys.stdout.reconfigure(encoding="utf-8")
@@ -152,16 +152,13 @@ def cmd_serve(args):
         config = main_config
         model_name = f"qwen3-{main_size}+{draft_size}-speculative"
 
-        def generator_factory(temperature, top_p):
-            draft_gen = TokenGenerator(model=draft_model, device=device,
-                                       temperature=temperature, top_p=top_p)
-            main_gen = TokenGenerator(model=main_model, device=device,
-                                      temperature=temperature, top_p=top_p)
-            return SpeculativeGenerator(
-                draft=draft_gen, main=main_gen,
-                num_layers=main_config["num_transformers"],
-                draft_num_layers=draft_config["num_transformers"],
-            )
+        draft_gen = StandardBackend(model=draft_model, device=device)
+        main_gen = StandardBackend(model=main_model, device=device)
+        backend = SpeculativeBackend(
+            draft=draft_gen, main=main_gen,
+            num_layers=main_config["num_transformers"],
+            draft_num_layers=draft_config["num_transformers"],
+        )
     else:
         model_size = args.model
         config = MODEL_CONFIGS[model_size]
@@ -169,11 +166,9 @@ def cmd_serve(args):
         tokenizer = create_tokenizer(local_dir)
         model_name = f"qwen3-{model_size}"
 
-        def generator_factory(temperature, top_p):
-            return TokenGenerator(model=model, device=device,
-                                  temperature=temperature, top_p=top_p)
+        backend = StandardBackend(model=model, device=device)
 
-    engine = SequentialEngine(generator_factory=generator_factory, config=config)
+    engine = SequentialEngine(backend=backend, config=config)
     app = create_app(engine=engine, tokenizer=tokenizer, model_name=model_name)
 
     print(f"\nCantoLLM server starting on http://{args.host}:{args.port}")

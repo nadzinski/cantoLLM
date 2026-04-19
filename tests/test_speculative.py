@@ -3,17 +3,20 @@ from unittest.mock import MagicMock, patch
 import torch
 import pytest
 
-from cantollm.speculative import SpeculativeGenerator
+from cantollm.engine.types import SamplingParams
+from cantollm.speculative import SpeculativeBackend
 from cantollm.kv_cache import KVCache
 
 
-def make_mock_generator(temperature=0.7, top_p=0.9):
-    """Create a mock TokenGenerator with configurable settings."""
+GREEDY = SamplingParams(temperature=0.0, top_p=1.0)
+STOCHASTIC = SamplingParams(temperature=0.7, top_p=0.9)
+
+
+def make_mock_generator():
+    """Create a mock StandardBackend."""
     mock = MagicMock()
-    mock.temperature = temperature
-    mock.top_p = top_p
-    mock._apply_top_p = MagicMock(side_effect=lambda x: x)
-    mock.get_probs = MagicMock(side_effect=lambda x: torch.softmax(x, dim=-1))
+    mock._apply_top_p = MagicMock(side_effect=lambda x, top_p: x)
+    mock.get_probs = MagicMock(side_effect=lambda x, sampling: torch.softmax(x, dim=-1))
     return mock
 
 
@@ -30,13 +33,13 @@ def make_cache_growing_forward(vocab_size=100):
     return mock_forward
 
 
-class TestSpeculativeGeneratorInit:
+class TestSpeculativeBackendInit:
     def test_init_stores_draft_and_main(self):
         """Test that constructor stores draft and main generators."""
         draft = make_mock_generator()
         main = make_mock_generator()
 
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=2)
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=2)
 
         assert spec_gen.draft is draft
         assert spec_gen.main is main
@@ -46,7 +49,7 @@ class TestSpeculativeGeneratorInit:
         draft = make_mock_generator()
         main = make_mock_generator()
 
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=4)
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=4)
 
         assert spec_gen.draft_cache is not None
         assert len(spec_gen.draft_cache) == 4
@@ -56,7 +59,7 @@ class TestSpeculativeGeneratorInit:
         draft = make_mock_generator()
         main = make_mock_generator()
 
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=2, speculative_tokens=8)
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=2, speculative_tokens=8)
 
         assert spec_gen.speculative_tokens == 8
 
@@ -66,7 +69,7 @@ class TestGenerateDraftTokens:
         """Test that we generate the requested number of speculative tokens."""
         draft = make_mock_generator()
         main = make_mock_generator()
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=1, speculative_tokens=4)
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1, speculative_tokens=4)
 
         vocab_size = 100
         probs = torch.softmax(torch.randn(1, vocab_size), dim=-1)
@@ -77,6 +80,7 @@ class TestGenerateDraftTokens:
         tokens, probs = spec_gen.generate_draft_tokens(
             input_tokens=[1],
             num_tokens=4,
+            sampling=STOCHASTIC,
             stop_token_ids={999},
         )
 
@@ -87,7 +91,7 @@ class TestGenerateDraftTokens:
         """Test that generation stops when a stop token is produced."""
         draft = make_mock_generator()
         main = make_mock_generator()
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=1)
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1)
 
         vocab_size = 100
         stop_token = 50
@@ -109,6 +113,7 @@ class TestGenerateDraftTokens:
         tokens, probs = spec_gen.generate_draft_tokens(
             input_tokens=[1],
             num_tokens=4,
+            sampling=STOCHASTIC,
             stop_token_ids={stop_token},
         )
 
@@ -121,7 +126,7 @@ class TestSpeculativeGenerate:
         """Test that generate returns immediately if draft's first token is stop token."""
         draft = make_mock_generator()
         main = make_mock_generator()
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=1)
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1)
 
         vocab_size = 100
         stop_token = 50  # within vocab_size
@@ -143,7 +148,7 @@ class TestSpeculativeGenerate:
             return logits
 
         main.forward = mock_main_forward
-        main.get_probs = MagicMock(side_effect=lambda x: torch.softmax(x, dim=-1))
+        main.get_probs = MagicMock(side_effect=lambda x, sampling: torch.softmax(x, dim=-1))
         main.sample = MagicMock(
             return_value=(torch.tensor([stop_token]), torch.softmax(torch.zeros(vocab_size), dim=-1))
         )
@@ -154,6 +159,7 @@ class TestSpeculativeGenerate:
             spec_gen.generate(
                 input_ids=[1, 2, 3],
                 cache=cache,
+                sampling=GREEDY,
                 stop_token_ids={stop_token},
                 max_tokens=10,
             )
@@ -164,9 +170,9 @@ class TestSpeculativeGenerate:
 
     def test_yields_tokens_from_accepted_drafts(self):
         """Test that accepted draft tokens are yielded."""
-        draft = make_mock_generator(temperature=0.0, top_p=1.0)
-        main = make_mock_generator(temperature=0.0, top_p=1.0)
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=1, speculative_tokens=1)
+        draft = make_mock_generator()
+        main = make_mock_generator()
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1, speculative_tokens=1)
 
         vocab_size = 100
         draft_token = 10
@@ -187,7 +193,7 @@ class TestSpeculativeGenerate:
             return logits
 
         main.forward = mock_main_forward
-        main.get_probs = MagicMock(side_effect=lambda x: torch.softmax(x, dim=-1))
+        main.get_probs = MagicMock(side_effect=lambda x, sampling: torch.softmax(x, dim=-1))
         main.sample = MagicMock(
             return_value=(torch.tensor([draft_token]), torch.softmax(torch.zeros(vocab_size), dim=-1))
         )
@@ -198,6 +204,7 @@ class TestSpeculativeGenerate:
             spec_gen.generate(
                 input_ids=[1, 2, 3],
                 cache=cache,
+                sampling=GREEDY,
                 stop_token_ids={999},
                 max_tokens=2,
             )
@@ -211,9 +218,9 @@ class TestSpeculativeGenerate:
 class TestFirstTokenYielded:
     def test_first_token_from_draft_verification_is_yielded(self):
         """Test that the first token comes from draft verified against main."""
-        draft = make_mock_generator(temperature=0.0, top_p=1.0)
-        main = make_mock_generator(temperature=0.0, top_p=1.0)
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=1, speculative_tokens=1)
+        draft = make_mock_generator()
+        main = make_mock_generator()
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1, speculative_tokens=1)
 
         vocab_size = 100
         draft_token = 10
@@ -234,7 +241,7 @@ class TestFirstTokenYielded:
             return logits
 
         main.forward = mock_main_forward
-        main.get_probs = MagicMock(side_effect=lambda x: torch.softmax(x, dim=-1))
+        main.get_probs = MagicMock(side_effect=lambda x, sampling: torch.softmax(x, dim=-1))
         main.sample = MagicMock(
             return_value=(torch.tensor([draft_token]), torch.softmax(torch.zeros(vocab_size), dim=-1))
         )
@@ -245,6 +252,7 @@ class TestFirstTokenYielded:
             spec_gen.generate(
                 input_ids=[1, 2, 3],
                 cache=cache,
+                sampling=GREEDY,
                 stop_token_ids={999},
                 max_tokens=2,
             )
@@ -259,7 +267,7 @@ class TestSpeculativeStats:
         """Test that stats are zeroed on init."""
         draft = make_mock_generator()
         main = make_mock_generator()
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=1)
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1)
 
         stats = spec_gen.get_stats()
         assert stats.draft_tokens_proposed == 0
@@ -268,9 +276,9 @@ class TestSpeculativeStats:
 
     def test_stats_tracked_during_generation(self):
         """Test that stats are accumulated during generate()."""
-        draft = make_mock_generator(temperature=0.0, top_p=1.0)
-        main = make_mock_generator(temperature=0.0, top_p=1.0)
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=1, speculative_tokens=2)
+        draft = make_mock_generator()
+        main = make_mock_generator()
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1, speculative_tokens=2)
 
         vocab_size = 100
         draft_token = 10
@@ -292,7 +300,7 @@ class TestSpeculativeStats:
 
         main.forward = mock_main_forward
         main.sample = MagicMock(return_value=(torch.tensor([5]), torch.zeros(1, vocab_size)))
-        main.get_probs = MagicMock(side_effect=lambda x: torch.softmax(x, dim=-1))
+        main.get_probs = MagicMock(side_effect=lambda x, sampling: torch.softmax(x, dim=-1))
 
         cache = KVCache(1)
 
@@ -300,6 +308,7 @@ class TestSpeculativeStats:
             spec_gen.generate(
                 input_ids=[1, 2, 3],
                 cache=cache,
+                sampling=GREEDY,
                 stop_token_ids={999},
                 max_tokens=3,
             )
@@ -315,7 +324,7 @@ class TestSpeculativeStats:
         """Test that reset_stats() clears counters."""
         draft = make_mock_generator()
         main = make_mock_generator()
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=1)
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1)
 
         spec_gen._draft_proposed = 10
         spec_gen._draft_accepted = 5
@@ -334,7 +343,7 @@ class TestVerifyDraftTokens:
         """When p_main >= p_draft, token should always be accepted."""
         draft = make_mock_generator()
         main = make_mock_generator()
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=1)
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1)
 
         vocab_size = 100
         token = 42
@@ -350,6 +359,7 @@ class TestVerifyDraftTokens:
             draft_tokens=(token,),
             draft_probs=(draft_probs,),
             main_probs=main_probs.unsqueeze(0),
+            sampling=STOCHASTIC,
         )
 
         assert token in accepted
@@ -358,7 +368,7 @@ class TestVerifyDraftTokens:
         """When p_main < p_draft, rejection depends on torch.rand."""
         draft = make_mock_generator()
         main = make_mock_generator()
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=1)
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1)
 
         vocab_size = 100
         token = 42
@@ -375,6 +385,7 @@ class TestVerifyDraftTokens:
                 draft_tokens=(token,),
                 draft_probs=(draft_probs,),
                 main_probs=main_probs.unsqueeze(0),
+                sampling=STOCHASTIC,
             )
 
         assert token not in accepted
@@ -385,6 +396,7 @@ class TestVerifyDraftTokens:
                 draft_tokens=(token,),
                 draft_probs=(draft_probs,),
                 main_probs=main_probs.unsqueeze(0),
+                sampling=STOCHASTIC,
             )
 
         assert token in accepted
@@ -393,7 +405,7 @@ class TestVerifyDraftTokens:
         """When p_draft is 0 (bfloat16 underflow) but p_main > 0, accept."""
         draft = make_mock_generator()
         main = make_mock_generator()
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=1)
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1)
 
         vocab_size = 100
         token = 42
@@ -408,6 +420,7 @@ class TestVerifyDraftTokens:
             draft_tokens=(token,),
             draft_probs=(draft_probs,),
             main_probs=main_probs.unsqueeze(0),
+            sampling=STOCHASTIC,
         )
 
         assert token in accepted
@@ -416,7 +429,7 @@ class TestVerifyDraftTokens:
         """When both p_draft and p_main are 0, reject."""
         draft = make_mock_generator()
         main = make_mock_generator()
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=1)
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1)
 
         vocab_size = 100
         token = 42
@@ -428,6 +441,7 @@ class TestVerifyDraftTokens:
             draft_tokens=(token,),
             draft_probs=(draft_probs,),
             main_probs=main_probs.unsqueeze(0),
+            sampling=STOCHASTIC,
         )
 
         assert token not in accepted
@@ -437,14 +451,14 @@ class TestCacheTruncation:
     """Tests for correct cache truncation after verification."""
 
     def _make_spec_gen_with_controlled_rejection(self, vocab_size=100, speculative_tokens=3):
-        """Set up a SpeculativeGenerator where we can control which drafts are rejected.
+        """Set up a SpeculativeBackend where we can control which drafts are rejected.
 
         Draft always produces token 10. Main's logits control acceptance:
         high logit for token 10 → accept, low logit → reject (via probability ratio).
         """
-        draft = make_mock_generator(temperature=0.0, top_p=1.0)
-        main = make_mock_generator(temperature=0.0, top_p=1.0)
-        spec_gen = SpeculativeGenerator(
+        draft = make_mock_generator()
+        main = make_mock_generator()
+        spec_gen = SpeculativeBackend(
             draft=draft, main=main, num_layers=1, speculative_tokens=speculative_tokens,
         )
 
@@ -459,7 +473,7 @@ class TestCacheTruncation:
         main.sample = MagicMock(
             return_value=(torch.tensor([main_token]), torch.softmax(torch.zeros(vocab_size), dim=-1))
         )
-        main.get_probs = MagicMock(side_effect=lambda x: torch.softmax(x, dim=-1))
+        main.get_probs = MagicMock(side_effect=lambda x, sampling: torch.softmax(x, dim=-1))
 
         return spec_gen, draft, main, draft_token, main_token
 
@@ -484,7 +498,7 @@ class TestCacheTruncation:
         cache = KVCache(1)
         input_ids = [1, 2, 3]
 
-        result = list(spec_gen.generate(input_ids, cache, stop_token_ids={999}, max_tokens=4))
+        result = list(spec_gen.generate(input_ids, cache, GREEDY, stop_token_ids={999}, max_tokens=4))
 
         assert len(result) == 4
         # Cache should contain: 3 input + 3 draft + 0 rejected = 6 entries
@@ -515,7 +529,7 @@ class TestCacheTruncation:
 
         # Force all rejections: torch.rand returns 0.999 which is > any accept_prob
         with patch("torch.rand", return_value=torch.tensor([0.999])):
-            result = list(spec_gen.generate(input_ids, cache, stop_token_ids={999}, max_tokens=1))
+            result = list(spec_gen.generate(input_ids, cache, STOCHASTIC, stop_token_ids={999}, max_tokens=1))
 
         assert len(result) == 1  # only main_tail_token
         # Cache should contain: 3 input + 0 accepted = 3 entries
@@ -546,7 +560,7 @@ class TestCacheTruncation:
         input_ids = [1, 2, 3]
 
         # max_tokens=6 → should take 2 iterations of (2 accepted + 1 main = 3 tokens)
-        result = list(spec_gen.generate(input_ids, cache, stop_token_ids={999}, max_tokens=6))
+        result = list(spec_gen.generate(input_ids, cache, GREEDY, stop_token_ids={999}, max_tokens=6))
 
         assert len(result) == 6
         # After 2 iterations: 3 input + 2 accepted + 2 accepted = 7
@@ -578,7 +592,7 @@ class TestCacheTruncation:
 
         # Reject all drafts
         with patch("torch.rand", return_value=torch.tensor([0.999])):
-            list(spec_gen.generate(input_ids, cache, stop_token_ids={999}, max_tokens=2))
+            list(spec_gen.generate(input_ids, cache, STOCHASTIC, stop_token_ids={999}, max_tokens=2))
 
         # Both caches should be truncated to the same base
         # (draft may lag by 1 since it doesn't process main_tail, but truncate
@@ -591,7 +605,7 @@ class TestReset:
         """reset() should zero out draft cache position."""
         draft = make_mock_generator()
         main = make_mock_generator()
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=2)
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=2)
 
         # Simulate some cache state
         for layer in spec_gen.draft_cache:
@@ -607,7 +621,7 @@ class TestReset:
         """reset() should also zero stats."""
         draft = make_mock_generator()
         main = make_mock_generator()
-        spec_gen = SpeculativeGenerator(draft=draft, main=main, num_layers=1)
+        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1)
 
         spec_gen._draft_proposed = 10
         spec_gen._draft_accepted = 5
@@ -631,9 +645,9 @@ class TestStopTokenCacheTruncation:
         draft_token = 10
 
         spec_tokens = 3
-        draft = make_mock_generator(temperature=0.0, top_p=1.0)
-        main = make_mock_generator(temperature=0.0, top_p=1.0)
-        spec_gen = SpeculativeGenerator(
+        draft = make_mock_generator()
+        main = make_mock_generator()
+        spec_gen = SpeculativeBackend(
             draft=draft, main=main, num_layers=1, speculative_tokens=spec_tokens,
         )
 
@@ -672,7 +686,7 @@ class TestStopTokenCacheTruncation:
             return logits
 
         main.forward = mock_main_forward
-        main.get_probs = MagicMock(side_effect=lambda x: torch.softmax(x, dim=-1))
+        main.get_probs = MagicMock(side_effect=lambda x, sampling: torch.softmax(x, dim=-1))
         main.sample = MagicMock(
             return_value=(torch.tensor([draft_token]), torch.softmax(torch.zeros(vocab_size), dim=-1))
         )
@@ -680,7 +694,7 @@ class TestStopTokenCacheTruncation:
         cache = KVCache(1)
         input_ids = [1, 2, 3]
 
-        result = list(spec_gen.generate(input_ids, cache, stop_token_ids={stop_token}, max_tokens=100))
+        result = list(spec_gen.generate(input_ids, cache, GREEDY, stop_token_ids={stop_token}, max_tokens=100))
 
         # Should yield draft_token, draft_token (then stop_token halts without yielding)
         assert stop_token not in result
@@ -700,9 +714,9 @@ class TestStopTokenCacheTruncation:
         stop_token = 50
         draft_token = 10
 
-        draft = make_mock_generator(temperature=0.0, top_p=1.0)
-        main = make_mock_generator(temperature=0.0, top_p=1.0)
-        spec_gen = SpeculativeGenerator(
+        draft = make_mock_generator()
+        main = make_mock_generator()
+        spec_gen = SpeculativeBackend(
             draft=draft, main=main, num_layers=1, speculative_tokens=3,
         )
 
@@ -722,7 +736,7 @@ class TestStopTokenCacheTruncation:
             return logits
 
         main.forward = mock_main_forward
-        main.get_probs = MagicMock(side_effect=lambda x: torch.softmax(x, dim=-1))
+        main.get_probs = MagicMock(side_effect=lambda x, sampling: torch.softmax(x, dim=-1))
         main.sample = MagicMock(
             return_value=(torch.tensor([stop_token]), torch.softmax(torch.zeros(vocab_size), dim=-1))
         )
@@ -730,7 +744,7 @@ class TestStopTokenCacheTruncation:
         cache = KVCache(1)
         input_ids = [1, 2, 3]
 
-        list(spec_gen.generate(input_ids, cache, stop_token_ids={stop_token}, max_tokens=100))
+        list(spec_gen.generate(input_ids, cache, GREEDY, stop_token_ids={stop_token}, max_tokens=100))
 
         # After stop token on first draft, no tokens yielded.
         # Main cache had: input_ids[3] + stop_token[1] = 4 entries from forward.
@@ -746,9 +760,9 @@ class TestStopTokenCacheTruncation:
         draft_token = 10
 
         spec_tokens = 2
-        draft = make_mock_generator(temperature=0.0, top_p=1.0)
-        main = make_mock_generator(temperature=0.0, top_p=1.0)
-        spec_gen = SpeculativeGenerator(
+        draft = make_mock_generator()
+        main = make_mock_generator()
+        spec_gen = SpeculativeBackend(
             draft=draft, main=main, num_layers=1, speculative_tokens=spec_tokens,
         )
 
@@ -783,7 +797,7 @@ class TestStopTokenCacheTruncation:
             return logits
 
         main.forward = mock_main_forward
-        main.get_probs = MagicMock(side_effect=lambda x: torch.softmax(x, dim=-1))
+        main.get_probs = MagicMock(side_effect=lambda x, sampling: torch.softmax(x, dim=-1))
         main.sample = MagicMock(
             return_value=(torch.tensor([draft_token]), torch.softmax(torch.zeros(vocab_size), dim=-1))
         )
@@ -792,7 +806,7 @@ class TestStopTokenCacheTruncation:
 
         # Turn 1
         input_ids_1 = [1, 2, 3]
-        result_1 = list(spec_gen.generate(input_ids_1, cache, stop_token_ids={stop_token}, max_tokens=100))
+        result_1 = list(spec_gen.generate(input_ids_1, cache, GREEDY, stop_token_ids={stop_token}, max_tokens=100))
 
         pos_after_turn_1 = cache.position
         draft_pos_after_turn_1 = spec_gen.draft_cache.position
@@ -805,7 +819,7 @@ class TestStopTokenCacheTruncation:
         # Turn 2: new input appended to existing cache
         spec_gen.reset_stats()
         input_ids_2 = [4, 5, 6]
-        result_2 = list(spec_gen.generate(input_ids_2, cache, stop_token_ids={stop_token}, max_tokens=100))
+        result_2 = list(spec_gen.generate(input_ids_2, cache, GREEDY, stop_token_ids={stop_token}, max_tokens=100))
 
         pos_after_turn_2 = cache.position
         draft_pos_after_turn_2 = spec_gen.draft_cache.position
@@ -819,9 +833,9 @@ class TestStopTokenCacheTruncation:
 class TestMaxTokensCap:
     def test_max_tokens_not_exceeded(self):
         """generate() should never yield more than max_tokens."""
-        draft = make_mock_generator(temperature=0.0, top_p=1.0)
-        main = make_mock_generator(temperature=0.0, top_p=1.0)
-        spec_gen = SpeculativeGenerator(
+        draft = make_mock_generator()
+        main = make_mock_generator()
+        spec_gen = SpeculativeBackend(
             draft=draft, main=main, num_layers=1, speculative_tokens=10,
         )
 
@@ -844,7 +858,7 @@ class TestMaxTokensCap:
             return logits
 
         main.forward = mock_main_forward
-        main.get_probs = MagicMock(side_effect=lambda x: torch.softmax(x, dim=-1))
+        main.get_probs = MagicMock(side_effect=lambda x, sampling: torch.softmax(x, dim=-1))
         main.sample = MagicMock(
             return_value=(torch.tensor([draft_token]), torch.softmax(torch.zeros(vocab_size), dim=-1))
         )
@@ -857,6 +871,7 @@ class TestMaxTokensCap:
             spec_gen.generate(
                 input_ids=[1, 2, 3],
                 cache=cache,
+                sampling=GREEDY,
                 stop_token_ids={999},
                 max_tokens=3,
             )

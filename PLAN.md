@@ -74,11 +74,14 @@ afternoon's work, not a rewrite.
 
 **Refactors:**
 
-- `ModelRuntime` abstraction owning weights, tokenizer, device, dtype, cache pool.
-  `SequentialEngine(runtime)` replaces `SequentialEngine(generator_factory, config)`.
-  Today `SequentialEngine.submit` instantiates a fresh
+- `ModelRuntime` abstraction owning weights, tokenizer, device, dtype, cache pool, and an
+  `InferenceBackend` (the `StandardBackend` / `SpeculativeBackend` Protocol already
+  landed pre-phase — see `src/cantollm/engine/backend.py`). `SequentialEngine(runtime)`
+  replaces `SequentialEngine(backend, config)`; the runtime composes the backend rather
+  than replacing it. Today `SequentialEngine.submit` instantiates a fresh
   `KVCache(config["num_transformers"])` per request — fine for sequential, a non-starter
-  for batching.
+  for batching; moving cache ownership into `ModelRuntime.new_cache()` is the headline
+  change in this bullet.
 - `ModelSpec` extracted from the inline `MODEL_CONFIGS` dict in `main.py:32`. A spec is a
   single declarative record per model (arch params, dtype, weight loader, tokenizer class,
   chat-template flavor) that the registry consumes. CLI stays, but it constructs runtimes

@@ -3,12 +3,13 @@ from collections.abc import Iterator
 
 import torch
 
-from cantollm.generator import TokenGenerator
+from cantollm.engine.types import SamplingParams
+from cantollm.standard import StandardBackend
 from cantollm.kv_cache import KVCache
 from cantollm.stats import SpeculativeStats
 
 
-class SpeculativeGenerator:
+class SpeculativeBackend:
     """Speculative decoding using draft and main models.
 
     Owns its own draft KV cache internally.
@@ -16,8 +17,8 @@ class SpeculativeGenerator:
 
     def __init__(
         self,
-        draft: TokenGenerator,
-        main: TokenGenerator,
+        draft: StandardBackend,
+        main: StandardBackend,
         num_layers: int,
         draft_num_layers: int | None = None,
         speculative_tokens: int = 10,
@@ -51,7 +52,11 @@ class SpeculativeGenerator:
 
     @torch.inference_mode()
     def generate_draft_tokens(
-        self, input_tokens: list[int], num_tokens: int, stop_token_ids: set[int]
+        self,
+        input_tokens: list[int],
+        num_tokens: int,
+        sampling: SamplingParams,
+        stop_token_ids: set[int],
     ):
         """Generate num_tokens draft predictions starting from input_tokens.
 
@@ -61,6 +66,7 @@ class SpeculativeGenerator:
         Args:
             input_tokens: Tokens to process (prompt for first call, continuation tokens after)
             num_tokens: Number of draft tokens to generate
+            sampling: Per-request sampling parameters
             stop_token_ids: Stop generation early if any of these are produced
 
         Returns:
@@ -72,7 +78,7 @@ class SpeculativeGenerator:
 
         for _ in range(num_tokens):
             logits = self.draft.forward(current_input, self.draft_cache, self.draft_cache.position)
-            token_id, token_probs = self.draft.sample(logits[:, -1])
+            token_id, token_probs = self.draft.sample(logits[:, -1], sampling)
             token_int = token_id.item()
             tokens.append(token_int)
             probs.append(token_probs.squeeze(0))
@@ -88,6 +94,7 @@ class SpeculativeGenerator:
         draft_tokens: tuple[int, ...],
         draft_probs: tuple[torch.Tensor, ...],
         main_probs: torch.Tensor,
+        sampling: SamplingParams,
     ) -> list[int]:
         """Determine which draft tokens to accept.
 
@@ -101,7 +108,7 @@ class SpeculativeGenerator:
         # tokens iff they match main's argmax. The stochastic rule below still
         # gives correct behavior, but wastes draft tokens when p_draft < 1 at
         # positions where the draft happened to agree with main's argmax.
-        if self.main.temperature == 0:
+        if sampling.temperature == 0:
             accepted = []
             main_argmax = torch.argmax(main_probs, dim=-1)
             for i, token in enumerate(draft_tokens):
@@ -133,8 +140,10 @@ class SpeculativeGenerator:
         self,
         input_ids: list[int],
         cache: KVCache,
+        sampling: SamplingParams,
         stop_token_ids: set[int],
         max_tokens: int,
+        stop_event: threading.Event | None = None,
     ) -> Iterator[int]:
         """
         Here is the speculative generation algorithm:
@@ -142,13 +151,13 @@ class SpeculativeGenerator:
         0) enter loop
         1) generate a run of speculative tokens using the draft model
            (first iteration also prefills draft kv cache)
-        2) run main model on draft tokens in one inference operation to verify 
+        2) run main model on draft tokens in one inference operation to verify
            (first iteration also prefills main kv cache)
         3) for each draft token, compare main's probability vs draft's probability
         4) accept draft token with probability min(1, p_main / p_draft), otherwise reject
         5) the first time there is a reject, we stop, and sample from main at that point
            as that token will be a valid prediction for main.
-           NB: sampling from main here ensures that if there are N accepts, we can yield 
+           NB: sampling from main here ensures that if there are N accepts, we can yield
            N+1 tokens (so 0 accepts, we still have a token)
            If there are no rejects, we sample from main at the last token.
         6) yield those N+1 tokens up (unless we hit a stop token, then return)
@@ -162,15 +171,12 @@ class SpeculativeGenerator:
         draft_input = input_ids
         main_prefix = input_ids
         tokens_yielded = 0
-        stop_event = getattr(self.main, "stop_event", None)
-        if not isinstance(stop_event, threading.Event):
-            stop_event = None
 
         while tokens_yielded < max_tokens:
             if stop_event is not None and stop_event.is_set():
                 return
             draft_tokens, draft_probs = self.generate_draft_tokens(
-                draft_input, self.speculative_tokens, stop_token_ids
+                draft_input, self.speculative_tokens, sampling, stop_token_ids
             )
             self._draft_proposed += len(draft_tokens)
             self._iterations += 1
@@ -182,13 +188,15 @@ class SpeculativeGenerator:
             main_logits = self.main.forward(main_input, cache, cache.position)[0]
             # Slice to verification positions: position i verifies draft[i]
             verify_logits = main_logits[len(main_prefix) - 1:]
-            main_probs = self.main.get_probs(verify_logits)
+            main_probs = self.main.get_probs(verify_logits, sampling)
 
-            accepted_tokens = self._verify_draft_tokens(draft_tokens, draft_probs, main_probs)
+            accepted_tokens = self._verify_draft_tokens(
+                draft_tokens, draft_probs, main_probs, sampling
+            )
             self._draft_accepted += len(accepted_tokens)
 
             # Sample next token from main at first rejection point (or after all accepted)
-            main_tail_token, _ = self.main.sample(verify_logits[len(accepted_tokens)])
+            main_tail_token, _ = self.main.sample(verify_logits[len(accepted_tokens)], sampling)
             main_tail_token = main_tail_token.item()
 
             # Yield tokens, respecting max_tokens budget

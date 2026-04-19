@@ -4,6 +4,7 @@ import asyncio
 import threading
 from collections.abc import AsyncIterator
 
+from cantollm.engine.backend import InferenceBackend
 from cantollm.engine.types import InferenceRequest, TokenEvent
 from cantollm.kv_cache import KVCache
 
@@ -11,15 +12,15 @@ _QUEUE_MAXSIZE = 256
 
 
 class SequentialEngine:
-    """Runs one request at a time through the existing TokenGenerator.
+    """Runs one request at a time through an InferenceBackend.
 
     Generation is synchronous torch work, so we dispatch it to a worker thread
     and bridge its output into a bounded asyncio.Queue. Each active request
-    has a threading.Event that the generator checks per step; abort() sets it.
+    has a threading.Event that the backend checks per step; abort() sets it.
     """
 
-    def __init__(self, generator_factory, config):
-        self.generator_factory = generator_factory
+    def __init__(self, backend: InferenceBackend, config):
+        self.backend = backend
         self.config = config
         self._active: dict[str, threading.Event] = {}
 
@@ -53,22 +54,14 @@ class SequentialEngine:
         def run():
             try:
                 cache = KVCache(self.config["num_transformers"])
-                gen = self.generator_factory(
-                    req.sampling_params.temperature,
-                    req.sampling_params.top_p,
-                )
-                # Let the generator (or its main generator, for speculative)
-                # observe cancellation between steps.
-                if hasattr(gen, "stop_event"):
-                    gen.stop_event = stop_event
-                elif hasattr(gen, "main") and hasattr(gen.main, "stop_event"):
-                    gen.main.stop_event = stop_event
-
-                for tok in gen.generate(
+                self.backend.reset()
+                for tok in self.backend.generate(
                     input_ids=req.prompt_token_ids,
                     cache=cache,
+                    sampling=req.sampling_params,
                     stop_token_ids=req.stop_token_ids,
                     max_tokens=req.max_tokens,
+                    stop_event=stop_event,
                 ):
                     put_threadsafe(TokenEvent(token_id=tok))
                     if stop_event.is_set():
