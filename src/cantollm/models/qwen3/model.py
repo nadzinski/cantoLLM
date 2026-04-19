@@ -178,9 +178,7 @@ class GroupedQueryAttention(nn.Module):
         # going to be 1 row or a few rows
         attn = torch.einsum("bighd,bjgd->bghij", queries_roped, full_keys)
 
-        full_seq_len = start_pos + seq_len
-        reduced_mask = mask[start_pos:full_seq_len, :full_seq_len]
-        masked_attn = attn.masked_fill(reduced_mask, -float("inf"))
+        masked_attn = attn.masked_fill(mask, -float("inf"))
         attn_weights = torch.softmax(masked_attn / self.head_dim**0.5, dim=-1)
 
         # Weighted sum of values, *and* rearrange dims to get ready to stitch heads together
@@ -259,7 +257,6 @@ class Qwen3(nn.Module):
 
         max_seq_len = qwen3_config["max_seq_len"]
         head_dim = qwen3_config["head_dim"]
-        self.register_buffer("mask", torch.ones(max_seq_len, max_seq_len).tril() == 0)
         freqs_cis = precompute_freqs_cis(head_dim, max_seq_len)
         self.register_buffer("freqs_cis", freqs_cis)
 
@@ -289,9 +286,18 @@ class Qwen3(nn.Module):
 
         x = self.initial_embedding_layer(tokens)
 
+        # Build the causal mask for this forward only — shape matches what
+        # attention will slice out, so we pay the same peak memory as the old
+        # preallocated slice but don't sit on a 40k x 40k buffer between calls.
+        seq_len = tokens.shape[-1]
+        full_seq_len = start_pos + seq_len
+        mask = torch.ones(
+            seq_len, full_seq_len, dtype=torch.bool, device=tokens.device
+        ).triu(diagonal=start_pos + 1)
+
         for i, transformer in enumerate(self.transformer_blocks):
             layer_cache = kv_cache[i] if kv_cache is not None else None
-            x = transformer(x, start_pos, self.mask, self.freqs_cis, kv_cache=layer_cache)
+            x = transformer(x, start_pos, mask, self.freqs_cis, kv_cache=layer_cache)
 
         x = self.output_RMSNorm(x)
         output = self.output_layer(x)

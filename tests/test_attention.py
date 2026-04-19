@@ -6,8 +6,14 @@ from cantollm.models.rope import precompute_freqs_cis
 MAX_SEQ_LEN = 128
 
 
+def _causal_mask(start_pos: int, seq_len: int) -> torch.Tensor:
+    """Build the pre-sliced causal mask GQA expects: shape [seq_len, start_pos+seq_len]."""
+    full_seq_len = start_pos + seq_len
+    return torch.ones(seq_len, full_seq_len, dtype=torch.bool).triu(diagonal=start_pos + 1)
+
+
 def _make_gqa(embedding_dim, num_heads, num_groups, head_dim=None):
-    """Create a GQA module with mask and freqs for testing."""
+    """Create a GQA module and freqs for testing. Mask is built per-call via `_causal_mask`."""
     if head_dim is None:
         head_dim = embedding_dim // num_heads
     gqa = GroupedQueryAttention(
@@ -16,9 +22,8 @@ def _make_gqa(embedding_dim, num_heads, num_groups, head_dim=None):
         num_groups=num_groups,
         head_dim=head_dim,
     )
-    mask = torch.ones(MAX_SEQ_LEN, MAX_SEQ_LEN).tril() == 0
     freqs_cis = precompute_freqs_cis(head_dim, MAX_SEQ_LEN)
-    return gqa, mask, freqs_cis
+    return gqa, freqs_cis
 
 
 def test_gqa_output_shape():
@@ -29,10 +34,10 @@ def test_gqa_output_shape():
     num_heads = 8
     num_groups = 4
 
-    gqa, mask, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
+    gqa, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
 
     x = torch.randn(batch_size, seq_len, embedding_dim)
-    output = gqa(x, start_pos=0, mask=mask, freqs_cis=freqs_cis)
+    output = gqa(x, start_pos=0, mask=_causal_mask(0, seq_len), freqs_cis=freqs_cis)
 
     assert output.shape == (batch_size, seq_len, embedding_dim)
 
@@ -42,20 +47,21 @@ def test_gqa_different_configurations():
     batch_size = 1
     seq_len = 4
     embedding_dim = 32
+    mask = _causal_mask(0, seq_len)
 
     # Test 1: 8 heads, 4 groups (2 heads per group)
-    gqa1, mask, freqs_cis = _make_gqa(embedding_dim, num_heads=8, num_groups=4)
+    gqa1, freqs_cis = _make_gqa(embedding_dim, num_heads=8, num_groups=4)
     x = torch.randn(batch_size, seq_len, embedding_dim)
     out1 = gqa1(x, start_pos=0, mask=mask, freqs_cis=freqs_cis)
     assert out1.shape == x.shape
 
     # Test 2: 4 heads, 1 group (MQA - multi-query attention)
-    gqa2, mask, freqs_cis = _make_gqa(embedding_dim, num_heads=4, num_groups=1)
+    gqa2, freqs_cis = _make_gqa(embedding_dim, num_heads=4, num_groups=1)
     out2 = gqa2(x, start_pos=0, mask=mask, freqs_cis=freqs_cis)
     assert out2.shape == x.shape
 
     # Test 3: 4 heads, 4 groups (standard multi-head attention)
-    gqa3, mask, freqs_cis = _make_gqa(embedding_dim, num_heads=4, num_groups=4)
+    gqa3, freqs_cis = _make_gqa(embedding_dim, num_heads=4, num_groups=4)
     out3 = gqa3(x, start_pos=0, mask=mask, freqs_cis=freqs_cis)
     assert out3.shape == x.shape
 
@@ -68,8 +74,9 @@ def test_gqa_causal_masking():
     num_heads = 4
     num_groups = 2
 
-    gqa, mask, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
+    gqa, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
     gqa.eval()
+    mask = _causal_mask(0, seq_len)
 
     # Create input where each position has a unique pattern
     x = torch.zeros(batch_size, seq_len, embedding_dim)
@@ -95,11 +102,11 @@ def test_gqa_with_kv_cache():
     num_heads = 4
     num_groups = 2
 
-    gqa, mask, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
+    gqa, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
 
     x = torch.randn(1, 4, embedding_dim)
     kv_cache = {"keys": None, "values": None}
-    output = gqa(x, start_pos=0, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
+    output = gqa(x, start_pos=0, mask=_causal_mask(0, 4), freqs_cis=freqs_cis, kv_cache=kv_cache)
 
     assert output.shape == x.shape
     assert kv_cache["keys"] is not None
@@ -108,7 +115,7 @@ def test_gqa_with_kv_cache():
 
 def test_gqa_learnable_parameters():
     """Test that GQA has learnable parameters."""
-    gqa, _, _ = _make_gqa(embedding_dim=32, num_heads=4, num_groups=2)
+    gqa, _ = _make_gqa(embedding_dim=32, num_heads=4, num_groups=2)
 
     assert gqa.W_q.weight.requires_grad
     assert gqa.W_k.weight.requires_grad
@@ -126,7 +133,7 @@ def test_kv_cache_incremental_matches_full():
     num_heads = 4
     num_groups = 2
 
-    gqa, mask, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
+    gqa, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
     gqa.eval()
 
     # Create a sequence of 4 tokens
@@ -134,16 +141,16 @@ def test_kv_cache_incremental_matches_full():
 
     with torch.no_grad():
         # Run full sequence without cache
-        output_full = gqa(x_full, start_pos=0, mask=mask, freqs_cis=freqs_cis, kv_cache=None)
+        output_full = gqa(x_full, start_pos=0, mask=_causal_mask(0, 4), freqs_cis=freqs_cis, kv_cache=None)
 
         # Run incrementally with cache
         kv_cache = {"keys": None, "values": None}
 
         # First: process tokens 0, 1, 2 (the "prompt")
-        output_prompt = gqa(x_full[:, :3, :], start_pos=0, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
+        output_prompt = gqa(x_full[:, :3, :], start_pos=0, mask=_causal_mask(0, 3), freqs_cis=freqs_cis, kv_cache=kv_cache)
 
         # Then: process just token 3
-        output_last = gqa(x_full[:, 3:, :], start_pos=3, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
+        output_last = gqa(x_full[:, 3:, :], start_pos=3, mask=_causal_mask(3, 1), freqs_cis=freqs_cis, kv_cache=kv_cache)
 
     # The last token's output should match between full and incremental
     assert torch.allclose(output_full[:, 3, :], output_last[:, 0, :], atol=1e-5)
@@ -159,7 +166,7 @@ def test_kv_cache_output_shape_incremental():
     num_heads = 4
     num_groups = 2
 
-    gqa, mask, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
+    gqa, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
     gqa.eval()
 
     kv_cache = {"keys": None, "values": None}
@@ -167,12 +174,12 @@ def test_kv_cache_output_shape_incremental():
     with torch.no_grad():
         # First pass: prompt of 3 tokens
         prompt = torch.randn(batch_size, 3, embedding_dim)
-        output1 = gqa(prompt, start_pos=0, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
+        output1 = gqa(prompt, start_pos=0, mask=_causal_mask(0, 3), freqs_cis=freqs_cis, kv_cache=kv_cache)
         assert output1.shape == (batch_size, 3, embedding_dim)
 
         # Second pass: just 1 new token
         new_token = torch.randn(batch_size, 1, embedding_dim)
-        output2 = gqa(new_token, start_pos=3, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
+        output2 = gqa(new_token, start_pos=3, mask=_causal_mask(3, 1), freqs_cis=freqs_cis, kv_cache=kv_cache)
         assert output2.shape == (batch_size, 1, embedding_dim)
 
 
@@ -183,8 +190,9 @@ def test_kv_cache_fresh_cache_matches_no_cache():
     num_heads = 4
     num_groups = 2
 
-    gqa, mask, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
+    gqa, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
     gqa.eval()
+    mask = _causal_mask(0, 4)
 
     x = torch.randn(batch_size, 4, embedding_dim)
 
@@ -204,7 +212,7 @@ def test_kv_cache_multiple_incremental_steps():
     num_heads = 4
     num_groups = 2
 
-    gqa, mask, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
+    gqa, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
     gqa.eval()
 
     # Create a sequence of 4 tokens
@@ -212,15 +220,15 @@ def test_kv_cache_multiple_incremental_steps():
 
     with torch.no_grad():
         # Run full sequence without cache
-        output_full = gqa(x_full, start_pos=0, mask=mask, freqs_cis=freqs_cis, kv_cache=None)
+        output_full = gqa(x_full, start_pos=0, mask=_causal_mask(0, 4), freqs_cis=freqs_cis, kv_cache=None)
 
         # Run incrementally: one token at a time
         kv_cache = {"keys": None, "values": None}
 
-        _ = gqa(x_full[:, :1, :], start_pos=0, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
-        _ = gqa(x_full[:, 1:2, :], start_pos=1, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
-        _ = gqa(x_full[:, 2:3, :], start_pos=2, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
-        output_last = gqa(x_full[:, 3:, :], start_pos=3, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
+        _ = gqa(x_full[:, :1, :], start_pos=0, mask=_causal_mask(0, 1), freqs_cis=freqs_cis, kv_cache=kv_cache)
+        _ = gqa(x_full[:, 1:2, :], start_pos=1, mask=_causal_mask(1, 1), freqs_cis=freqs_cis, kv_cache=kv_cache)
+        _ = gqa(x_full[:, 2:3, :], start_pos=2, mask=_causal_mask(2, 1), freqs_cis=freqs_cis, kv_cache=kv_cache)
+        output_last = gqa(x_full[:, 3:, :], start_pos=3, mask=_causal_mask(3, 1), freqs_cis=freqs_cis, kv_cache=kv_cache)
 
     assert torch.allclose(output_full[:, 3, :], output_last[:, 0, :], atol=1e-5)
 
@@ -232,22 +240,22 @@ def test_kv_cache_chunk_of_new_tokens():
     num_heads = 4
     num_groups = 2
 
-    gqa, mask, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
+    gqa, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
     gqa.eval()
 
     # Create a sequence of 6 tokens
     x_full = torch.randn(batch_size, 6, embedding_dim)
 
     with torch.no_grad():
-        output_full = gqa(x_full, start_pos=0, mask=mask, freqs_cis=freqs_cis, kv_cache=None)
+        output_full = gqa(x_full, start_pos=0, mask=_causal_mask(0, 6), freqs_cis=freqs_cis, kv_cache=None)
 
         kv_cache = {"keys": None, "values": None}
 
         # Process first 3 tokens
-        output_prompt = gqa(x_full[:, :3, :], start_pos=0, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
+        output_prompt = gqa(x_full[:, :3, :], start_pos=0, mask=_causal_mask(0, 3), freqs_cis=freqs_cis, kv_cache=kv_cache)
 
         # Process last 3 tokens as a chunk
-        output_chunk = gqa(x_full[:, 3:, :], start_pos=3, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
+        output_chunk = gqa(x_full[:, 3:, :], start_pos=3, mask=_causal_mask(3, 3), freqs_cis=freqs_cis, kv_cache=kv_cache)
 
     assert torch.allclose(output_full[:, :3, :], output_prompt, atol=1e-5)
     assert output_chunk.shape == (batch_size, 3, embedding_dim)
@@ -261,20 +269,20 @@ def test_kv_cache_single_token_prompt():
     num_heads = 4
     num_groups = 2
 
-    gqa, mask, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
+    gqa, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
     gqa.eval()
 
     x_full = torch.randn(batch_size, 4, embedding_dim)
 
     with torch.no_grad():
-        output_full = gqa(x_full, start_pos=0, mask=mask, freqs_cis=freqs_cis, kv_cache=None)
+        output_full = gqa(x_full, start_pos=0, mask=_causal_mask(0, 4), freqs_cis=freqs_cis, kv_cache=None)
 
         kv_cache = {"keys": None, "values": None}
 
-        output_0 = gqa(x_full[:, :1, :], start_pos=0, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
-        output_1 = gqa(x_full[:, 1:2, :], start_pos=1, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
-        output_2 = gqa(x_full[:, 2:3, :], start_pos=2, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
-        output_3 = gqa(x_full[:, 3:, :], start_pos=3, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
+        output_0 = gqa(x_full[:, :1, :], start_pos=0, mask=_causal_mask(0, 1), freqs_cis=freqs_cis, kv_cache=kv_cache)
+        output_1 = gqa(x_full[:, 1:2, :], start_pos=1, mask=_causal_mask(1, 1), freqs_cis=freqs_cis, kv_cache=kv_cache)
+        output_2 = gqa(x_full[:, 2:3, :], start_pos=2, mask=_causal_mask(2, 1), freqs_cis=freqs_cis, kv_cache=kv_cache)
+        output_3 = gqa(x_full[:, 3:, :], start_pos=3, mask=_causal_mask(3, 1), freqs_cis=freqs_cis, kv_cache=kv_cache)
 
     assert torch.allclose(output_full[:, 0, :], output_0[:, 0, :], atol=1e-5)
     assert torch.allclose(output_full[:, 1, :], output_1[:, 0, :], atol=1e-5)
@@ -290,8 +298,9 @@ def test_gqa_multiple_batches():
     num_heads = 4
     num_groups = 2
 
-    gqa, mask, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
+    gqa, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
     gqa.eval()
+    mask = _causal_mask(0, seq_len)
 
     x = torch.randn(batch_size, seq_len, embedding_dim)
 
@@ -313,18 +322,18 @@ def test_kv_cache_multiple_batches():
     num_heads = 4
     num_groups = 2
 
-    gqa, mask, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
+    gqa, freqs_cis = _make_gqa(embedding_dim, num_heads, num_groups)
     gqa.eval()
 
     x_full = torch.randn(batch_size, 6, embedding_dim)
 
     with torch.no_grad():
-        output_full = gqa(x_full, start_pos=0, mask=mask, freqs_cis=freqs_cis, kv_cache=None)
+        output_full = gqa(x_full, start_pos=0, mask=_causal_mask(0, 6), freqs_cis=freqs_cis, kv_cache=None)
 
         kv_cache = {"keys": None, "values": None}
 
-        output_prompt = gqa(x_full[:, :3, :], start_pos=0, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
-        output_rest = gqa(x_full[:, 3:, :], start_pos=3, mask=mask, freqs_cis=freqs_cis, kv_cache=kv_cache)
+        output_prompt = gqa(x_full[:, :3, :], start_pos=0, mask=_causal_mask(0, 3), freqs_cis=freqs_cis, kv_cache=kv_cache)
+        output_rest = gqa(x_full[:, 3:, :], start_pos=3, mask=_causal_mask(3, 3), freqs_cis=freqs_cis, kv_cache=kv_cache)
 
     assert torch.allclose(output_full[:, :3, :], output_prompt, atol=1e-5)
     assert output_rest.shape == (batch_size, 3, embedding_dim)
