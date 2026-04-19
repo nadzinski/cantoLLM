@@ -60,7 +60,6 @@ first → feature work → hardware → what falls out.
   those metrics (ITL, finish reasons, KV utilization) require the `TokenEvent` widening in
   Phase 1a and the scheduler in Phase 2 before they're actually instrumentable — the spec
   names them; the instrumentation lands across phases as the contract grows.
-- Add `uvloop` + `httptools` to uvicorn config. One-line perf win, zero risk.
 
 **Hardware:** Mac.
 
@@ -228,7 +227,9 @@ right on a correctness-first attention path, then optimizing the mature target.
   established in Phase 1a — this is exactly the phase where that decision pays off,
   because the scheduler loop in the engine process now has something real to protect. Fix
   the `put_nowait` backpressure edge case at the new IPC boundary while we're rebuilding
-  it.
+  it. Switch uvicorn to `uvloop` + `httptools` as part of the split — the API is now
+  serving many concurrent streams and wants the faster loop before this phase's
+  end-of-phase benchmark locks in the baseline that Phase 3 will measure against.
 - **Scheduler**: FCFS waiting queue, running set, per-step token budget. Decode requests
   prioritized; prefill requests pulled in when budget allows.
 - **Batched forward pass**: `model.py`'s `batches` dim is already plumbed through —
