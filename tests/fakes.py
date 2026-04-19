@@ -91,6 +91,9 @@ class FakeRegistry:
     def names(self) -> list[str]:
         return list(self._entries)
 
+    def items(self):
+        return self._entries.items()
+
     async def start_all(self) -> None:
         for entry in self._entries.values():
             await entry.runtime.start()
@@ -106,6 +109,7 @@ class FakeRegistry:
 class _FakeEntry:
     engine: "FakeEngine"
     runtime: FakeRuntime
+    registered_at: float = 0.0
 
 
 @dataclass

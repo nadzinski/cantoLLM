@@ -80,7 +80,7 @@ class ChatClient:
     """Client for the Anthropic-compatible Messages API with streaming SSE support."""
 
     def __init__(self, base_url: str, temperature: float = 0.7, top_p: float = 0.9,
-                 max_tokens: int = 2048, model: str = "qwen3",
+                 max_tokens: int = 2048, model: str | None = None,
                  show_thinking: bool = False, quiet: bool = False):
         self.base_url = base_url.rstrip("/")
         self.temperature = temperature
@@ -90,6 +90,17 @@ class ChatClient:
         self.show_thinking = show_thinking
         self.quiet = quiet
         self.messages: list[dict] = []
+
+    def fetch_model(self) -> str:
+        """GET /v1/models and set self.model to the first entry. Returns the id."""
+        url = f"{self.base_url}/v1/models"
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            body = json.loads(resp.read())
+        data = body.get("data", [])
+        if not data:
+            raise RuntimeError(f"Server at {self.base_url} has no registered models")
+        self.model = data[0]["id"]
+        return self.model
 
     def reset(self):
         """Clear conversation history."""
@@ -319,13 +330,14 @@ def run_client(base_url: str, temperature: float = 0.7, top_p: float = 0.9,
     client = ChatClient(base_url, temperature=temperature, top_p=top_p,
                         max_tokens=max_tokens, show_thinking=show_thinking)
 
-    # Check server health
+    # Check server health and discover the model
     try:
         url = f"{base_url.rstrip('/')}/health"
         with urllib.request.urlopen(url, timeout=5) as resp:
             if resp.status != 200:
                 print(f"Server at {base_url} returned status {resp.status}")
                 return
+        client.fetch_model()
     except Exception as e:
         print(f"Cannot connect to server at {base_url}: {e}")
         return
@@ -335,6 +347,7 @@ def run_client(base_url: str, temperature: float = 0.7, top_p: float = 0.9,
     print(f"\n{sep}")
     print(f"  {Colors.TITLE}CantoLLM Chat Client{Colors.RESET}")
     print(f"  Server:      {base_url}")
+    print(f"  Model:       {client.model}")
     print(f"  Temperature: {temperature}  Top-p: {top_p}  Max tokens: {max_tokens}")
     print(f"{sep}")
     print("  Type 'quit' or 'exit' to end, 'reset' to clear history.\n")

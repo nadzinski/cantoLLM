@@ -39,6 +39,23 @@ class MessagesRequest(BaseModel):
     stream: bool = False
 
 
+# ── Models listing ────────────────────────────────────────────────────
+
+
+class ModelInfo(BaseModel):
+    type: Literal["model"] = "model"
+    id: str
+    display_name: str
+    created_at: str
+
+
+class ModelListResponse(BaseModel):
+    data: list[ModelInfo]
+    has_more: bool = False
+    first_id: str | None = None
+    last_id: str | None = None
+
+
 # ── Response: content blocks ──────────────────────────────────────────
 
 

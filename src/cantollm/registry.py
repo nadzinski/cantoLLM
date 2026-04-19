@@ -8,7 +8,8 @@ route through the registry, not through a hardcoded closure.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 
 from cantollm.engine.engine import InferenceEngine
 from cantollm.runtime import ModelRuntime
@@ -18,6 +19,7 @@ from cantollm.runtime import ModelRuntime
 class RegistryEntry:
     engine: InferenceEngine
     runtime: ModelRuntime
+    registered_at: float = field(default_factory=time.time)
 
 
 class EngineRegistry:
@@ -34,6 +36,9 @@ class EngineRegistry:
 
     def names(self) -> list[str]:
         return list(self._entries)
+
+    def items(self):
+        return self._entries.items()
 
     async def start_all(self) -> None:
         for entry in self._entries.values():

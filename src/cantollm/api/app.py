@@ -2,12 +2,17 @@
 
 import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 
 from cantollm.api.anthropic_adapter import render_message, render_sse
-from cantollm.api.anthropic_types import MessagesRequest
+from cantollm.api.anthropic_types import (
+    MessagesRequest,
+    ModelInfo,
+    ModelListResponse,
+)
 from cantollm.engine.types import InferenceRequest, SamplingParams
 from cantollm.registry import EngineRegistry
 
@@ -40,6 +45,26 @@ def create_app(registry: EngineRegistry) -> FastAPI:
     @app.get("/health")
     async def health():
         return {"status": "ok"}
+
+    @app.get("/v1/models", response_model=ModelListResponse)
+    async def list_models():
+        names = registry.names()
+        data = [
+            ModelInfo(
+                id=name,
+                display_name=name,
+                created_at=datetime.fromtimestamp(
+                    entry.registered_at, tz=timezone.utc
+                ).isoformat().replace("+00:00", "Z"),
+            )
+            for name, entry in registry.items()
+        ]
+        return ModelListResponse(
+            data=data,
+            has_more=False,
+            first_id=names[0] if names else None,
+            last_id=names[-1] if names else None,
+        )
 
     @app.post("/v1/messages")
     async def messages(body: MessagesRequest):

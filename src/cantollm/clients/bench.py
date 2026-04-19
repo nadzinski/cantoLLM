@@ -62,6 +62,7 @@ def _run_one(
     temperature: float,
     top_p: float,
     max_tokens: int,
+    model: str,
     verbose: bool,
     print_lock: threading.Lock,
 ) -> BenchResult:
@@ -72,6 +73,7 @@ def _run_one(
         temperature=temperature,
         top_p=top_p,
         max_tokens=max_tokens,
+        model=model,
         quiet=True,
     )
 
@@ -222,6 +224,13 @@ def run_bench(
         print(f"Cannot connect to server at {url}: {err}")
         return
 
+    try:
+        probe = ChatClient(base_url=url, quiet=True)
+        model = probe.fetch_model()
+    except Exception as e:
+        print(f"Cannot discover model from {url}: {e}")
+        return
+
     path = Path(prompts_path)
     if not path.exists():
         print(f"Prompts file not found: {prompts_path}")
@@ -243,7 +252,7 @@ def run_bench(
             submit_time = time.perf_counter()
             fut = pool.submit(
                 _run_one, i, prompt, submit_time, url,
-                temperature, top_p, max_tokens, verbose, print_lock,
+                temperature, top_p, max_tokens, model, verbose, print_lock,
             )
             futures.append(fut)
 
