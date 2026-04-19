@@ -252,5 +252,5 @@ async def render_sse(
         # Let the producer finalize (e.g. abort the engine via its finally block).
         try:
             await producer
-        except (asyncio.CancelledError, BaseException):
+        except BaseException:
             pass
