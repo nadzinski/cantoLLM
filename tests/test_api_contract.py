@@ -498,5 +498,77 @@ def test_validation_rejects_bad_requests():
     assert (s1, s2, s3) == (422, 422, 422)
 
 
+# ── Tokenization runs on a thread pool (doesn't serialize the event loop) ──
+
+
+class _SlowTokenizer(FakeTokenizer):
+    """FakeTokenizer whose encode_conversation blocks for `delay` seconds."""
+
+    def __init__(self, delay: float, id_to_text: dict[int, str] | None = None):
+        super().__init__(id_to_text=id_to_text)
+        self._delay = delay
+
+    def encode_conversation(self, messages, system=None) -> list[int]:
+        import time
+
+        time.sleep(self._delay)
+        return super().encode_conversation(messages, system=system)
+
+
+def test_concurrent_tokenization_runs_in_parallel():
+    delay = 0.2
+    n = 4
+    tokenizer = _SlowTokenizer(delay=delay, id_to_text=_tokenizer_for("a")._id_to_text)
+    engine = FakeEngine(script=_script_from_text("a"))
+
+    runtime = FakeRuntime(tokenizer=tokenizer)
+    registry = FakeRegistry(entries={"test-model": (engine, runtime)})
+    app = create_app(registry, tokenizer_workers=n)
+    transport = httpx.ASGITransport(app=app)
+
+    async def run():
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            loop = asyncio.get_running_loop()
+            t0 = loop.time()
+            results = await asyncio.gather(
+                *(client.post("/v1/messages", json=_messages_body(1, False)) for _ in range(n))
+            )
+            return loop.time() - t0, [r.status_code for r in results]
+
+    elapsed, statuses = _run(run())
+    assert statuses == [200] * n
+    # Serialized would be ~n*delay; parallel should be ~delay. Pick a threshold
+    # that's loose enough to survive CI jitter but tight enough to catch a
+    # regression to serial execution.
+    assert elapsed < delay * (n / 2), (
+        f"expected parallel tokenization (~{delay}s), got {elapsed:.3f}s over {n} requests"
+    )
+
+
+# ── Tokenizer errors surface as HTTP 400 ─────────────────────────────
+
+
+class _RaisingTokenizer(FakeTokenizer):
+    def __init__(self, exc: BaseException):
+        super().__init__()
+        self._exc = exc
+
+    def encode_conversation(self, messages, system=None) -> list[int]:
+        raise self._exc
+
+
+def test_tokenizer_value_error_becomes_400():
+    tokenizer = _RaisingTokenizer(ValueError("prompt too long"))
+    engine = FakeEngine()
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            return await client.post("/v1/messages", json=_messages_body(1, False))
+
+    r = _run(run())
+    assert r.status_code == 400
+    assert "prompt too long" in r.json()["detail"]
+
+
 # Reference so ruff doesn't complain about imported-but-unused names.
 _ = STOP_TOKEN_ID

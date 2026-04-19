@@ -1,6 +1,9 @@
 """FastAPI application for the CantoLLM Messages API."""
 
+import asyncio
+import os
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -31,7 +34,30 @@ def _build_inference_request(body: MessagesRequest, tokenizer) -> InferenceReque
     )
 
 
-def create_app(registry: EngineRegistry) -> FastAPI:
+async def _build_inference_request_async(
+    body: MessagesRequest, tokenizer, executor: ThreadPoolExecutor
+) -> InferenceRequest:
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        executor, _build_inference_request, body, tokenizer
+    )
+
+
+def _default_tokenizer_workers() -> int:
+    return min(8, os.cpu_count() or 4)
+
+
+def create_app(
+    registry: EngineRegistry, *, tokenizer_workers: int | None = None
+) -> FastAPI:
+    # Rust tokenizer releases the GIL, so threads give real parallelism; keep
+    # the pool well under core count so it doesn't starve the event loop (and,
+    # post Phase 2 split, the IPC bridge).
+    workers = tokenizer_workers if tokenizer_workers is not None else _default_tokenizer_workers()
+    tokenizer_executor = ThreadPoolExecutor(
+        max_workers=workers, thread_name_prefix="tokenize"
+    )
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         await registry.start_all()
@@ -39,6 +65,7 @@ def create_app(registry: EngineRegistry) -> FastAPI:
             yield
         finally:
             await registry.shutdown_all()
+            tokenizer_executor.shutdown(wait=True, cancel_futures=True)
 
     app = FastAPI(title="CantoLLM", lifespan=lifespan)
 
@@ -77,7 +104,12 @@ def create_app(registry: EngineRegistry) -> FastAPI:
             )
 
         tokenizer = entry.runtime.tokenizer
-        req = _build_inference_request(body, tokenizer)
+        try:
+            req = await _build_inference_request_async(
+                body, tokenizer, tokenizer_executor
+            )
+        except (ValueError, TypeError, KeyError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
         events = entry.engine.submit(req)
         input_tokens = len(req.prompt_token_ids)
 
