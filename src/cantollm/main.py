@@ -81,6 +81,7 @@ def cmd_chat(args):
 
     run_client(
         base_url=args.url,
+        api=args.api,
         temperature=args.temperature,
         top_p=args.top_p,
         max_tokens=args.max_tokens,
@@ -145,6 +146,8 @@ def parse_args():
     chat_parser = subparsers.add_parser("chat", help="Chat client (connects to a running server)")
     chat_parser.add_argument("--url", default="http://localhost:8000",
                              help="Server URL (default: http://localhost:8000)")
+    chat_parser.add_argument("--api", choices=("anthropic", "openai"), default="anthropic",
+                             help="API dialect to use (default: anthropic)")
     chat_parser.add_argument("--temperature", "-t", type=float, default=0.7,
                              help="Sampling temperature (default: 0.7)")
     chat_parser.add_argument("--top-p", type=float, default=0.9,

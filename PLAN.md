@@ -187,6 +187,17 @@ verified; HTTP/SSE contract test suite is green.
 **Goal:** exercise the registry by adding OpenAI, and pick up the small reliability wins
 that fall out of the Phase 1a refactors.
 
+**Status (2026-04-19):** OpenAI Chat Completions surface landed
+(`/v1/chat/completions`) alongside a refactor of `src/cantollm/api/` into
+per-dialect routers (`anthropic_router`, `openai_router`, `common_router`
+for `/health` + a union-payload `/v1/models`) plus shared helpers
+(`phase.py` for the thinking/text classifier, `common.py` for request
+tokenization). Thinking tokens are emitted as DeepSeek-R1-style
+`reasoning_content` on assistant messages / deltas. CLI gained
+`--api {anthropic,openai}` (default anthropic). Open: stream error-event
+parity (OpenAI mid-stream error is minimum-viable today), `X-Request-ID`
+middleware, raw-tokens NDJSON endpoint.
+
 - **OpenAI API surface** (`/v1/chat/completions`) as a second adapter.
   `api/openai_types.py` + `api/openai_adapter.py`. Forces the registry pattern to stay
   honest and gives us a real multi-surface story before batching lands.

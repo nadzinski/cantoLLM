@@ -8,7 +8,6 @@ the only layer that knows about Anthropic's format or thinking/text phases.
 import asyncio
 import uuid
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
 
 from fastapi import HTTPException
 
@@ -34,20 +33,11 @@ from cantollm.api.anthropic_types import (
     Usage,
     sse,
 )
-from cantollm.decoder import StreamingDecoder
+from cantollm.api.phase import DecodeState, phase_tagged_events
 from cantollm.engine.types import TokenEvent
 from cantollm.stream_events import TextChunk, ThinkingEndEvent, ThinkingStartEvent
 
 PING_INTERVAL_SECONDS = 15.0
-
-
-@dataclass
-class _DecodeState:
-    thinking: int = 0
-    text: int = 0
-    total: int = 0
-    finish_reason: str | None = None
-    error: str | None = None
 
 
 def _to_stop_reason(finish_reason: str | None) -> StopReason | None:
@@ -65,44 +55,18 @@ def _new_message_id() -> str:
     return f"msg_{uuid.uuid4().hex[:24]}"
 
 
-def _classify(token_id: int, tokenizer, phase_is_thinking: bool) -> tuple[bool, str]:
-    """Return (new_phase_is_thinking, bucket) where bucket is 'thinking' or 'text'."""
-    if token_id == tokenizer.thinking_start_id:
-        return True, "thinking"
-    if token_id == tokenizer.thinking_end_id:
-        return False, "thinking"
-    return phase_is_thinking, "thinking" if phase_is_thinking else "text"
-
-
 async def _decoded_events(
     events: AsyncIterator[TokenEvent],
     tokenizer,
-    state: _DecodeState,
+    state: DecodeState,
 ):
-    """Drive StreamingDecoder from an async TokenEvent source, tracking counts.
+    """Adapter-local view of phase_tagged_events that drops the phase tag.
 
-    Terminal events (finish_reason or error) end the stream and record their
-    reason on `state` so the caller can emit the right wire-level closer.
+    Anthropic's renderers track `in_thinking` themselves via the
+    ThinkingStartEvent/ThinkingEndEvent markers, so the phase tuple is
+    discarded; the helper is here for the counter side-effects on `state`.
     """
-    decoder = StreamingDecoder(tokenizer)
-    phase_is_thinking = False
-
-    async for evt in events:
-        if evt.error is not None:
-            state.error = evt.error
-            break
-        if evt.finish_reason is not None:
-            state.finish_reason = evt.finish_reason
-            break
-        if evt.token_id is None:
-            continue
-        phase_is_thinking, bucket = _classify(evt.token_id, tokenizer, phase_is_thinking)
-        setattr(state, bucket, getattr(state, bucket) + 1)
-        state.total += 1
-        for dec_evt in decoder.process(evt.token_id):
-            yield dec_evt
-
-    for dec_evt in decoder.flush():
+    async for _phase, dec_evt in phase_tagged_events(events, tokenizer, state):
         yield dec_evt
 
 
@@ -113,7 +77,7 @@ async def render_message(
     input_tokens: int,
 ) -> MessageResponse:
     """Drain the event stream into a single MessageResponse."""
-    state = _DecodeState()
+    state = DecodeState()
     content_blocks: list[ContentBlock] = []
     current_text: list[str] = []
     current_thinking: list[str] = []
@@ -166,7 +130,7 @@ async def render_sse(
     proxies don't close the stream during long thinking phases.
     """
     msg_id = _new_message_id()
-    state = _DecodeState()
+    state = DecodeState()
     out: asyncio.Queue[str | None] = asyncio.Queue()
 
     async def produce():

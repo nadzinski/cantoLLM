@@ -1,46 +1,20 @@
-"""FastAPI application for the CantoLLM Messages API."""
+"""FastAPI application factory.
 
-import asyncio
+Mounts three routers — common (`/health`, `/v1/models`), Anthropic
+(`/v1/messages`), and OpenAI (`/v1/chat/completions`) — against a single
+`EngineRegistry` and a shared tokenizer executor.
+"""
+
 import os
-import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI
 
-from cantollm.api.anthropic_adapter import render_message, render_sse
-from cantollm.api.anthropic_types import (
-    MessagesRequest,
-    ModelInfo,
-    ModelListResponse,
-)
-from cantollm.engine.types import InferenceRequest, SamplingParams
+from cantollm.api.anthropic_router import build_anthropic_router
+from cantollm.api.common_router import build_common_router
+from cantollm.api.openai_router import build_openai_router
 from cantollm.registry import EngineRegistry
-
-
-def _build_inference_request(body: MessagesRequest, tokenizer) -> InferenceRequest:
-    prompt_token_ids = tokenizer.encode_conversation(
-        [m.model_dump() for m in body.messages],
-        system=body.system,
-    )
-    return InferenceRequest(
-        request_id=uuid.uuid4().hex,
-        prompt_token_ids=prompt_token_ids,
-        sampling_params=SamplingParams(temperature=body.temperature, top_p=body.top_p),
-        max_tokens=body.max_tokens,
-        stop_token_ids=tokenizer.stop_token_ids,
-    )
-
-
-async def _build_inference_request_async(
-    body: MessagesRequest, tokenizer, executor: ThreadPoolExecutor
-) -> InferenceRequest:
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(
-        executor, _build_inference_request, body, tokenizer
-    )
 
 
 def _default_tokenizer_workers() -> int:
@@ -68,56 +42,7 @@ def create_app(
             tokenizer_executor.shutdown(wait=True, cancel_futures=True)
 
     app = FastAPI(title="CantoLLM", lifespan=lifespan)
-
-    @app.get("/health")
-    async def health():
-        return {"status": "ok"}
-
-    @app.get("/v1/models", response_model=ModelListResponse)
-    async def list_models():
-        names = registry.names()
-        data = [
-            ModelInfo(
-                id=name,
-                display_name=name,
-                created_at=datetime.fromtimestamp(
-                    entry.registered_at, tz=timezone.utc
-                ).isoformat().replace("+00:00", "Z"),
-            )
-            for name, entry in registry.items()
-        ]
-        return ModelListResponse(
-            data=data,
-            has_more=False,
-            first_id=names[0] if names else None,
-            last_id=names[-1] if names else None,
-        )
-
-    @app.post("/v1/messages")
-    async def messages(body: MessagesRequest):
-        try:
-            entry = registry.get(body.model)
-        except KeyError:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Model '{body.model}' is not registered. Available: {registry.names()}",
-            )
-
-        tokenizer = entry.runtime.tokenizer
-        try:
-            req = await _build_inference_request_async(
-                body, tokenizer, tokenizer_executor
-            )
-        except (ValueError, TypeError, KeyError) as exc:
-            raise HTTPException(status_code=400, detail=str(exc))
-        events = entry.engine.submit(req)
-        input_tokens = len(req.prompt_token_ids)
-
-        if body.stream:
-            return StreamingResponse(
-                render_sse(events, tokenizer, body.model, input_tokens),
-                media_type="text/event-stream",
-            )
-        return await render_message(events, tokenizer, body.model, input_tokens)
-
+    app.include_router(build_common_router(registry))
+    app.include_router(build_anthropic_router(registry, tokenizer_executor))
+    app.include_router(build_openai_router(registry, tokenizer_executor))
     return app

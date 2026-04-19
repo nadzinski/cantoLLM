@@ -1,4 +1,9 @@
-"""Streaming client and REPL for the CantoLLM Messages API."""
+"""Streaming client and REPL for the CantoLLM server.
+
+Supports both the Anthropic Messages API (`/v1/messages`) and the OpenAI
+Chat Completions API (`/v1/chat/completions`) against the same server. The
+dialect is selected via `run_client(api=...)`.
+"""
 
 import http.client
 import json
@@ -40,7 +45,6 @@ class WordWrapper:
                     break
 
             if sp == -1:
-                # No boundary yet — hold the partial word in the buffer
                 break
 
             word = self._buf[:sp]
@@ -53,13 +57,11 @@ class WordWrapper:
                 print(flush=True)
                 self._col = 0
             else:
-                # Space — only print it if we're not at column 0
                 if self._col > 0:
                     print(" ", end="", flush=True)
                     self._col += 1
 
     def flush(self):
-        """Print any remaining buffered text."""
         if self._buf:
             self._emit_word(self._buf)
             self._buf = ""
@@ -67,17 +69,25 @@ class WordWrapper:
     def _emit_word(self, word: str):
         if not word:
             return
-        # Would this word overflow the line?
         needed = len(word) + (1 if self._col > 0 else 0)
         if self._col > 0 and self._col + needed > self._width:
-            print(flush=True)  # Wrap to next line
+            print(flush=True)
             self._col = 0
         print(word, end="", flush=True)
         self._col += len(word)
 
 
-class ChatClient:
-    """Client for the Anthropic-compatible Messages API with streaming SSE support."""
+# ── Base client ──────────────────────────────────────────────────────
+
+
+class _BaseChatClient:
+    """Shared scaffolding for dialect-specific chat clients.
+
+    Subclasses supply the endpoint path, request-body shape, and SSE parser.
+    """
+
+    # Subclass overrides:
+    PATH: str = ""
 
     def __init__(self, base_url: str, temperature: float = 0.7, top_p: float = 0.9,
                  max_tokens: int = 2048, model: str | None = None,
@@ -92,7 +102,7 @@ class ChatClient:
         self.messages: list[dict] = []
 
     def fetch_model(self) -> str:
-        """GET /v1/models and set self.model to the first entry. Returns the id."""
+        """GET /v1/models and set self.model to the first entry."""
         url = f"{self.base_url}/v1/models"
         with urllib.request.urlopen(url, timeout=5) as resp:
             body = json.loads(resp.read())
@@ -103,34 +113,27 @@ class ChatClient:
         return self.model
 
     def reset(self):
-        """Clear conversation history."""
         self.messages = []
 
+    # ── Subclass hooks ──
+
+    def _build_body(self, stream: bool) -> dict:
+        raise NotImplementedError
+
+    def _parse_stream(self, resp, spinner_stop, thinking_count) -> dict | None:
+        raise NotImplementedError
+
+    # ── Send ──
+
     def send_message(self, text: str, stream: bool = True) -> dict | None:
-        """Send a message and handle the response.
-
-        For streaming: prints tokens as they arrive, returns final usage stats.
-        For non-streaming: returns the full response dict.
-        """
         self.messages.append({"role": "user", "content": text})
-
-        body = {
-            "model": self.model,
-            "max_tokens": self.max_tokens,
-            "messages": self.messages,
-            "temperature": self.temperature,
-            "top_p": self.top_p,
-            "stream": stream,
-        }
-
+        body = self._build_body(stream)
         if stream:
             return self._send_streaming(body)
-        else:
-            return self._send_sync(body)
+        return self._send_sync(body)
 
     def _send_sync(self, body: dict) -> dict:
-        """Non-streaming request via urllib."""
-        url = f"{self.base_url}/v1/messages"
+        url = f"{self.base_url}{self.PATH}"
         data = json.dumps(body).encode()
         req = urllib.request.Request(
             url, data=data,
@@ -138,19 +141,13 @@ class ChatClient:
         )
         with urllib.request.urlopen(req) as resp:
             response = json.loads(resp.read())
-
-        # Extract assistant text and add to history
-        text_parts = []
-        for block in response.get("content", []):
-            if block.get("type") == "text":
-                text_parts.append(block["text"])
-        if text_parts:
-            self.messages.append({"role": "assistant", "content": "\n".join(text_parts)})
-
+        self._append_assistant_from_sync(response)
         return response
 
+    def _append_assistant_from_sync(self, response: dict) -> None:
+        raise NotImplementedError
+
     def _send_streaming(self, body: dict) -> dict | None:
-        """Streaming request via http.client for line-by-line SSE control."""
         parsed = urllib.parse.urlparse(self.base_url)
         host = parsed.hostname
         if parsed.scheme == "https":
@@ -160,7 +157,7 @@ class ChatClient:
             port = parsed.port or 80
             conn = http.client.HTTPConnection(host, port)
         spinner_stop = threading.Event()
-        thinking_count = [0]  # Mutable container shared with spinner thread
+        thinking_count = [0]
 
         def spin():
             frames = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
@@ -182,7 +179,7 @@ class ChatClient:
 
         try:
             data = json.dumps(body).encode()
-            conn.request("POST", "/v1/messages", body=data,
+            conn.request("POST", self.PATH, body=data,
                          headers={"Content-Type": "application/json"})
             resp = conn.getresponse()
 
@@ -193,7 +190,11 @@ class ChatClient:
                 error_body = resp.read().decode()
                 try:
                     error = json.loads(error_body)
-                    msg = error.get("error", {}).get("message", error_body)
+                    # Anthropic 4xx shape: {"detail": "..."}; OpenAI shape:
+                    # {"error": {"message": "..."}}. Accept either.
+                    msg = (error.get("error", {}).get("message")
+                           or error.get("detail")
+                           or error_body)
                 except json.JSONDecodeError:
                     msg = error_body
                 self.messages.pop()
@@ -207,7 +208,7 @@ class ChatClient:
                 print(f"\n{Colors.GRAY}Error: {msg}{Colors.RESET}")
                 return None
 
-            result = self._parse_sse_stream(resp, spinner_stop, thinking_count)
+            result = self._parse_stream(resp, spinner_stop, thinking_count)
             if result is not None:
                 result.setdefault("start_time", start_time)
                 result.setdefault("end_time", time.perf_counter())
@@ -219,32 +220,62 @@ class ChatClient:
                 spinner_thread.join()
             conn.close()
 
-    def _parse_sse_stream(self, resp, spinner_stop, thinking_count) -> dict | None:
-        """Parse SSE events from an HTTP response, printing content as it arrives."""
-        assistant_text = []
+    # ── Spinner/label coordination (shared) ──
+
+    def _make_stop_spinner(self, spinner_stop, state):
+        """Produce a closure that stops the spinner and prints the assistant
+        label the first time it's called."""
+        prefix = "Assistant: "
+
+        def stop():
+            if state["spinner_stopped"]:
+                return
+            spinner_stop.set()
+            if not self.quiet:
+                print(f"\r{' ' * 40}\r{Colors.GREEN}{prefix}{Colors.RESET}",
+                      end="", flush=True)
+                state["wrapper"] = WordWrapper(initial_col=len(prefix))
+            state["spinner_stopped"] = True
+
+        return stop
+
+
+# ── Anthropic ────────────────────────────────────────────────────────
+
+
+class AnthropicChatClient(_BaseChatClient):
+    PATH = "/v1/messages"
+
+    def _build_body(self, stream: bool) -> dict:
+        return {
+            "model": self.model,
+            "max_tokens": self.max_tokens,
+            "messages": self.messages,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "stream": stream,
+        }
+
+    def _append_assistant_from_sync(self, response: dict) -> None:
+        text_parts = [b["text"] for b in response.get("content", [])
+                      if b.get("type") == "text"]
+        if text_parts:
+            self.messages.append(
+                {"role": "assistant", "content": "\n".join(text_parts)}
+            )
+
+    def _parse_stream(self, resp, spinner_stop, thinking_count) -> dict | None:
+        assistant_text: list[str] = []
         in_thinking = False
-        usage = {}
+        usage: dict = {}
         stop_reason = None
-        spinner_stopped = False
-        wrapper = None
-        first_token_time = None
+        first_token_time: float | None = None
         error_message: str | None = None
+        state = {"spinner_stopped": False, "wrapper": None}
+        stop = self._make_stop_spinner(spinner_stop, state)
 
         current_event = None
         current_data = None
-
-        prefix = "Assistant: "
-
-        def stop_spinner():
-            nonlocal spinner_stopped, wrapper
-            if not spinner_stopped:
-                spinner_stop.set()
-                if not self.quiet:
-                    # Clear spinner line and print the assistant label
-                    print(f"\r{' ' * 40}\r{Colors.GREEN}{prefix}{Colors.RESET}",
-                          end="", flush=True)
-                    wrapper = WordWrapper(initial_col=len(prefix))
-                spinner_stopped = True
 
         for line_bytes in resp:
             line = line_bytes.decode("utf-8").rstrip("\n").rstrip("\r")
@@ -263,54 +294,44 @@ class ChatClient:
 
                 match current_event:
                     case "message_start":
-                        msg = data.get("message", {})
-                        usage.update(msg.get("usage", {}))
-
+                        usage.update(data.get("message", {}).get("usage", {}))
                     case "content_block_start":
-                        block = data.get("content_block", {})
-                        if block.get("type") == "thinking":
+                        if data.get("content_block", {}).get("type") == "thinking":
                             in_thinking = True
                             if self.show_thinking and not self.quiet:
-                                stop_spinner()
+                                stop()
                                 print(f"{Colors.GRAY}<think>", end="", flush=True)
-
                     case "content_block_delta":
                         delta = data.get("delta", {})
-                        delta_type = delta.get("type")
-                        if delta_type == "thinking_delta":
+                        dtype = delta.get("type")
+                        if dtype == "thinking_delta":
                             thinking_count[0] += 1
                             if first_token_time is None:
                                 first_token_time = time.perf_counter()
                             if self.show_thinking and not self.quiet:
-                                stop_spinner()
+                                stop()
                                 print(delta.get("thinking", ""), end="", flush=True)
-                        elif delta_type == "text_delta":
+                        elif dtype == "text_delta":
                             if first_token_time is None:
                                 first_token_time = time.perf_counter()
-                            stop_spinner()
+                            stop()
                             text = delta.get("text", "")
                             assistant_text.append(text)
                             if not self.quiet:
-                                wrapper.write(text)
-
+                                state["wrapper"].write(text)
                     case "content_block_stop":
                         if in_thinking:
                             in_thinking = False
                             if self.show_thinking and not self.quiet:
                                 print(f"</think>{Colors.GREEN}", end="", flush=True)
-
                     case "message_delta":
-                        delta = data.get("delta", {})
-                        stop_reason = delta.get("stop_reason")
+                        stop_reason = data.get("delta", {}).get("stop_reason")
                         usage.update(data.get("usage", {}))
-
                     case "error":
-                        err = data.get("error", {})
-                        error_message = err.get("message", "unknown error")
+                        error_message = data.get("error", {}).get("message", "unknown error")
                         current_event = None
                         current_data = None
                         break
-
                     case "message_stop":
                         current_event = None
                         current_data = None
@@ -319,14 +340,11 @@ class ChatClient:
                 current_event = None
                 current_data = None
 
-        stop_spinner()
-        if wrapper:
-            wrapper.flush()
+        stop()
+        if state["wrapper"]:
+            state["wrapper"].flush()
 
         if error_message is not None:
-            # Mid-stream server error: drop the user message we optimistically
-            # appended so history doesn't get poisoned with a turn the server
-            # never completed.
             if self.messages and self.messages[-1]["role"] == "user":
                 self.messages.pop()
             if not self.quiet:
@@ -335,7 +353,6 @@ class ChatClient:
                     "first_token_time": first_token_time,
                     "error": error_message}
 
-        # Store assistant response in history (text only, not thinking)
         text = "".join(assistant_text)
         if text:
             self.messages.append({"role": "assistant", "content": text})
@@ -344,13 +361,155 @@ class ChatClient:
                 "first_token_time": first_token_time}
 
 
-def run_client(base_url: str, temperature: float = 0.7, top_p: float = 0.9,
+# ── OpenAI ───────────────────────────────────────────────────────────
+
+
+class OpenAIChatClient(_BaseChatClient):
+    PATH = "/v1/chat/completions"
+
+    def _build_body(self, stream: bool) -> dict:
+        body = {
+            "model": self.model,
+            "max_completion_tokens": self.max_tokens,
+            "messages": self.messages,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "stream": stream,
+        }
+        if stream:
+            # Populates the stats line with completion/prompt/reasoning counts.
+            body["stream_options"] = {"include_usage": True}
+        return body
+
+    def _append_assistant_from_sync(self, response: dict) -> None:
+        choices = response.get("choices", [])
+        if not choices:
+            return
+        content = choices[0].get("message", {}).get("content")
+        if content:
+            self.messages.append({"role": "assistant", "content": content})
+
+    def _parse_stream(self, resp, spinner_stop, thinking_count) -> dict | None:
+        assistant_text: list[str] = []
+        usage: dict = {}
+        stop_reason = None
+        first_token_time: float | None = None
+        error_message: str | None = None
+        state = {"spinner_stopped": False, "wrapper": None}
+        stop = self._make_stop_spinner(spinner_stop, state)
+        think_open = False
+
+        def close_think():
+            nonlocal think_open
+            if think_open and self.show_thinking and not self.quiet:
+                print(f"</think>{Colors.GREEN}", end="", flush=True)
+            think_open = False
+
+        # Accumulate raw body line-by-line; OpenAI SSE has no `event:` lines.
+        for line_bytes in resp:
+            line = line_bytes.decode("utf-8").rstrip("\n").rstrip("\r")
+            if not line.startswith("data: "):
+                continue
+            payload = line[6:].strip()
+            if payload == "[DONE]":
+                break
+            try:
+                data = json.loads(payload)
+            except json.JSONDecodeError:
+                continue
+
+            if "error" in data:
+                error_message = data["error"].get("message", "unknown error")
+                break
+
+            # Usage chunk: empty choices, populated usage.
+            if not data.get("choices"):
+                if data.get("usage"):
+                    usage = data["usage"]
+                continue
+
+            choice = data["choices"][0]
+            delta = choice.get("delta", {})
+
+            reasoning = delta.get("reasoning_content")
+            content = delta.get("content")
+
+            if reasoning:
+                thinking_count[0] += 1
+                if first_token_time is None:
+                    first_token_time = time.perf_counter()
+                if self.show_thinking and not self.quiet:
+                    stop()
+                    if not think_open:
+                        print(f"{Colors.GRAY}<think>", end="", flush=True)
+                        think_open = True
+                    print(reasoning, end="", flush=True)
+
+            if content:
+                close_think()
+                if first_token_time is None:
+                    first_token_time = time.perf_counter()
+                stop()
+                assistant_text.append(content)
+                if not self.quiet:
+                    state["wrapper"].write(content)
+
+            if choice.get("finish_reason"):
+                stop_reason = choice["finish_reason"]
+
+        stop()
+        close_think()
+        if state["wrapper"]:
+            state["wrapper"].flush()
+
+        if error_message is not None:
+            if self.messages and self.messages[-1]["role"] == "user":
+                self.messages.pop()
+            if not self.quiet:
+                print(f"\n{Colors.GRAY}Error: {error_message}{Colors.RESET}")
+            return {"usage": {}, "stop_reason": None,
+                    "first_token_time": first_token_time,
+                    "error": error_message}
+
+        text = "".join(assistant_text)
+        if text:
+            self.messages.append({"role": "assistant", "content": text})
+
+        # Normalize OpenAI usage fields into the shape the stats formatter
+        # expects (input_tokens / output_tokens / thinking_tokens / text_tokens).
+        normalized: dict = {}
+        if usage:
+            details = usage.get("completion_tokens_details") or {}
+            reasoning_tokens = details.get("reasoning_tokens", 0)
+            completion = usage.get("completion_tokens", 0)
+            normalized = {
+                "input_tokens": usage.get("prompt_tokens", 0),
+                "output_tokens": completion + reasoning_tokens,
+                "thinking_tokens": reasoning_tokens,
+                "text_tokens": completion,
+            }
+
+        return {"usage": normalized, "stop_reason": stop_reason,
+                "first_token_time": first_token_time}
+
+
+# ── REPL ─────────────────────────────────────────────────────────────
+
+
+_CLIENTS: dict[str, type[_BaseChatClient]] = {
+    "anthropic": AnthropicChatClient,
+    "openai": OpenAIChatClient,
+}
+
+
+def run_client(base_url: str, *, api: str = "anthropic",
+               temperature: float = 0.7, top_p: float = 0.9,
                max_tokens: int = 2048, show_thinking: bool = False):
-    """Run the interactive chat REPL."""
-    client = ChatClient(base_url, temperature=temperature, top_p=top_p,
+    """Run the interactive chat REPL against the chosen dialect."""
+    client_cls = _CLIENTS[api]
+    client = client_cls(base_url, temperature=temperature, top_p=top_p,
                         max_tokens=max_tokens, show_thinking=show_thinking)
 
-    # Check server health and discover the model
     try:
         url = f"{base_url.rstrip('/')}/health"
         with urllib.request.urlopen(url, timeout=5) as resp:
@@ -366,6 +525,7 @@ def run_client(base_url: str, temperature: float = 0.7, top_p: float = 0.9,
 
     print(f"\n{sep}")
     print(f"  {Colors.TITLE}CantoLLM Chat Client{Colors.RESET}")
+    print(f"  API:         {api}")
     print(f"  Server:      {base_url}")
     print(f"  Model:       {client.model}")
     print(f"  Temperature: {temperature}  Top-p: {top_p}  Max tokens: {max_tokens}")
@@ -391,14 +551,13 @@ def run_client(base_url: str, temperature: float = 0.7, top_p: float = 0.9,
             print("Conversation reset.\n")
             continue
 
-        print()  # Blank line before response
+        print()
         start_time = time.perf_counter()
 
         try:
             result = client.send_message(prompt, stream=True)
         except Exception as e:
             print(f"\n{Colors.GRAY}Connection error: {e}{Colors.RESET}")
-            # Remove the message we tried to send
             if client.messages and client.messages[-1]["role"] == "user":
                 client.messages.pop()
             print()
@@ -407,7 +566,6 @@ def run_client(base_url: str, temperature: float = 0.7, top_p: float = 0.9,
         elapsed = time.perf_counter() - start_time
         print(f"{Colors.RESET}")
 
-        # Stats line
         if result and result.get("usage"):
             usage = result["usage"]
             input_tok = usage.get("input_tokens", 0)
@@ -420,3 +578,10 @@ def run_client(base_url: str, temperature: float = 0.7, top_p: float = 0.9,
                   f"{tps:.1f} tok/s | {elapsed:.1f}s]{Colors.RESET}")
 
         print(f"{sep}\n")
+
+
+# ── Back-compat re-export ────────────────────────────────────────────
+
+# bench.py imports ChatClient. Keep the name pointed at the Anthropic
+# implementation so existing benchmarks don't need updating.
+ChatClient = AnthropicChatClient

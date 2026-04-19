@@ -33,20 +33,32 @@ class MessagesRequest(BaseModel):
 
 
 # ── Models listing ────────────────────────────────────────────────────
+#
+# Served by the shared common_router so both Anthropic and OpenAI SDKs can
+# hit GET /v1/models against the same server. The payload is a union of the
+# two dialects' shapes; each client ignores the fields it doesn't recognize.
 
 
 class ModelInfo(BaseModel):
+    # Anthropic fields
     type: Literal["model"] = "model"
     id: str
     display_name: str
     created_at: str
+    # OpenAI fields
+    object: Literal["model"] = "model"
+    created: int
+    owned_by: str = "cantollm"
 
 
 class ModelListResponse(BaseModel):
+    # Anthropic fields
     data: list[ModelInfo]
     has_more: bool = False
     first_id: str | None = None
     last_id: str | None = None
+    # OpenAI wrapper field
+    object: Literal["list"] = "list"
 
 
 # ── Response: content blocks ──────────────────────────────────────────
