@@ -47,8 +47,12 @@ class FakeTokenizer:
         self.stop_token_ids = {STOP_TOKEN_ID}
         self._id_to_text = id_to_text or {i: chr(ord("a") + (i % 26)) for i in range(256)}
         self._prompt_len = prompt_len
+        self.last_messages = None
+        self.last_system = None
 
     def encode_conversation(self, messages, system=None) -> list[int]:
+        self.last_messages = messages
+        self.last_system = system
         return [1] * self._prompt_len
 
     def incremental_decoder(self) -> _FakeIncrementalDecoder:

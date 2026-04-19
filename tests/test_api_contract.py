@@ -64,6 +64,60 @@ def _run(coro):
     return asyncio.run(coro)
 
 
+# ── Structured content passes through unflattened ───────────────────
+
+
+def test_structured_content_blocks_reach_tokenizer_unflattened():
+    tokenizer = _tokenizer_for("a")
+    engine = FakeEngine(script=_script_from_text("a"))
+
+    body = {
+        "model": "test-model",
+        "max_tokens": 1,
+        "stream": False,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "first"},
+                    {"type": "text", "text": "second"},
+                ],
+            }
+        ],
+    }
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            r = await client.post("/v1/messages", json=body)
+            assert r.status_code == 200
+
+    _run(run())
+
+    assert tokenizer.last_messages == [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "first"},
+                {"type": "text", "text": "second"},
+            ],
+        }
+    ]
+
+
+def test_string_content_still_passes_through_as_string():
+    tokenizer = _tokenizer_for("a")
+    engine = FakeEngine(script=_script_from_text("a"))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            r = await client.post("/v1/messages", json=_messages_body(max_tokens=1, stream=False))
+            assert r.status_code == 200
+
+    _run(run())
+
+    assert tokenizer.last_messages == [{"role": "user", "content": "hi"}]
+
+
 # ── 1. Non-streaming happy path ──────────────────────────────────────
 
 

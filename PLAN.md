@@ -80,9 +80,10 @@ afternoon's work, not a rewrite.
 count-based `stop_reason` guess is gone; HTTP/SSE contract test suite green;
 `ModelSpec` / `ModelRuntime` / `EngineRegistry` landed — `SequentialEngine`
 takes a runtime, cache is allocated via `runtime.new_cache()`, `create_app`
-takes the registry and dispatches per-model tokenizer via `body.model`. Open:
-stop flattening `Message.content`; tokenization thread pool; both latent bug
-fixes (mask buffer, tokenizer `chat_wrapped`).
+takes the registry and dispatches per-model tokenizer via `body.model`;
+`Message.content` flattening removed — structured `list[ContentBlockInput]`
+now passes through to the tokenizer. Open: tokenization thread pool; both
+latent bug fixes (mask buffer, tokenizer `chat_wrapped`).
 
 **Refactors:**
 

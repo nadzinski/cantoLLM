@@ -7,7 +7,7 @@ adapter constructs typed SSE events so mis-shaped payloads fail at construction.
 
 from typing import Annotated, Literal, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 # ── Request ────────────────────────────────────────────────────────────
 
@@ -20,13 +20,6 @@ class ContentBlockInput(BaseModel):
 class Message(BaseModel):
     role: Literal["user", "assistant"]
     content: str | list[ContentBlockInput]
-
-    @field_validator("content", mode="after")
-    @classmethod
-    def _flatten_content(cls, v):
-        if isinstance(v, list):
-            return "\n".join(b.text for b in v)
-        return v
 
 
 class MessagesRequest(BaseModel):

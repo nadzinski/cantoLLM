@@ -178,7 +178,9 @@ class Qwen3Tokenizer:
         Builds a full ChatML string from the message history and encodes it.
 
         Args:
-            messages: List of {"role": "user"|"assistant", "content": "..."} dicts.
+            messages: List of {"role": "user"|"assistant", "content": ...} dicts.
+                ``content`` is either a string or a list of content-block dicts
+                of the form ``{"type": "text", "text": "..."}``.
             system: Optional system prompt.
 
         Returns:
