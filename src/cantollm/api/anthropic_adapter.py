@@ -56,7 +56,7 @@ def _to_stop_reason(finish_reason: str | None) -> StopReason | None:
     `abort` (client disconnect) has no Anthropic equivalent; callers reading
     the terminal events on that path are already in cleanup anyway.
     """
-    if finish_reason in ("end_turn", "max_tokens", "stop_sequence"):
+    if finish_reason in ("end_turn", "max_tokens"):
         return finish_reason  # type: ignore[return-value]
     return None
 

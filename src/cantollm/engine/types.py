@@ -9,7 +9,7 @@ toward batching without rippling into the API surface.
 from dataclasses import dataclass
 from typing import Literal
 
-FinishReason = Literal["end_turn", "max_tokens", "stop_sequence", "abort"]
+FinishReason = Literal["end_turn", "max_tokens", "abort"]
 
 
 @dataclass
