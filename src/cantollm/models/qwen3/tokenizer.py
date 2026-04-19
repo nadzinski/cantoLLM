@@ -2,13 +2,6 @@
 
 Wraps the HuggingFace tokenizers Rust library and adds chat template
 formatting, special token handling, and an incremental decoder for streaming.
-
-Known quirk: the quick-path in encode() (lines ~135-137) checks if the
-stripped text is a bare special token and returns its ID immediately,
-*before* considering chat_wrapped. So encode("<|im_start|>",
-chat_wrapped=True) returns the raw token ID rather than wrapping it in a
-chat template. To fix this, the quick-path should be gated on
-``not chat_wrapped``.
 """
 
 import re
