@@ -10,17 +10,22 @@ import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
+from fastapi import HTTPException
+
 from cantollm.api.anthropic_types import (
     ContentBlock,
     ContentBlockDeltaEvent,
     ContentBlockStartEvent,
     ContentBlockStopEvent,
+    ErrorBody,
+    ErrorEvent,
     MessageDeltaBody,
     MessageDeltaEvent,
     MessageResponse,
     MessageStartEvent,
     MessageStartSnapshot,
     MessageStopEvent,
+    StopReason,
     StreamUsage,
     TextBlock,
     TextDelta,
@@ -37,10 +42,23 @@ PING_INTERVAL_SECONDS = 15.0
 
 
 @dataclass
-class _PhaseCounts:
+class _DecodeState:
     thinking: int = 0
     text: int = 0
     total: int = 0
+    finish_reason: str | None = None
+    error: str | None = None
+
+
+def _to_stop_reason(finish_reason: str | None) -> StopReason | None:
+    """Map engine FinishReason to Anthropic's StopReason literal.
+
+    `abort` (client disconnect) has no Anthropic equivalent; callers reading
+    the terminal events on that path are already in cleanup anyway.
+    """
+    if finish_reason in ("end_turn", "max_tokens", "stop_sequence"):
+        return finish_reason  # type: ignore[return-value]
+    return None
 
 
 def _new_message_id() -> str:
@@ -59,16 +77,28 @@ def _classify(token_id: int, tokenizer, phase_is_thinking: bool) -> tuple[bool, 
 async def _decoded_events(
     events: AsyncIterator[TokenEvent],
     tokenizer,
-    counts: _PhaseCounts,
+    state: _DecodeState,
 ):
-    """Drive StreamingDecoder from an async TokenEvent source, tracking counts."""
+    """Drive StreamingDecoder from an async TokenEvent source, tracking counts.
+
+    Terminal events (finish_reason or error) end the stream and record their
+    reason on `state` so the caller can emit the right wire-level closer.
+    """
     decoder = StreamingDecoder(tokenizer)
     phase_is_thinking = False
 
     async for evt in events:
+        if evt.error is not None:
+            state.error = evt.error
+            break
+        if evt.finish_reason is not None:
+            state.finish_reason = evt.finish_reason
+            break
+        if evt.token_id is None:
+            continue
         phase_is_thinking, bucket = _classify(evt.token_id, tokenizer, phase_is_thinking)
-        setattr(counts, bucket, getattr(counts, bucket) + 1)
-        counts.total += 1
+        setattr(state, bucket, getattr(state, bucket) + 1)
+        state.total += 1
         for dec_evt in decoder.process(evt.token_id):
             yield dec_evt
 
@@ -81,16 +111,15 @@ async def render_message(
     tokenizer,
     model_name: str,
     input_tokens: int,
-    max_tokens: int,
 ) -> MessageResponse:
     """Drain the event stream into a single MessageResponse."""
-    counts = _PhaseCounts()
+    state = _DecodeState()
     content_blocks: list[ContentBlock] = []
     current_text: list[str] = []
     current_thinking: list[str] = []
     in_thinking = False
 
-    async for dec_evt in _decoded_events(events, tokenizer, counts):
+    async for dec_evt in _decoded_events(events, tokenizer, state):
         match dec_evt:
             case ThinkingStartEvent():
                 in_thinking = True
@@ -103,6 +132,9 @@ async def render_message(
             case TextChunk(text=t):
                 (current_thinking if in_thinking else current_text).append(t)
 
+    if state.error is not None:
+        raise HTTPException(status_code=500, detail=state.error)
+
     text = "".join(current_text)
     if text:
         content_blocks.append(TextBlock(text=text))
@@ -112,14 +144,12 @@ async def render_message(
     if not content_blocks:
         content_blocks.append(TextBlock(text=""))
 
-    stop_reason = "max_tokens" if counts.total >= max_tokens else "end_turn"
-
     return MessageResponse(
         id=_new_message_id(),
         content=content_blocks,
         model=model_name,
-        stop_reason=stop_reason,
-        usage=Usage(input_tokens=input_tokens, output_tokens=counts.total),
+        stop_reason=_to_stop_reason(state.finish_reason),
+        usage=Usage(input_tokens=input_tokens, output_tokens=state.total),
     )
 
 
@@ -128,7 +158,6 @@ async def render_sse(
     tokenizer,
     model_name: str,
     input_tokens: int,
-    max_tokens: int,
 ) -> AsyncIterator[str]:
     """Stream the event stream as Anthropic SSE event strings.
 
@@ -137,7 +166,7 @@ async def render_sse(
     proxies don't close the stream during long thinking phases.
     """
     msg_id = _new_message_id()
-    counts = _PhaseCounts()
+    state = _DecodeState()
     out: asyncio.Queue[str | None] = asyncio.Queue()
 
     async def produce():
@@ -154,7 +183,7 @@ async def render_sse(
             in_thinking = False
             started_text_block = False
 
-            async for dec_evt in _decoded_events(events, tokenizer, counts):
+            async for dec_evt in _decoded_events(events, tokenizer, state):
                 match dec_evt:
                     case ThinkingStartEvent():
                         in_thinking = True
@@ -187,14 +216,18 @@ async def render_sse(
             if started_text_block:
                 await out.put(sse(ContentBlockStopEvent(index=block_index)))
 
-            stop_reason = "max_tokens" if counts.total >= max_tokens else "end_turn"
+            if state.error is not None:
+                # Emit the error and stop — no message_delta/message_stop on
+                # the error path, matching Anthropic's SSE contract.
+                await out.put(sse(ErrorEvent(error=ErrorBody(message=state.error))))
+                return
 
             await out.put(sse(MessageDeltaEvent(
-                delta=MessageDeltaBody(stop_reason=stop_reason),
+                delta=MessageDeltaBody(stop_reason=_to_stop_reason(state.finish_reason)),
                 usage=StreamUsage(
-                    output_tokens=counts.total,
-                    thinking_tokens=counts.thinking,
-                    text_tokens=counts.text,
+                    output_tokens=state.total,
+                    thinking_tokens=state.thinking,
+                    text_tokens=state.text,
                 ),
             )))
             await out.put(sse(MessageStopEvent()))

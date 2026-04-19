@@ -17,7 +17,6 @@ from dataclasses import dataclass, field
 
 from cantollm.engine.types import InferenceRequest, TokenEvent
 
-
 THINKING_START_ID = 1000
 THINKING_END_ID = 1001
 STOP_TOKEN_ID = 999
@@ -92,14 +91,25 @@ class FakeEngine:
         self.abort_calls.append(request_id)
 
     async def submit(self, req: InferenceRequest) -> AsyncIterator[TokenEvent]:
+        tokens_emitted = 0
         try:
             for step in self.script:
                 if step.sleep:
                     await asyncio.sleep(step.sleep)
                 if step.raise_error is not None:
-                    raise step.raise_error
+                    yield TokenEvent(
+                        error=str(step.raise_error), request_id=req.request_id
+                    )
+                    self.completed = True
+                    return
                 if step.token_id is not None:
-                    yield TokenEvent(token_id=step.token_id)
+                    yield TokenEvent(token_id=step.token_id, request_id=req.request_id)
+                    tokens_emitted += 1
+            if tokens_emitted >= req.max_tokens:
+                reason = "max_tokens"
+            else:
+                reason = "end_turn"
+            yield TokenEvent(finish_reason=reason, request_id=req.request_id)
             self.completed = True
         finally:
             if not self.completed:

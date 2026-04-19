@@ -5,7 +5,7 @@ import threading
 from collections.abc import AsyncIterator
 
 from cantollm.engine.backend import InferenceBackend
-from cantollm.engine.types import InferenceRequest, TokenEvent
+from cantollm.engine.types import FinishReason, InferenceRequest, TokenEvent
 from cantollm.kv_cache import KVCache
 
 _QUEUE_MAXSIZE = 256
@@ -37,12 +37,11 @@ class SequentialEngine:
             event.set()
 
     async def submit(self, req: InferenceRequest) -> AsyncIterator[TokenEvent]:
-        queue: asyncio.Queue[TokenEvent | BaseException | None] = asyncio.Queue(
-            maxsize=_QUEUE_MAXSIZE
-        )
+        queue: asyncio.Queue[TokenEvent | None] = asyncio.Queue(maxsize=_QUEUE_MAXSIZE)
         loop = asyncio.get_running_loop()
         stop_event = threading.Event()
         self._active[req.request_id] = stop_event
+        rid = req.request_id
 
         def put_threadsafe(item):
             # Use call_soon_threadsafe + put_nowait. For a bounded queue this
@@ -52,6 +51,7 @@ class SequentialEngine:
             loop.call_soon_threadsafe(queue.put_nowait, item)
 
         def run():
+            tokens_emitted = 0
             try:
                 cache = KVCache(self.config["num_transformers"])
                 self.backend.reset()
@@ -63,20 +63,31 @@ class SequentialEngine:
                     max_tokens=req.max_tokens,
                     stop_event=stop_event,
                 ):
-                    put_threadsafe(TokenEvent(token_id=tok))
+                    put_threadsafe(TokenEvent(token_id=tok, request_id=rid))
+                    tokens_emitted += 1
                     if stop_event.is_set():
                         break
             except Exception as e:
-                put_threadsafe(e)
-            finally:
+                put_threadsafe(TokenEvent(error=str(e), request_id=rid))
                 put_threadsafe(None)
+                return
+
+            reason: FinishReason
+            if tokens_emitted >= req.max_tokens:
+                reason = "max_tokens"
+            elif stop_event.is_set():
+                reason = "abort"
+            else:
+                # Backend returned without hitting max_tokens and without an
+                # abort — it saw an EOS or configured stop token.
+                reason = "end_turn"
+            put_threadsafe(TokenEvent(finish_reason=reason, request_id=rid))
+            put_threadsafe(None)
 
         worker_task = asyncio.create_task(asyncio.to_thread(run))
 
         try:
             while (evt := await queue.get()) is not None:
-                if isinstance(evt, BaseException):
-                    raise evt
                 yield evt
         finally:
             stop_event.set()

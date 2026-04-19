@@ -152,6 +152,16 @@ class MessageStopEvent(BaseModel):
     type: Literal["message_stop"] = "message_stop"
 
 
+class ErrorBody(BaseModel):
+    type: Literal["api_error"] = "api_error"
+    message: str
+
+
+class ErrorEvent(BaseModel):
+    type: Literal["error"] = "error"
+    error: ErrorBody
+
+
 SSEEvent = Annotated[
     Union[
         MessageStartEvent,
@@ -160,6 +170,7 @@ SSEEvent = Annotated[
         ContentBlockStopEvent,
         MessageDeltaEvent,
         MessageStopEvent,
+        ErrorEvent,
     ],
     Field(discriminator="type"),
 ]

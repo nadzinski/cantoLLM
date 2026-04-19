@@ -11,11 +11,9 @@ from __future__ import annotations
 import asyncio
 
 import httpx
-import pytest
 
 from cantollm.api import create_app
 from cantollm.api.anthropic_adapter import render_sse
-
 from tests.fakes import (
     STOP_TOKEN_ID,
     THINKING_END_ID,
@@ -25,7 +23,6 @@ from tests.fakes import (
     ScriptStep,
     parse_sse,
 )
-
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
@@ -339,7 +336,7 @@ def test_render_sse_aclose_propagates_to_engine():
     )
 
     async def run():
-        gen = render_sse(engine.submit(req), tokenizer, "test-model", 3, 100)
+        gen = render_sse(engine.submit(req), tokenizer, "test-model", 3)
         # Pull the first chunk (message_start) then close.
         first = await gen.__anext__()
         assert "message_start" in first
@@ -353,15 +350,14 @@ def test_render_sse_aclose_propagates_to_engine():
     assert engine.completed is False
 
 
-# ── 8. Error propagation (deferred: TokenEvent.error lands in Phase 1a) ──
+# ── 8. Error propagation ─────────────────────────────────────────────
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="TokenEvent.error + SSE error event lands in Phase 1a — today the "
-           "stream truncates silently. Flip this test when the error path ships.",
-)
 def test_sse_error_event_on_midstream_exception():
+    """Mid-stream backend error surfaces as an Anthropic-style `error` SSE
+    event, not a silent truncation. No message_delta/message_stop on the
+    error path.
+    """
     tokenizer = _tokenizer_for("hi")
     script = [
         ScriptStep(token_id=_char_ids("h")[0]),
@@ -382,7 +378,35 @@ def test_sse_error_event_on_midstream_exception():
     body = _run(run())
     events = [e for e in parse_sse(body) if e.event != "ping"]
     kinds = [e.event for e in events]
-    assert "error" in kinds, f"expected error event in stream, got {kinds}"
+
+    assert "error" in kinds
+    error_evt = next(e for e in events if e.event == "error")
+    assert error_evt.data["error"]["type"] == "api_error"
+    assert "boom" in error_evt.data["error"]["message"]
+    # No terminal message_delta/message_stop on the error path.
+    assert "message_delta" not in kinds
+    assert "message_stop" not in kinds
+
+
+def test_non_streaming_error_returns_500():
+    """Non-streaming error path surfaces as an HTTP 500, not a 200 with a
+    malformed body.
+    """
+    tokenizer = _tokenizer_for("hi")
+    script = [
+        ScriptStep(token_id=_char_ids("h")[0]),
+        ScriptStep(raise_error=RuntimeError("boom")),
+    ]
+    engine = FakeEngine(script=script)
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            r = await client.post("/v1/messages", json=_messages_body(max_tokens=100, stream=False))
+            return r.status_code, r.json()
+
+    status, body = _run(run())
+    assert status == 500
+    assert "boom" in body.get("detail", "")
 
 
 # ── 9. Pydantic validation ───────────────────────────────────────────

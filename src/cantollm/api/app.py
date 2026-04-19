@@ -49,11 +49,9 @@ def create_app(engine: InferenceEngine, tokenizer, model_name: str) -> FastAPI:
 
         if body.stream:
             return StreamingResponse(
-                render_sse(events, tokenizer, model_name, input_tokens, body.max_tokens),
+                render_sse(events, tokenizer, model_name, input_tokens),
                 media_type="text/event-stream",
             )
-        return await render_message(
-            events, tokenizer, model_name, input_tokens, body.max_tokens
-        )
+        return await render_message(events, tokenizer, model_name, input_tokens)
 
     return app

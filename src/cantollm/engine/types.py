@@ -7,6 +7,9 @@ toward batching without rippling into the API surface.
 """
 
 from dataclasses import dataclass
+from typing import Literal
+
+FinishReason = Literal["end_turn", "max_tokens", "stop_sequence", "abort"]
 
 
 @dataclass
@@ -26,4 +29,16 @@ class InferenceRequest:
 
 @dataclass
 class TokenEvent:
-    token_id: int
+    """One event in the engine's per-request output stream.
+
+    An event carries a token (`token_id` set) *or* marks end-of-stream
+    (`finish_reason` set) *or* signals a failure (`error` set). Exactly one of
+    those three is populated. `request_id` is always set on engine-produced
+    events and becomes load-bearing once a batching scheduler multiplexes
+    per-request queues into a shared stream.
+    """
+
+    token_id: int | None = None
+    finish_reason: FinishReason | None = None
+    error: str | None = None
+    request_id: str | None = None
