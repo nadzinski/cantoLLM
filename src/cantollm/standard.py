@@ -5,7 +5,6 @@ import torch
 
 from cantollm.engine.types import SamplingParams
 from cantollm.kv_cache import KVCache
-from cantollm.stats import SpeculativeStats
 
 
 class StandardBackend:
@@ -22,14 +21,6 @@ class StandardBackend:
     def reset(self):
         """Reset generator state. No-op for standard generation."""
         pass
-
-    def reset_stats(self):
-        """Reset stats counters. No-op for standard generation."""
-        pass
-
-    def get_stats(self) -> SpeculativeStats | None:
-        """Get speculative decoding stats. Returns None for standard generation."""
-        return None
 
     def _apply_top_p(self, logits: torch.Tensor, top_p: float) -> torch.Tensor:
         """Zero out tokens outside the top-p probability mass."""

@@ -32,9 +32,7 @@ class SpeculativeBackend:
     def reset(self):
         """Reset for a new conversation: clear draft cache and stats."""
         self.draft_cache.reset()
-        self._draft_proposed = 0
-        self._draft_accepted = 0
-        self._iterations = 0
+        self.reset_stats()
 
     def reset_stats(self):
         """Reset stats counters for a new generation run."""
