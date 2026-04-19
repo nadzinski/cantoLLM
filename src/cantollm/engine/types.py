@@ -6,16 +6,33 @@ lets the adapter own Anthropic-specific concerns and lets the engine grow
 toward batching without rippling into the API surface.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
+
+from cantollm.engine.logits_processors import (
+    LogitsProcessor,
+    TemperatureProcessor,
+    TopPProcessor,
+)
 
 FinishReason = Literal["end_turn", "max_tokens", "abort"]
 
 
 @dataclass
 class SamplingParams:
-    temperature: float = 0.7
-    top_p: float = 0.9
+    processors: list[LogitsProcessor] = field(default_factory=list)
+    greedy: bool = False
+
+    @classmethod
+    def from_temperature_top_p(
+        cls, temperature: float, top_p: float,
+    ) -> "SamplingParams":
+        if temperature == 0:
+            return cls(greedy=True)
+        processors: list[LogitsProcessor] = [TemperatureProcessor(temperature)]
+        if top_p < 1.0:
+            processors.append(TopPProcessor(top_p))
+        return cls(processors=processors, greedy=False)
 
 
 @dataclass

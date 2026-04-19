@@ -8,8 +8,8 @@ from cantollm.speculative import SpeculativeBackend
 from cantollm.kv_cache import KVCache
 
 
-GREEDY = SamplingParams(temperature=0.0, top_p=1.0)
-STOCHASTIC = SamplingParams(temperature=0.7, top_p=0.9)
+GREEDY = SamplingParams.from_temperature_top_p(temperature=0.0, top_p=1.0)
+STOCHASTIC = SamplingParams.from_temperature_top_p(temperature=0.7, top_p=0.9)
 
 
 def make_mock_generator():

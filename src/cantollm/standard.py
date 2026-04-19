@@ -8,7 +8,8 @@ from cantollm.kv_cache import KVCache
 
 
 class StandardBackend:
-    """Generates tokens from a model using temperature and top-p sampling."""
+    """Generates tokens from a model, applying a per-request logits processor
+    pipeline before sampling."""
 
     def __init__(
         self,
@@ -22,47 +23,24 @@ class StandardBackend:
         """Reset generator state. No-op for standard generation."""
         pass
 
-    def _apply_top_p(self, logits: torch.Tensor, top_p: float) -> torch.Tensor:
-        """Zero out tokens outside the top-p probability mass."""
-        sorted_logits, sorted_indices = torch.sort(logits, descending=True)
-        cumulative_probs = torch.cumsum(torch.softmax(sorted_logits, dim=-1), dim=-1)
-
-        remove_mask = cumulative_probs > top_p
-
-        # Shift right: keep the token that crosses the threshold too
-        # (position 0 stays False, ensuring at least the top token survives)
-        sorted_indices_to_remove = torch.full_like(remove_mask, False)
-        sorted_indices_to_remove[..., 1:] = remove_mask[..., :-1]
-
-        indices_to_remove = sorted_indices_to_remove.scatter(
-            dim=-1, index=sorted_indices, src=sorted_indices_to_remove
-        )
-        return logits.masked_fill(indices_to_remove, float("-inf"))
-
     def get_probs(self, logits: torch.Tensor, sampling: SamplingParams) -> torch.Tensor:
-        """Apply temperature/top_p and return probabilities.
+        """Run the processor pipeline and return the resulting distribution.
 
         Args:
             logits: Raw logits from model, shape (batch, vocab) or (vocab,)
             sampling: Per-request sampling parameters
 
         Returns:
-            Probability tensor after temperature scaling and top-p filtering.
+            Probability tensor after all processors have been applied.
         """
-        if sampling.temperature > 0:
-            logits = logits / sampling.temperature
-
-        if sampling.top_p < 1.0:
-            logits = self._apply_top_p(logits, sampling.top_p)
-
+        for processor in sampling.processors:
+            logits = processor(logits)
         return torch.softmax(logits, dim=-1)
 
     def sample(
         self, logits: torch.Tensor, sampling: SamplingParams
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Sample a token from logits.
-
-        Applies temperature scaling and top-p filtering before sampling.
 
         Args:
             logits: Raw logits from model, shape (batch, vocab) or (vocab,)
@@ -72,8 +50,9 @@ class StandardBackend:
             Tensor containing the sampled token ID(s).
             Tensor containing the probs
         """
-        if sampling.temperature == 0:
-            # Greedy: skip top_p work entirely, softmax is cheap
+        if sampling.greedy:
+            # Skip the pipeline: argmax is invariant under monotonic shifts
+            # and softmax of the raw logits is cheap.
             probs = torch.softmax(logits, dim=-1)
             return torch.argmax(logits, dim=-1), probs
         probs = self.get_probs(logits, sampling)

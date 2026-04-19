@@ -106,7 +106,7 @@ class SpeculativeBackend:
         # tokens iff they match main's argmax. The stochastic rule below still
         # gives correct behavior, but wastes draft tokens when p_draft < 1 at
         # positions where the draft happened to agree with main's argmax.
-        if sampling.temperature == 0:
+        if sampling.greedy:
             accepted = []
             main_argmax = torch.argmax(main_probs, dim=-1)
             for i, token in enumerate(draft_tokens):

@@ -129,8 +129,8 @@ def build_openai_router(
             req = await tokenize_and_build_request(
                 messages=messages,
                 system=system,
-                sampling_params=SamplingParams(
-                    temperature=body.temperature, top_p=body.top_p,
+                sampling_params=SamplingParams.from_temperature_top_p(
+                    body.temperature, body.top_p,
                 ),
                 max_tokens=max_tokens,
                 tokenizer=tokenizer,

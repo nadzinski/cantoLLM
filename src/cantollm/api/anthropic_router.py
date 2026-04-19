@@ -33,8 +33,8 @@ def build_anthropic_router(
             req = await tokenize_and_build_request(
                 messages=[m.model_dump() for m in body.messages],
                 system=body.system,
-                sampling_params=SamplingParams(
-                    temperature=body.temperature, top_p=body.top_p,
+                sampling_params=SamplingParams.from_temperature_top_p(
+                    body.temperature, body.top_p,
                 ),
                 max_tokens=body.max_tokens,
                 tokenizer=tokenizer,
