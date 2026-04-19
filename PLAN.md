@@ -50,6 +50,9 @@ first → feature work → hardware → what falls out.
 
 **Goal:** small housekeeping before real work; costs a day, pays dividends forever.
 
+**Status (2026-04-19):** Rename done (`src/cantollm/` with Qwen3 code under
+`models/qwen3/`). Open: benchmark harness spec document.
+
 - Rename `src/qwen3/` → `src/cantollm/`. `qwen3` becomes a backend subfolder for
   Qwen3-specific code (model, tokenizer, weight loader). Generic code (engine, api,
   kv_cache, generator, decoder) moves up.
@@ -70,6 +73,14 @@ first → feature work → hardware → what falls out.
 **Goal:** land the architectural hygiene that continuous batching will need. Stay
 single-process — but shape every interface so the Phase 2 process split is a later
 afternoon's work, not a rewrite.
+
+**Status (2026-04-19):** `InferenceBackend` Protocol + `StandardBackend` /
+`SpeculativeBackend` split landed; `api_types.py` now at `api/anthropic_types.py`;
+`TokenEvent` widened (`finish_reason`, `error`, `request_id`) and the adapter's
+count-based `stop_reason` guess is gone; HTTP/SSE contract test suite green. Open:
+`ModelRuntime` / `ModelSpec` / `EngineRegistry` refactor (still inline in
+`main.py`); stop flattening `Message.content`; per-model tokenization dispatch +
+thread pool; both latent bug fixes (mask buffer, tokenizer `chat_wrapped`).
 
 **Refactors:**
 
