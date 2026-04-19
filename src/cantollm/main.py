@@ -10,11 +10,7 @@ import torch
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from cantollm.models.qwen3.model import Qwen3
-from cantollm.models.qwen3.tokenizer import Qwen3Tokenizer
-from cantollm.models.qwen3.weights import download_weights, load_weights_into_model
-from cantollm.speculative import SpeculativeBackend
-from cantollm.standard import StandardBackend
+from cantollm.spec import MODEL_CONFIGS, qwen3_spec
 
 # Reconfigure stdout to use UTF-8 encoding for emoji support
 sys.stdout.reconfigure(encoding="utf-8")
@@ -24,65 +20,6 @@ os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
 
 # Disable SSL verification for HuggingFace (needed for some network configs)
 os.environ["HF_HUB_DISABLE_SSL_VERIFICATION"] = "1"
-
-
-MODEL_CONFIGS = {
-    "0.6B": {
-        "token_count": 151_936,
-        "max_seq_len": 40_960,
-        "token_embedding_dim": 1024,
-        "num_heads": 16,
-        "num_transformers": 28,
-        "expanded_dim": 3072,
-        "num_groups": 8,
-        "head_dim": 128,
-        "dtype": torch.bfloat16,
-    },
-    "1.7B": {
-        "token_count": 151_936,
-        "max_seq_len": 40_960,
-        "token_embedding_dim": 2048,
-        "num_heads": 16,
-        "num_transformers": 28,
-        "expanded_dim": 6144,
-        "num_groups": 8,
-        "head_dim": 128,
-        "dtype": torch.bfloat16,
-    },
-    "4B": {
-        "token_count": 151_936,
-        "max_seq_len": 40_960,
-        "token_embedding_dim": 2560,
-        "num_heads": 32,
-        "num_transformers": 36,
-        "expanded_dim": 9728,
-        "num_groups": 8,
-        "head_dim": 128,
-        "dtype": torch.bfloat16,
-    },
-    "8B": {
-        "token_count": 151_936,
-        "max_seq_len": 40_960,
-        "token_embedding_dim": 4096,
-        "num_heads": 32,
-        "num_transformers": 36,
-        "expanded_dim": 12288,
-        "num_groups": 8,
-        "head_dim": 128,
-        "dtype": torch.bfloat16,
-    },
-    "14B": {
-        "token_count": 151_936,
-        "max_seq_len": 40_960,
-        "token_embedding_dim": 5120,
-        "num_heads": 40,
-        "num_transformers": 40,
-        "expanded_dim": 17408,
-        "num_groups": 8,
-        "head_dim": 128,
-        "dtype": torch.bfloat16,
-    },
-}
 
 
 def select_device() -> torch.device:
@@ -99,36 +36,6 @@ def select_device() -> torch.device:
     return device
 
 
-def load_model(model_size: str, config: dict, device: torch.device):
-    """Download weights and initialize the model."""
-    print(f"Downloading {model_size} model weights...")
-    local_dir, weights_dict = download_weights(model_size=model_size, use_instruct=True)
-
-    print("Creating model...")
-    model = Qwen3(qwen3_config=config)
-
-    print("Loading pretrained weights...")
-    load_weights_into_model(model, config, weights_dict)
-    del weights_dict  # Free memory
-
-    model.to(device)
-    model.eval()
-
-    return model, local_dir
-
-
-def create_tokenizer(local_dir: str) -> Qwen3Tokenizer:
-    """Initialize the tokenizer."""
-    tokenizer_path = f"{local_dir}/tokenizer.json"
-    return Qwen3Tokenizer(
-        tokenizer_file_path=tokenizer_path,
-        is_instruct_model=True,
-        apply_chat_template=True,
-        add_generation_prompt=True,
-        enable_thinking=True,
-    )
-
-
 # ── Subcommand: serve ───────────────────────────────────────────────
 
 def cmd_serve(args):
@@ -137,39 +44,25 @@ def cmd_serve(args):
 
     from cantollm.api import create_app
     from cantollm.engine import SequentialEngine
+    from cantollm.registry import EngineRegistry
+    from cantollm.runtime import build_runtime
 
     device = select_device()
 
     if args.speculative:
-        main_size = args.main_model or args.model
-        draft_size = args.draft_model or "0.6B"
-        main_config = MODEL_CONFIGS[main_size]
-        draft_config = MODEL_CONFIGS[draft_size]
-
-        draft_model, draft_dir = load_model(draft_size, draft_config, device)
-        main_model, _ = load_model(main_size, main_config, device)
-        tokenizer = create_tokenizer(draft_dir)
-        config = main_config
-        model_name = f"qwen3-{main_size}+{draft_size}-speculative"
-
-        draft_gen = StandardBackend(model=draft_model, device=device)
-        main_gen = StandardBackend(model=main_model, device=device)
-        backend = SpeculativeBackend(
-            draft=draft_gen, main=main_gen,
-            num_layers=main_config["num_transformers"],
-            draft_num_layers=draft_config["num_transformers"],
-        )
+        main_spec = qwen3_spec(args.main_model or args.model)
+        draft_spec = qwen3_spec(args.draft_model or "0.6B")
+        runtime = build_runtime(main_spec, device, speculative=draft_spec)
+        model_name = f"qwen3-{main_spec.size}+{draft_spec.size}-speculative"
     else:
-        model_size = args.model
-        config = MODEL_CONFIGS[model_size]
-        model, local_dir = load_model(model_size, config, device)
-        tokenizer = create_tokenizer(local_dir)
-        model_name = f"qwen3-{model_size}"
+        spec = qwen3_spec(args.model)
+        runtime = build_runtime(spec, device)
+        model_name = spec.name
 
-        backend = StandardBackend(model=model, device=device)
-
-    engine = SequentialEngine(backend=backend, config=config)
-    app = create_app(engine=engine, tokenizer=tokenizer, model_name=model_name)
+    engine = SequentialEngine(runtime)
+    registry = EngineRegistry()
+    registry.register(model_name, engine, runtime)
+    app = create_app(registry)
 
     print(f"\nCantoLLM server starting on http://{args.host}:{args.port}")
     print("  POST /v1/messages  — Anthropic-compatible Messages API")

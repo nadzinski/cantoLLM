@@ -19,6 +19,8 @@ from tests.fakes import (
     THINKING_END_ID,
     THINKING_START_ID,
     FakeEngine,
+    FakeRegistry,
+    FakeRuntime,
     FakeTokenizer,
     ScriptStep,
     parse_sse,
@@ -42,7 +44,9 @@ def _tokenizer_for(text: str) -> FakeTokenizer:
 
 
 def _client(engine: FakeEngine, tokenizer: FakeTokenizer) -> httpx.AsyncClient:
-    app = create_app(engine=engine, tokenizer=tokenizer, model_name="test-model")
+    runtime = FakeRuntime(tokenizer=tokenizer)
+    registry = FakeRegistry(entries={"test-model": (engine, runtime)})
+    app = create_app(registry)
     transport = httpx.ASGITransport(app=app)
     return httpx.AsyncClient(transport=transport, base_url="http://test")
 

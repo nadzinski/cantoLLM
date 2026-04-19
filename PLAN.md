@@ -77,10 +77,12 @@ afternoon's work, not a rewrite.
 **Status (2026-04-19):** `InferenceBackend` Protocol + `StandardBackend` /
 `SpeculativeBackend` split landed; `api_types.py` now at `api/anthropic_types.py`;
 `TokenEvent` widened (`finish_reason`, `error`, `request_id`) and the adapter's
-count-based `stop_reason` guess is gone; HTTP/SSE contract test suite green. Open:
-`ModelRuntime` / `ModelSpec` / `EngineRegistry` refactor (still inline in
-`main.py`); stop flattening `Message.content`; per-model tokenization dispatch +
-thread pool; both latent bug fixes (mask buffer, tokenizer `chat_wrapped`).
+count-based `stop_reason` guess is gone; HTTP/SSE contract test suite green;
+`ModelSpec` / `ModelRuntime` / `EngineRegistry` landed — `SequentialEngine`
+takes a runtime, cache is allocated via `runtime.new_cache()`, `create_app`
+takes the registry and dispatches per-model tokenizer via `body.model`. Open:
+stop flattening `Message.content`; tokenization thread pool; both latent bug
+fixes (mask buffer, tokenizer `chat_wrapped`).
 
 **Refactors:**
 

@@ -65,6 +65,50 @@ class ScriptStep:
 
 
 @dataclass
+class FakeRuntime:
+    """Runtime double: exposes just `.tokenizer` (what the API layer reads)."""
+
+    tokenizer: FakeTokenizer
+
+    async def start(self) -> None:
+        pass
+
+    async def shutdown(self) -> None:
+        pass
+
+
+class FakeRegistry:
+    """Minimal EngineRegistry stand-in for contract tests."""
+
+    def __init__(self, entries: dict[str, tuple["FakeEngine", FakeRuntime]]):
+        self._entries = {
+            name: _FakeEntry(engine=eng, runtime=rt) for name, (eng, rt) in entries.items()
+        }
+
+    def get(self, name: str):
+        return self._entries[name]
+
+    def names(self) -> list[str]:
+        return list(self._entries)
+
+    async def start_all(self) -> None:
+        for entry in self._entries.values():
+            await entry.runtime.start()
+            await entry.engine.start()
+
+    async def shutdown_all(self) -> None:
+        for entry in self._entries.values():
+            await entry.engine.shutdown()
+            await entry.runtime.shutdown()
+
+
+@dataclass
+class _FakeEntry:
+    engine: "FakeEngine"
+    runtime: FakeRuntime
+
+
+@dataclass
 class FakeEngine:
     """Engine double that replays a scripted list of ScriptSteps.
 

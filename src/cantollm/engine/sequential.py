@@ -4,9 +4,8 @@ import asyncio
 import threading
 from collections.abc import AsyncIterator
 
-from cantollm.engine.backend import InferenceBackend
 from cantollm.engine.types import FinishReason, InferenceRequest, TokenEvent
-from cantollm.kv_cache import KVCache
+from cantollm.runtime import ModelRuntime
 
 _QUEUE_MAXSIZE = 256
 
@@ -19,10 +18,13 @@ class SequentialEngine:
     has a threading.Event that the backend checks per step; abort() sets it.
     """
 
-    def __init__(self, backend: InferenceBackend, config):
-        self.backend = backend
-        self.config = config
+    def __init__(self, runtime: ModelRuntime):
+        self.runtime = runtime
         self._active: dict[str, threading.Event] = {}
+
+    @property
+    def backend(self):
+        return self.runtime.backend
 
     async def start(self) -> None:
         pass
@@ -53,9 +55,9 @@ class SequentialEngine:
         def run():
             tokens_emitted = 0
             try:
-                cache = KVCache(self.config["num_transformers"])
-                self.backend.reset()
-                for tok in self.backend.generate(
+                cache = self.runtime.new_cache()
+                self.runtime.backend.reset()
+                for tok in self.runtime.backend.generate(
                     input_ids=req.prompt_token_ids,
                     cache=cache,
                     sampling=req.sampling_params,

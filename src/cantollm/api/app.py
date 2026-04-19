@@ -3,13 +3,13 @@
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 
 from cantollm.api.anthropic_adapter import render_message, render_sse
 from cantollm.api.anthropic_types import MessagesRequest
-from cantollm.engine.engine import InferenceEngine
 from cantollm.engine.types import InferenceRequest, SamplingParams
+from cantollm.registry import EngineRegistry
 
 
 def _build_inference_request(body: MessagesRequest, tokenizer) -> InferenceRequest:
@@ -26,14 +26,14 @@ def _build_inference_request(body: MessagesRequest, tokenizer) -> InferenceReque
     )
 
 
-def create_app(engine: InferenceEngine, tokenizer, model_name: str) -> FastAPI:
+def create_app(registry: EngineRegistry) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        await engine.start()
+        await registry.start_all()
         try:
             yield
         finally:
-            await engine.shutdown()
+            await registry.shutdown_all()
 
     app = FastAPI(title="CantoLLM", lifespan=lifespan)
 
@@ -43,15 +43,24 @@ def create_app(engine: InferenceEngine, tokenizer, model_name: str) -> FastAPI:
 
     @app.post("/v1/messages")
     async def messages(body: MessagesRequest):
+        try:
+            entry = registry.get(body.model)
+        except KeyError:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Model '{body.model}' is not registered. Available: {registry.names()}",
+            )
+
+        tokenizer = entry.runtime.tokenizer
         req = _build_inference_request(body, tokenizer)
-        events = engine.submit(req)
+        events = entry.engine.submit(req)
         input_tokens = len(req.prompt_token_ids)
 
         if body.stream:
             return StreamingResponse(
-                render_sse(events, tokenizer, model_name, input_tokens),
+                render_sse(events, tokenizer, body.model, input_tokens),
                 media_type="text/event-stream",
             )
-        return await render_message(events, tokenizer, model_name, input_tokens)
+        return await render_message(events, tokenizer, body.model, input_tokens)
 
     return app
