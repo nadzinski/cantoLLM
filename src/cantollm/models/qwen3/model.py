@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 
+from cantollm.models.attention import AttentionMethod
 from cantollm.models.rope import apply_rotary_emb, precompute_freqs_cis
 
 
@@ -106,7 +107,15 @@ class GroupedQueryAttention(nn.Module):
     dimension (num_heads * head_dim) may differ from the input embedding dimension.
     """
 
-    def __init__(self, token_embedding_dim, num_heads, num_groups, head_dim, dtype=None):
+    def __init__(
+        self,
+        token_embedding_dim,
+        num_heads,
+        num_groups,
+        head_dim,
+        attention_method: AttentionMethod,
+        dtype=None,
+    ):
         super().__init__()
         assert num_heads % num_groups == 0
         self.token_embedding_dim = token_embedding_dim
@@ -126,6 +135,8 @@ class GroupedQueryAttention(nn.Module):
 
         self.q_norm = RootMeanSquareNorm(self.head_dim)
         self.k_norm = RootMeanSquareNorm(self.head_dim)
+
+        self.attention_method = attention_method
 
     def forward(self, x, start_pos, mask, freqs_cis, kv_cache=None):
         batches, seq_len, _ = x.shape
@@ -152,39 +163,17 @@ class GroupedQueryAttention(nn.Module):
         queries_roped = apply_rotary_emb(queries_normed, freqs_cis, offset=start_pos)
         keys_roped = apply_rotary_emb(keys_normed, freqs_cis, offset=start_pos)
 
-        # When doing inference on the last n vectors with the kv_cache, we only
-        # want to compute the last n rows of the attention matrix.
-        # Usually n is just 1, but we may need it to be higher to do a few last
-        # tokens at a time, e.g. for speculative decoding.
-        if kv_cache and kv_cache["keys"] is not None:
-            # Glue the cached and computed K, V along the seq dimension
-            full_keys = torch.cat((kv_cache["keys"], keys_roped), dim=1)
-            full_values = torch.cat((kv_cache["values"], values), dim=1)
+        # Delegate attention math + KV update to the attention method.
+        # When the cache is populated we're in the decode path (possibly a
+        # multi-token speculative chunk); otherwise it's prefill.
+        if kv_cache is None or kv_cache["keys"] is None:
+            z_context = self.attention_method.forward_prefill(
+                queries_roped, keys_roped, values, mask, kv_cache,
+            )
         else:
-            full_keys = keys_roped
-            full_values = values
-
-        # Update cache
-        if kv_cache is not None:
-            kv_cache["keys"] = full_keys
-            kv_cache["values"] = full_values
-
-        # Form attn matrices for each head by dot product along the head dim
-        # I used to study General Relativity so I find einstein summations easier to think about
-        # than complicated transpose sequences and matmuls.
-        # (batch, seq_i, groups, heads, dim) @ (batch, seq_j, groups, dim)
-        #   -> (batch, groups, heads, seq_i, seq_j)
-        # If we're computing with the KV cache, at this point attn is just
-        # going to be 1 row or a few rows
-        attn = torch.einsum("bighd,bjgd->bghij", queries_roped, full_keys)
-
-        masked_attn = attn.masked_fill(mask, -float("inf"))
-        attn_weights = torch.softmax(masked_attn / self.head_dim**0.5, dim=-1)
-
-        # Weighted sum of values, *and* rearrange dims to get ready to stitch heads together
-        # (batch, groups, heads, seq_i, seq_j) @ (batch, seq_j, groups, dim)
-        #   -> (batch, seq_i, groups, heads, dim)
-        z_context = torch.einsum("bghij,bjgd->bighd", attn_weights, full_values)
+            z_context = self.attention_method.forward_decode(
+                queries_roped, keys_roped, values, mask, kv_cache,
+            )
 
         # Stitch heads together
         z_context_flat = z_context.reshape(batches, seq_len, self.q_out_dim)
@@ -197,14 +186,21 @@ class GroupedQueryAttention(nn.Module):
 
 class Transformer(nn.Module):
     def __init__(
-        self, token_embedding_dim, expanded_dim, num_heads, num_groups, head_dim, dtype=None
+        self,
+        token_embedding_dim,
+        expanded_dim,
+        num_heads,
+        num_groups,
+        head_dim,
+        attention_method: AttentionMethod,
+        dtype=None,
     ):
         super().__init__()
         self.RMSNorm_1 = RootMeanSquareNorm(token_embedding_dim)
         self.RMSNorm_2 = RootMeanSquareNorm(token_embedding_dim)
 
         self.GQA = GroupedQueryAttention(
-            token_embedding_dim, num_heads, num_groups, head_dim, dtype
+            token_embedding_dim, num_heads, num_groups, head_dim, attention_method, dtype
         )
 
         self.FF = FeedForward(token_embedding_dim, expanded_dim, dtype)
@@ -224,8 +220,10 @@ class Transformer(nn.Module):
 
 
 class Qwen3(nn.Module):
-    def __init__(self, qwen3_config):
+    def __init__(self, qwen3_config, attention_method: AttentionMethod):
         super().__init__()
+
+        self.attention_method = attention_method
 
         self.initial_embedding_layer = nn.Embedding(
             qwen3_config["token_count"],
@@ -241,6 +239,7 @@ class Qwen3(nn.Module):
                     qwen3_config["num_heads"],
                     qwen3_config["num_groups"],
                     qwen3_config["head_dim"],
+                    attention_method,
                     dtype=qwen3_config["dtype"],
                 )
                 for _ in range(qwen3_config["num_transformers"])
@@ -286,14 +285,8 @@ class Qwen3(nn.Module):
 
         x = self.initial_embedding_layer(tokens)
 
-        # Build the causal mask for this forward only — shape matches what
-        # attention will slice out, so we pay the same peak memory as the old
-        # preallocated slice but don't sit on a 40k x 40k buffer between calls.
         seq_len = tokens.shape[-1]
-        full_seq_len = start_pos + seq_len
-        mask = torch.ones(
-            seq_len, full_seq_len, dtype=torch.bool, device=tokens.device
-        ).triu(diagonal=start_pos + 1)
+        mask = self.attention_method.build_mask(start_pos, seq_len, tokens.device)
 
         for i, transformer in enumerate(self.transformer_blocks):
             layer_cache = kv_cache[i] if kv_cache is not None else None

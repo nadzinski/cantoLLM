@@ -1,5 +1,6 @@
 import torch
 
+from cantollm.models.attention import EinsumAttentionMethod
 from cantollm.models.qwen3.model import Qwen3
 
 
@@ -20,7 +21,7 @@ def make_config():
 def test_qwen3_output_shape():
     """Test that Qwen3 returns correct output shape."""
     config = make_config()
-    model = Qwen3(config)
+    model = Qwen3(config, attention_method=EinsumAttentionMethod())
     model.eval()
 
     batch_size = 2
@@ -38,7 +39,7 @@ def test_qwen3_output_shape():
 def test_qwen3_with_kv_cache():
     """Test that Qwen3 populates KV cache correctly."""
     config = make_config()
-    model = Qwen3(config)
+    model = Qwen3(config, attention_method=EinsumAttentionMethod())
     model.eval()
 
     batch_size = 1
@@ -60,7 +61,7 @@ def test_qwen3_with_kv_cache():
 def test_qwen3_incremental_generation():
     """Test incremental generation with KV cache."""
     config = make_config()
-    model = Qwen3(config)
+    model = Qwen3(config, attention_method=EinsumAttentionMethod())
     model.eval()
 
     batch_size = 1
@@ -87,7 +88,7 @@ def test_qwen3_incremental_generation():
 def test_qwen3_without_kv_cache():
     """Test that Qwen3 works without a KV cache for simple inference."""
     config = make_config()
-    model = Qwen3(config)
+    model = Qwen3(config, attention_method=EinsumAttentionMethod())
     model.eval()
 
     batch_size = 2

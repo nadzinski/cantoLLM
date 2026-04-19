@@ -14,6 +14,7 @@ import torch
 
 from cantollm.engine.backend import InferenceBackend
 from cantollm.kv_cache import KVCache
+from cantollm.models.attention import EinsumAttentionMethod
 from cantollm.spec import ModelSpec
 from cantollm.speculative import SpeculativeBackend
 from cantollm.standard import StandardBackend
@@ -49,7 +50,10 @@ def _load_model(spec: ModelSpec, device: torch.device) -> tuple[torch.nn.Module,
     local_dir, weights_dict = spec.weights_loader()
 
     print("Creating model...")
-    model = spec.model_cls(qwen3_config=spec.arch)
+    model = spec.model_cls(
+        qwen3_config=spec.arch,
+        attention_method=EinsumAttentionMethod(),
+    )
 
     print("Loading pretrained weights...")
     spec.apply_weights(model, spec.arch, weights_dict)

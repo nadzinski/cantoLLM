@@ -1,5 +1,6 @@
 import torch
 
+from cantollm.models.attention import EinsumAttentionMethod
 from cantollm.models.qwen3.model import GroupedQueryAttention
 from cantollm.models.rope import precompute_freqs_cis
 
@@ -21,6 +22,7 @@ def _make_gqa(embedding_dim, num_heads, num_groups, head_dim=None):
         num_heads=num_heads,
         num_groups=num_groups,
         head_dim=head_dim,
+        attention_method=EinsumAttentionMethod(),
     )
     freqs_cis = precompute_freqs_cis(head_dim, MAX_SEQ_LEN)
     return gqa, freqs_cis

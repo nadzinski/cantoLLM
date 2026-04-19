@@ -1,6 +1,7 @@
 import pytest
 import torch
 
+from cantollm.models.attention import EinsumAttentionMethod
 from cantollm.models.qwen3.model import Qwen3
 from cantollm.models.qwen3.weights import VALID_SIZES, load_weights_into_model
 
@@ -57,7 +58,7 @@ def make_fake_weights(config):
 def test_load_weights_copies_values():
     """Weights from the dict should actually end up in the model parameters."""
     config = make_config()
-    model = Qwen3(config)
+    model = Qwen3(config, attention_method=EinsumAttentionMethod())
     weights = make_fake_weights(config)
 
     load_weights_into_model(model, config, weights)
@@ -77,7 +78,7 @@ def test_load_weights_copies_values():
 def test_load_weights_all_layers_populated():
     """Every transformer block should receive its weights, not just the first."""
     config = make_config()
-    model = Qwen3(config)
+    model = Qwen3(config, attention_method=EinsumAttentionMethod())
     weights = make_fake_weights(config)
 
     load_weights_into_model(model, config, weights)
@@ -91,7 +92,7 @@ def test_load_weights_all_layers_populated():
 def test_load_weights_weight_tying():
     """When lm_head.weight is absent, output layer should be the same parameter as embedding."""
     config = make_config()
-    model = Qwen3(config)
+    model = Qwen3(config, attention_method=EinsumAttentionMethod())
     weights = make_fake_weights(config)
     del weights["lm_head.weight"]
 
@@ -104,7 +105,7 @@ def test_load_weights_weight_tying():
 def test_load_weights_shape_mismatch_raises():
     """A shape mismatch between model and weights should raise ValueError."""
     config = make_config()
-    model = Qwen3(config)
+    model = Qwen3(config, attention_method=EinsumAttentionMethod())
     weights = make_fake_weights(config)
     # Corrupt one weight to have the wrong shape
     weights["model.norm.weight"] = torch.randn(999)
@@ -116,7 +117,7 @@ def test_load_weights_shape_mismatch_raises():
 def test_load_weights_missing_key_raises():
     """A missing key in weights_dict should raise KeyError."""
     config = make_config()
-    model = Qwen3(config)
+    model = Qwen3(config, attention_method=EinsumAttentionMethod())
     weights = make_fake_weights(config)
     del weights["model.layers.0.self_attn.q_proj.weight"]
 
