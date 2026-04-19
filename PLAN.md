@@ -74,7 +74,7 @@ first → feature work → hardware → what falls out.
 single-process — but shape every interface so the Phase 2 process split is a later
 afternoon's work, not a rewrite.
 
-**Status (2026-04-19):** `InferenceBackend` Protocol + `StandardBackend` /
+**Status (2026-04-19):** Complete. `InferenceBackend` Protocol + `StandardBackend` /
 `SpeculativeBackend` split landed; `api_types.py` now at `api/anthropic_types.py`;
 `TokenEvent` widened (`finish_reason`, `error`, `request_id`) and the adapter's
 count-based `stop_reason` guess is gone; HTTP/SSE contract test suite green;
@@ -82,8 +82,11 @@ count-based `stop_reason` guess is gone; HTTP/SSE contract test suite green;
 takes a runtime, cache is allocated via `runtime.new_cache()`, `create_app`
 takes the registry and dispatches per-model tokenizer via `body.model`;
 `Message.content` flattening removed — structured `list[ContentBlockInput]`
-now passes through to the tokenizer. Open: tokenization thread pool; both
-latent bug fixes (mask buffer, tokenizer `chat_wrapped`).
+now passes through to the tokenizer; API-side `encode_conversation` runs on a
+dedicated `ThreadPoolExecutor` with tokenizer errors mapped to HTTP 400; both
+latent bugs fixed — causal mask is built per-forward in `Qwen3LLM.forward`
+(idle memory drops by ~1.68 GB at `max_seq_len=40960`), and the tokenizer's
+single-special-token shortcut is gated on `not chat_wrapped`.
 
 **Refactors:**
 
