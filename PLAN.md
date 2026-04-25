@@ -226,6 +226,20 @@ wants to own its own process. Perf optimizations (SDPA, `torch.compile`, CUDA gr
 deliberately deferred to Phase 3: this phase is about getting the scheduler and batching
 right on a correctness-first attention path, then optimizing the mature target.
 
+**Status (2026-04-25):** Two of the four prereq refactors landed. The pluggable
+attention-compute boundary is in (named `AttentionMethod` in code, not
+`AttentionBackend`): `GroupedQueryAttention` delegates score + value-aggregate +
+KV update + mask construction to a method, with `EinsumAttentionMethod` as the
+correctness reference and `PaddedAttentionMethod` stubbed (NotImplementedError)
+marking the continuous-batching slot. Logits-processor pipeline landed:
+`SamplingParams` carries `list[LogitsProcessor]` + greedy flag (built via
+`from_temperature_top_p`); both `StandardBackend` and `SpeculativeBackend`
+read from it, so future sampling knobs (repetition penalty, logit bias,
+guided decoding) extend the pipeline instead of patching the hot path. Open:
+per-sequence state object, tiny test-model fixture, and all feature work
+(process split, scheduler, batched forward, padded KV, chunked prefill,
+logprobs, stop strings).
+
 **Refactors that have to land first:**
 
 - **`AttentionBackend` as a named artifact.** `GroupedQueryAttention` loses its inline
