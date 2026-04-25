@@ -250,9 +250,17 @@ the full `SequentialEngine → StandardBackend → Qwen3 → KVCache` path in
 under a second; `tests/test_tiny_model.py` smoke-tests the seam.
 Deliberately deferred: explicit `position` decoupled from `cache.position`
 (only needed once batching has divergent positions), per-sequence draft
-cache (speculative is batch=1 today). Open: all feature work (process
-split, scheduler, batched forward, padded KV, chunked prefill, logprobs,
-stop strings).
+cache (speculative is batch=1 today). Open: feature work, ordered —
+(1) in-process scheduler + batched forward + padded KV (author writing by
+hand for learning; chunked prefill, logprobs, and stop strings fall out
+alongside); then (2) API/engine process split, bolted on once the
+in-process loop is correctness-clean.
+
+**Author note:** the in-process scheduler, batched forward, and padded KV
+are being written by hand by the project author for learning. Assistants
+working in this phase should not write that code unless explicitly asked.
+Review, ordering advice, prereq refactors, tests, and the eventual process
+split are fair game.
 
 **Refactors that have to land first:**
 
@@ -274,7 +282,30 @@ stop strings).
 - **Tiny test-model fixture** (2-layer, 64-dim) so scheduler/batching tests run in
   milliseconds, no HF downloads.
 
-**Feature work:**
+**Feature work, in order:**
+
+*1. In-process scheduler + batched forward + padded KV.* This is the headline
+learning work; gets done first, single-process, so debugging is print-statement
+cheap. Correctness comes before the IPC boundary.
+
+- **Scheduler**: FCFS waiting queue, running set, per-step token budget. Decode requests
+  prioritized; prefill requests pulled in when budget allows.
+- **Batched forward pass**: `model.py`'s `batches` dim is already plumbed through —
+  finally exercise it. Verify attention mask + RoPE offsets handle variable sequence
+  lengths.
+- **Padded KV cache** sized per active slot. Preallocate
+  `max_batch_size × max_seq_len × ...` tensors.
+- **Per-sequence stop logic**, per-sequence sampling, per-sequence event streams.
+- **Chunked prefill** — falls out once token budget exists. Long prompts don't monopolize
+  a step.
+- **Logprobs in response** — trivial addition once the sampler is per-sequence.
+- **Stop strings** (not just stop token IDs) — requires decoder-level backtracking. Minor
+  but nice.
+
+*2. API/engine process split.* Bolted on once the in-process loop is
+correctness-clean. The engine becomes a steady-state busy loop that wants
+to own its own process; this is the phase where Phase 1a's process-split
+readiness work pays off.
 
 - **Process split**: API process (FastAPI, async) and engine process (sync busy loop). IPC
   over ZMQ or multiprocessing queues — pick one and commit. Engine drops asyncio
@@ -286,19 +317,6 @@ stop strings).
   it. Switch uvicorn to `uvloop` + `httptools` as part of the split — the API is now
   serving many concurrent streams and wants the faster loop before this phase's
   end-of-phase benchmark locks in the baseline that Phase 3 will measure against.
-- **Scheduler**: FCFS waiting queue, running set, per-step token budget. Decode requests
-  prioritized; prefill requests pulled in when budget allows.
-- **Batched forward pass**: `model.py`'s `batches` dim is already plumbed through —
-  finally exercise it. Verify attention mask + RoPE offsets handle variable sequence
-  lengths.
-- **Padded KV cache** sized per active slot. Preallocate
-  `max_batch_size × max_seq_len × ...` tensors.
-- **Per-sequence stop logic**, per-sequence sampling, per-sequence event streams over IPC.
-- **Chunked prefill** — falls out once token budget exists. Long prompts don't monopolize
-  a step.
-- **Logprobs in response** — trivial addition once the sampler is per-sequence.
-- **Stop strings** (not just stop token IDs) — requires decoder-level backtracking. Minor
-  but nice.
 
 **Speculative decoding in batched mode:** disabled. Divergent accept counts across
 sequences turn the batched forward pass into a ragged horror that isn't worth debugging
