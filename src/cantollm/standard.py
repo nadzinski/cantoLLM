@@ -1,9 +1,8 @@
-import threading
 from collections.abc import Iterator
 
 import torch
 
-from cantollm.engine.types import SamplingParams
+from cantollm.engine.types import SamplingParams, Sequence
 from cantollm.kv_cache import KVCache
 
 
@@ -78,34 +77,26 @@ class StandardBackend:
         tokens = torch.tensor(token_ids, device=self.device).unsqueeze(0)
         return self.model(tokens, start_pos=start_pos, kv_cache=cache)
 
-    def generate(
-        self,
-        input_ids: list[int],
-        cache: KVCache,
-        sampling: SamplingParams,
-        stop_token_ids: set[int],
-        max_tokens: int,
-        stop_event: threading.Event | None = None,
-    ) -> Iterator[int]:
-        """Generate tokens, yielding each as it's produced.
+    def generate(self, sequence: Sequence) -> Iterator[int]:
+        """Generate tokens for `sequence`, yielding each as it's produced.
 
-        Args:
-            input_ids: Input token IDs to process
-            cache: KV cache for all transformer layers (modified in place)
-            sampling: Per-request sampling parameters
-            stop_token_ids: Token IDs that should stop generation
-            max_tokens: Maximum number of new tokens to generate
-            stop_event: Optional cooperative cancel flag. Checked between tokens;
-                torch forward itself can't be interrupted.
-
-        Yields:
-            Token IDs one at a time
+        The backend reads `prompt_token_ids`, `cache`, `sampling_params`,
+        `stop_token_ids`, `max_tokens`, and `stop_event` off the sequence;
+        `tokens_emitted` is bumped by the engine as tokens are consumed,
+        not here. `stop_event` is a cooperative cancel flag checked between
+        tokens — the torch forward itself can't be interrupted.
         """
+        cache = sequence.cache
+        sampling = sequence.sampling_params
+        stop_token_ids = sequence.stop_token_ids
+        max_tokens = sequence.max_tokens
+        stop_event = sequence.stop_event
+
         if max_tokens <= 0:
             return
 
         # Process input and get first token
-        logits = self.forward(input_ids, cache, cache.position)
+        logits = self.forward(sequence.prompt_token_ids, cache, cache.position)
         token_id, _ = self.sample(logits[:, -1], sampling)
         token_id = token_id.item()
 
@@ -115,7 +106,7 @@ class StandardBackend:
 
         # Generate remaining tokens
         for _ in range(max_tokens - 1):
-            if stop_event is not None and stop_event.is_set():
+            if stop_event.is_set():
                 return
             logits = self.forward([token_id], cache, cache.position)
             token_id, _ = self.sample(logits[:, -1], sampling)

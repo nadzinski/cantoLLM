@@ -1,15 +1,34 @@
+import threading
 from unittest.mock import MagicMock, patch
 
 import torch
 import pytest
 
-from cantollm.engine.types import SamplingParams
+from cantollm.engine.types import SamplingParams, Sequence
 from cantollm.speculative import SpeculativeBackend
 from cantollm.kv_cache import KVCache
 
 
 GREEDY = SamplingParams.from_temperature_top_p(temperature=0.0, top_p=1.0)
 STOCHASTIC = SamplingParams.from_temperature_top_p(temperature=0.7, top_p=0.9)
+
+
+def make_sequence(
+    prompt_token_ids,
+    cache,
+    sampling=GREEDY,
+    stop_token_ids=None,
+    max_tokens=10,
+):
+    return Sequence(
+        request_id="test",
+        prompt_token_ids=list(prompt_token_ids),
+        sampling_params=sampling,
+        stop_token_ids=set(stop_token_ids) if stop_token_ids is not None else {999},
+        max_tokens=max_tokens,
+        cache=cache,
+        stop_event=threading.Event(),
+    )
 
 
 def make_mock_generator():
@@ -157,11 +176,7 @@ class TestSpeculativeGenerate:
 
         result = list(
             spec_gen.generate(
-                input_ids=[1, 2, 3],
-                cache=cache,
-                sampling=GREEDY,
-                stop_token_ids={stop_token},
-                max_tokens=10,
+                make_sequence([1, 2, 3], cache, stop_token_ids={stop_token}, max_tokens=10)
             )
         )
 
@@ -201,13 +216,7 @@ class TestSpeculativeGenerate:
         cache = KVCache(1)
 
         result = list(
-            spec_gen.generate(
-                input_ids=[1, 2, 3],
-                cache=cache,
-                sampling=GREEDY,
-                stop_token_ids={999},
-                max_tokens=2,
-            )
+            spec_gen.generate(make_sequence([1, 2, 3], cache, max_tokens=2))
         )
 
         # Should yield accepted draft token + next sampled from main
@@ -249,13 +258,7 @@ class TestFirstTokenYielded:
         cache = KVCache(1)
 
         result = list(
-            spec_gen.generate(
-                input_ids=[1, 2, 3],
-                cache=cache,
-                sampling=GREEDY,
-                stop_token_ids={999},
-                max_tokens=2,
-            )
+            spec_gen.generate(make_sequence([1, 2, 3], cache, max_tokens=2))
         )
 
         # First token should be the accepted draft token
@@ -305,13 +308,7 @@ class TestSpeculativeStats:
         cache = KVCache(1)
 
         list(
-            spec_gen.generate(
-                input_ids=[1, 2, 3],
-                cache=cache,
-                sampling=GREEDY,
-                stop_token_ids={999},
-                max_tokens=3,
-            )
+            spec_gen.generate(make_sequence([1, 2, 3], cache, max_tokens=3))
         )
 
         stats = spec_gen.get_stats()
@@ -498,7 +495,7 @@ class TestCacheTruncation:
         cache = KVCache(1)
         input_ids = [1, 2, 3]
 
-        result = list(spec_gen.generate(input_ids, cache, GREEDY, stop_token_ids={999}, max_tokens=4))
+        result = list(spec_gen.generate(make_sequence(input_ids, cache, max_tokens=4)))
 
         assert len(result) == 4
         # Cache should contain: 3 input + 3 draft + 0 rejected = 6 entries
@@ -529,7 +526,9 @@ class TestCacheTruncation:
 
         # Force all rejections: torch.rand returns 0.999 which is > any accept_prob
         with patch("torch.rand", return_value=torch.tensor([0.999])):
-            result = list(spec_gen.generate(input_ids, cache, STOCHASTIC, stop_token_ids={999}, max_tokens=1))
+            result = list(spec_gen.generate(
+                make_sequence(input_ids, cache, sampling=STOCHASTIC, max_tokens=1)
+            ))
 
         assert len(result) == 1  # only main_tail_token
         # Cache should contain: 3 input + 0 accepted = 3 entries
@@ -560,7 +559,7 @@ class TestCacheTruncation:
         input_ids = [1, 2, 3]
 
         # max_tokens=6 → should take 2 iterations of (2 accepted + 1 main = 3 tokens)
-        result = list(spec_gen.generate(input_ids, cache, GREEDY, stop_token_ids={999}, max_tokens=6))
+        result = list(spec_gen.generate(make_sequence(input_ids, cache, max_tokens=6)))
 
         assert len(result) == 6
         # After 2 iterations: 3 input + 2 accepted + 2 accepted = 7
@@ -592,7 +591,9 @@ class TestCacheTruncation:
 
         # Reject all drafts
         with patch("torch.rand", return_value=torch.tensor([0.999])):
-            list(spec_gen.generate(input_ids, cache, STOCHASTIC, stop_token_ids={999}, max_tokens=2))
+            list(spec_gen.generate(
+                make_sequence(input_ids, cache, sampling=STOCHASTIC, max_tokens=2)
+            ))
 
         # Both caches should be truncated to the same base
         # (draft may lag by 1 since it doesn't process main_tail, but truncate
@@ -694,7 +695,9 @@ class TestStopTokenCacheTruncation:
         cache = KVCache(1)
         input_ids = [1, 2, 3]
 
-        result = list(spec_gen.generate(input_ids, cache, GREEDY, stop_token_ids={stop_token}, max_tokens=100))
+        result = list(spec_gen.generate(
+            make_sequence(input_ids, cache, stop_token_ids={stop_token}, max_tokens=100)
+        ))
 
         # Should yield draft_token, draft_token (then stop_token halts without yielding)
         assert stop_token not in result
@@ -744,7 +747,9 @@ class TestStopTokenCacheTruncation:
         cache = KVCache(1)
         input_ids = [1, 2, 3]
 
-        list(spec_gen.generate(input_ids, cache, GREEDY, stop_token_ids={stop_token}, max_tokens=100))
+        list(spec_gen.generate(
+            make_sequence(input_ids, cache, stop_token_ids={stop_token}, max_tokens=100)
+        ))
 
         # After stop token on first draft, no tokens yielded.
         # Main cache had: input_ids[3] + stop_token[1] = 4 entries from forward.
@@ -806,7 +811,9 @@ class TestStopTokenCacheTruncation:
 
         # Turn 1
         input_ids_1 = [1, 2, 3]
-        result_1 = list(spec_gen.generate(input_ids_1, cache, GREEDY, stop_token_ids={stop_token}, max_tokens=100))
+        result_1 = list(spec_gen.generate(
+            make_sequence(input_ids_1, cache, stop_token_ids={stop_token}, max_tokens=100)
+        ))
 
         pos_after_turn_1 = cache.position
         draft_pos_after_turn_1 = spec_gen.draft_cache.position
@@ -819,7 +826,9 @@ class TestStopTokenCacheTruncation:
         # Turn 2: new input appended to existing cache
         spec_gen.reset_stats()
         input_ids_2 = [4, 5, 6]
-        result_2 = list(spec_gen.generate(input_ids_2, cache, GREEDY, stop_token_ids={stop_token}, max_tokens=100))
+        result_2 = list(spec_gen.generate(
+            make_sequence(input_ids_2, cache, stop_token_ids={stop_token}, max_tokens=100)
+        ))
 
         pos_after_turn_2 = cache.position
         draft_pos_after_turn_2 = spec_gen.draft_cache.position
@@ -868,13 +877,7 @@ class TestMaxTokensCap:
         # speculative_tokens=10, so one iteration wants to yield 11 tokens,
         # but max_tokens=3 should cap it
         result = list(
-            spec_gen.generate(
-                input_ids=[1, 2, 3],
-                cache=cache,
-                sampling=GREEDY,
-                stop_token_ids={999},
-                max_tokens=3,
-            )
+            spec_gen.generate(make_sequence([1, 2, 3], cache, max_tokens=3))
         )
 
         assert len(result) == 3

@@ -1,9 +1,8 @@
-import threading
 from collections.abc import Iterator
 
 import torch
 
-from cantollm.engine.types import SamplingParams
+from cantollm.engine.types import SamplingParams, Sequence
 from cantollm.standard import StandardBackend
 from cantollm.kv_cache import KVCache
 from cantollm.stats import SpeculativeStats
@@ -134,15 +133,7 @@ class SpeculativeBackend:
         return accepted
 
     @torch.inference_mode()
-    def generate(
-        self,
-        input_ids: list[int],
-        cache: KVCache,
-        sampling: SamplingParams,
-        stop_token_ids: set[int],
-        max_tokens: int,
-        stop_event: threading.Event | None = None,
-    ) -> Iterator[int]:
+    def generate(self, sequence: Sequence) -> Iterator[int]:
         """
         Here is the speculative generation algorithm:
 
@@ -166,12 +157,19 @@ class SpeculativeBackend:
         decoding would require per-sequence position tracking, padded KV caches,
         and attention masking to handle divergent acceptance rates across sequences.
         """
+        input_ids = sequence.prompt_token_ids
+        cache = sequence.cache
+        sampling = sequence.sampling_params
+        stop_token_ids = sequence.stop_token_ids
+        max_tokens = sequence.max_tokens
+        stop_event = sequence.stop_event
+
         draft_input = input_ids
         main_prefix = input_ids
         tokens_yielded = 0
 
         while tokens_yielded < max_tokens:
-            if stop_event is not None and stop_event.is_set():
+            if stop_event.is_set():
                 return
             draft_tokens, draft_probs = self.generate_draft_tokens(
                 draft_input, self.speculative_tokens, sampling, stop_token_ids

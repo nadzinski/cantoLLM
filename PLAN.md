@@ -226,19 +226,33 @@ wants to own its own process. Perf optimizations (SDPA, `torch.compile`, CUDA gr
 deliberately deferred to Phase 3: this phase is about getting the scheduler and batching
 right on a correctness-first attention path, then optimizing the mature target.
 
-**Status (2026-04-25):** Two of the four prereq refactors landed. The pluggable
-attention-compute boundary is in (named `AttentionMethod` in code, not
-`AttentionBackend`): `GroupedQueryAttention` delegates score + value-aggregate +
-KV update + mask construction to a method, with `EinsumAttentionMethod` as the
-correctness reference and `PaddedAttentionMethod` stubbed (NotImplementedError)
-marking the continuous-batching slot. Logits-processor pipeline landed:
-`SamplingParams` carries `list[LogitsProcessor]` + greedy flag (built via
+**Status (2026-04-25):** All four prereq refactors landed. The
+pluggable attention-compute boundary is in (named `AttentionMethod` in code,
+not `AttentionBackend`): `GroupedQueryAttention` delegates score +
+value-aggregate + KV update + mask construction to a method, with
+`EinsumAttentionMethod` as the correctness reference and
+`PaddedAttentionMethod` stubbed (NotImplementedError) marking the
+continuous-batching slot. Logits-processor pipeline landed: `SamplingParams`
+carries `list[LogitsProcessor]` + greedy flag (built via
 `from_temperature_top_p`); both `StandardBackend` and `SpeculativeBackend`
 read from it, so future sampling knobs (repetition penalty, logit bias,
-guided decoding) extend the pipeline instead of patching the hot path. Open:
-per-sequence state object, tiny test-model fixture, and all feature work
-(process split, scheduler, batched forward, padded KV, chunked prefill,
-logprobs, stop strings).
+guided decoding) extend the pipeline instead of patching the hot path.
+Per-sequence state object landed: `Sequence` dataclass in `engine/types.py`
+bundles request_id, prompt_token_ids, sampling_params, stop_token_ids,
+max_tokens, cache, stop_event, and tokens_emitted; `InferenceBackend.generate`
+collapsed from a 6-arg call to `generate(sequence)`; `SequentialEngine.run()`
+constructs the sequence, ticks `tokens_emitted` in the consumer loop, and
+reads finish reason via `seq.finish_reason_after_normal_exit()`. Tiny
+test-model fixture landed in `tests/tiny_model.py`: a `tiny_qwen3_spec()`
+builder (2-layer, 64-dim, vocab 2048, random-init weights, `FakeTokenizer`)
+plugs straight into `build_runtime` so scheduler/batching tests can exercise
+the full `SequentialEngine → StandardBackend → Qwen3 → KVCache` path in
+under a second; `tests/test_tiny_model.py` smoke-tests the seam.
+Deliberately deferred: explicit `position` decoupled from `cache.position`
+(only needed once batching has divergent positions), per-sequence draft
+cache (speculative is batch=1 today). Open: all feature work (process
+split, scheduler, batched forward, padded KV, chunked prefill, logprobs,
+stop strings).
 
 **Refactors that have to land first:**
 

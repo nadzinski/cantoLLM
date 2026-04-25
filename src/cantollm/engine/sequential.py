@@ -4,7 +4,7 @@ import asyncio
 import threading
 from collections.abc import AsyncIterator
 
-from cantollm.engine.types import FinishReason, InferenceRequest, TokenEvent
+from cantollm.engine.types import InferenceRequest, Sequence, TokenEvent
 from cantollm.runtime import ModelRuntime
 
 _QUEUE_MAXSIZE = 256
@@ -59,20 +59,20 @@ class SequentialEngine:
                 pass
 
         def run():
-            tokens_emitted = 0
             try:
-                cache = self.runtime.new_cache()
-                self.runtime.backend.reset()
-                for tok in self.runtime.backend.generate(
-                    input_ids=req.prompt_token_ids,
-                    cache=cache,
-                    sampling=req.sampling_params,
+                seq = Sequence(
+                    request_id=req.request_id,
+                    prompt_token_ids=req.prompt_token_ids,
+                    sampling_params=req.sampling_params,
                     stop_token_ids=req.stop_token_ids,
                     max_tokens=req.max_tokens,
+                    cache=self.runtime.new_cache(),
                     stop_event=stop_event,
-                ):
+                )
+                self.runtime.backend.reset()
+                for tok in self.runtime.backend.generate(seq):
                     put_threadsafe(TokenEvent(token_id=tok, request_id=rid))
-                    tokens_emitted += 1
+                    seq.tokens_emitted += 1
                     if stop_event.is_set():
                         break
             except Exception as e:
@@ -80,16 +80,12 @@ class SequentialEngine:
                 put_threadsafe(None)
                 return
 
-            reason: FinishReason
-            if tokens_emitted >= req.max_tokens:
-                reason = "max_tokens"
-            elif stop_event.is_set():
-                reason = "abort"
-            else:
-                # Backend returned without hitting max_tokens and without an
-                # abort — it saw an EOS or configured stop token.
-                reason = "end_turn"
-            put_threadsafe(TokenEvent(finish_reason=reason, request_id=rid))
+            put_threadsafe(
+                TokenEvent(
+                    finish_reason=seq.finish_reason_after_normal_exit(),
+                    request_id=rid,
+                )
+            )
             put_threadsafe(None)
 
         worker_task = asyncio.create_task(asyncio.to_thread(run))
