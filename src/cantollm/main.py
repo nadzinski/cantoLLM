@@ -89,6 +89,15 @@ def cmd_chat(args):
     )
 
 
+# ── Subcommand: webchat ─────────────────────────────────────────────
+
+def cmd_webchat(args):
+    """Start the browser-based chat client."""
+    from cantollm.clients.web.server import run_server
+
+    run_server(host=args.host, port=args.port, upstream=args.upstream)
+
+
 # ── Subcommand: bench ───────────────────────────────────────────────
 
 def cmd_bench(args):
@@ -157,6 +166,15 @@ def parse_args():
     chat_parser.add_argument("--show-thinking", action="store_true",
                              help="Show model thinking blocks (default: hidden)")
 
+    # webchat
+    web_parser = subparsers.add_parser("webchat", help="Browser-based chat client")
+    web_parser.add_argument("--upstream", default="http://localhost:8000",
+                            help="API server URL (default: http://localhost:8000)")
+    web_parser.add_argument("--host", default="127.0.0.1",
+                            help="Bind address for the web UI (default: 127.0.0.1)")
+    web_parser.add_argument("--port", type=int, default=8001,
+                            help="Port for the web UI (default: 8001)")
+
     # bench
     bench_parser = subparsers.add_parser("bench", help="Fire concurrent requests at a running server")
     bench_parser.add_argument("--url", default="http://localhost:8000",
@@ -192,6 +210,8 @@ def main():
             cmd_serve(args)
         case "chat":
             cmd_chat(args)
+        case "webchat":
+            cmd_webchat(args)
         case "bench":
             cmd_bench(args)
 
