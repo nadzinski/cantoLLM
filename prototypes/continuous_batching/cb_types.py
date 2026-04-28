@@ -1,0 +1,40 @@
+"""Domain types for the continuous-batching prototype.
+
+Stripped-down analogues of `src/cantollm/engine/types.py` — same shape,
+fewer fields. The scheduler mutates `Sequence`; the rest are immutable
+records.
+"""
+
+from dataclasses import dataclass, field
+from typing import Literal
+
+
+FinishReason = Literal["end_turn", "max_tokens", "abort"]
+
+
+@dataclass
+class Request:
+    request_id: str
+    prompt_token_ids: list[int]
+    max_tokens: int
+    stop_token_ids: set[int] = field(default_factory=set)
+
+
+@dataclass
+class Sequence:
+    request_id: str
+    prompt_token_ids: list[int]
+    max_tokens: int
+    stop_token_ids: set[int]
+    slot_idx: int | None = None
+    position: int = 0
+    output_token_ids: list[int] = field(default_factory=list)
+    finish_reason: FinishReason | None = None
+    aborted: bool = False
+
+
+@dataclass
+class TokenEvent:
+    request_id: str
+    token_id: int | None = None
+    finish_reason: FinishReason | None = None
