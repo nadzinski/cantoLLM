@@ -33,6 +33,11 @@ class ContinuousBatchingScheduler:
         cache: PaddedKVCache,
         max_tokens_per_step: int,
     ):
+        if max_tokens_per_step < cache.max_batch:
+            raise ValueError(
+                f"max_tokens_per_step ({max_tokens_per_step}) must be >= "
+                f"cache.max_batch ({cache.max_batch})"
+            )
         self.model = model
         self.cache = cache
         self.max_tokens_per_step = max_tokens_per_step
@@ -133,7 +138,7 @@ class ContinuousBatchingScheduler:
                 # evenly diving part and then the residue 
                 residue = remaining % len(reqs_and_idxs)
                 for i, (_, idx) in enumerate(reqs_and_idxs):
-                    allocations[idx] = alloc if residue < i else alloc + 1
+                    allocations[idx] = alloc + 1 if i < residue else alloc
                 break
 
         return allocations

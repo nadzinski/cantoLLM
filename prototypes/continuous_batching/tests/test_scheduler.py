@@ -98,6 +98,67 @@ def test_stop_token_emitted_at_correct_position(model, reference, make_request):
         assert finish[r.request_id] == "end_turn"
 
 
+class _BudgetRecorder:
+    """Wraps a ToyModel and records sum(num_new) per forward call."""
+
+    def __init__(self, inner):
+        self.inner = inner
+        self.per_step_totals: list[int] = []
+
+    def forward(self, input_ids, slot_metas, kv_cache):
+        self.per_step_totals.append(sum(n for _, _, n in slot_metas))
+        return self.inner.forward(input_ids, slot_metas, kv_cache)
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+
+def test_step_respects_token_budget(model, make_request):
+    recorder = _BudgetRecorder(model)
+    cache = PaddedKVCache(max_batch=4, max_seq_len=MAX_SEQ_LEN, dim=DIM)
+    budget = 4
+    sched = ContinuousBatchingScheduler(
+        model=recorder, cache=cache, max_tokens_per_step=budget,
+    )
+    req = make_request(prompt_len=20, max_tokens=4)
+    run_to_completion(sched, [req])
+
+    violations = [t for t in recorder.per_step_totals if t > budget]
+    assert not violations, (
+        f"step(s) exceeded budget={budget}: per-step totals were "
+        f"{recorder.per_step_totals}"
+    )
+
+
+def test_step_respects_token_budget_with_concurrent_prefills(model, make_request):
+    """Two seqs both in prefill, both falling into the else branch — n>=2."""
+    recorder = _BudgetRecorder(model)
+    cache = PaddedKVCache(max_batch=2, max_seq_len=MAX_SEQ_LEN, dim=DIM)
+    budget = 4
+    sched = ContinuousBatchingScheduler(
+        model=recorder, cache=cache, max_tokens_per_step=budget,
+    )
+    reqs = [
+        make_request(prompt_len=20, max_tokens=2, request_id="a"),
+        make_request(prompt_len=20, max_tokens=2, request_id="b"),
+    ]
+    run_to_completion(sched, reqs)
+
+    violations = [t for t in recorder.per_step_totals if t > budget]
+    assert not violations, (
+        f"step(s) exceeded budget={budget}: per-step totals were "
+        f"{recorder.per_step_totals}"
+    )
+
+
+def test_rejects_budget_smaller_than_max_batch(model):
+    cache = PaddedKVCache(max_batch=4, max_seq_len=MAX_SEQ_LEN, dim=DIM)
+    with pytest.raises(ValueError, match="max_tokens_per_step"):
+        ContinuousBatchingScheduler(
+            model=model, cache=cache, max_tokens_per_step=3,
+        )
+
+
 def test_late_arriving_request(model, reference, make_request):
     req_a = make_request(prompt_len=6, max_tokens=8, request_id="a")
     req_b = make_request(prompt_len=4, max_tokens=5, request_id="b")
