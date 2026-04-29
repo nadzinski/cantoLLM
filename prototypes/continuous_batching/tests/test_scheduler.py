@@ -105,9 +105,9 @@ class _BudgetRecorder:
         self.inner = inner
         self.per_step_totals: list[int] = []
 
-    def forward(self, input_ids, slot_metas, kv_cache):
+    def __call__(self, input_ids, slot_metas, kv_cache):
         self.per_step_totals.append(sum(n for _, _, n in slot_metas))
-        return self.inner.forward(input_ids, slot_metas, kv_cache)
+        return self.inner(input_ids, slot_metas, kv_cache)
 
     def __getattr__(self, name):
         return getattr(self.inner, name)

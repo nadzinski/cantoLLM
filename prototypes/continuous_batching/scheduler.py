@@ -62,14 +62,14 @@ class ContinuousBatchingScheduler:
             for s in self.active_sequences.values()
         ]
 
-        logits = self.model.forward(input_ids, slot_metas, self.cache)
+        logits = self.model(input_ids, slot_metas, self.cache)
         tokens = greedy_sample(logits)
 
         finished_slots = set()
         token_events = []
         for pos, s in enumerate(self.active_sequences.values()):
             # advance position
-            num_new = num_news[s.slot_idx] 
+            num_new = num_news[s.slot_idx]
             s.position += num_new
 
             # If we're mid-prefill we have no output token
