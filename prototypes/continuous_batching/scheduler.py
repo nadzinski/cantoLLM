@@ -47,8 +47,15 @@ class ContinuousBatchingScheduler:
         # import pdb; pdb.set_trace()
         self._allocate_free_slots()
 
-        input_ids = self._get_input_ids()
-        slot_metas = self._get_slot_metas()
+        input_ids, num_news = self._get_input_ids_and_num_news()
+        slot_metas = [
+            (
+                s.slot_idx,
+                s.position,
+                num_news[s.slot_idx]
+            )
+            for s in self.active_sequences.values()
+        ]
 
         logits = self.model.forward(input_ids, slot_metas, self.cache)
         tokens = greedy_sample(logits)
@@ -56,17 +63,23 @@ class ContinuousBatchingScheduler:
         finished_slots = set()
         token_events = []
         for pos, s in enumerate(self.active_sequences.values()):
-            # Append output token and advance position
+            # advance position
+            num_new = num_news[s.slot_idx] 
+            s.position += num_new
+
+            # If we're mid-prefill we have no output token
+            if s.position < len(s.prompt_token_ids):
+                continue
+
             output_token = tokens[pos].item()
             s.output_token_ids.append(output_token)
-            num_new = len(s.prompt_token_ids) if s.is_prefilling() else 1
-            s.position += num_new
 
             finish_reason = None
             if output_token in s.stop_token_ids:
                 finish_reason = "end_turn"
             elif len(s.output_token_ids) == s.max_tokens:
                 finish_reason = "max_tokens"
+
 
             token_events.append(
                 TokenEvent(
@@ -97,32 +110,60 @@ class ContinuousBatchingScheduler:
             stop_token_ids=set(request.stop_token_ids),
         )
 
-    def _get_input_ids(self):
-        # todo: need chunked prefill after I make it work without 
+    def _allocate_tokens(self, requested_tokens: dict[int, int]) -> dict[int, int]:
+        # We allocate our max_tokens_per_step budget evenly across seqs
+        allocations = {}
+
+        reqs_and_idxs = sorted(
+            ((req, idx) for idx, req in requested_tokens.items()), reverse=True
+        )
+
+        remaining = self.max_tokens_per_step
+
+        while reqs_and_idxs:
+            alloc = remaining // len(reqs_and_idxs)
+            if reqs_and_idxs[-1][0] <= alloc:
+                # We can do this whole seq for sure
+                req, idx = reqs_and_idxs.pop()
+                allocations[idx] = req
+                remaining = remaining - req
+            else:
+                # We can't do the whole of any of the remaining seqs
+                # so just allocate what we have, first the
+                # evenly diving part and then the residue 
+                residue = remaining % len(reqs_and_idxs)
+                for i, (_, idx) in enumerate(reqs_and_idxs):
+                    allocations[idx] = alloc if residue < i else alloc + 1
+                break
+
+        return allocations
+
+
+    def _get_input_ids_and_num_news(self):
+        requested_tokens = {
+            s.slot_idx: len(s.prompt_token_ids) - s.position if s.is_prefilling() else 1
+            for s in self.active_sequences.values()
+        }
+        allocated_tokens = self._allocate_tokens(requested_tokens)
 
         # todo: could not create this every time?
         batch = len(self.active_sequences)
         input_ids = torch.zeros(batch, self.cache.max_seq_len, dtype=torch.int64)
+        num_news = {}
 
         for b, s in enumerate(self.active_sequences.values()):
+            allocated = allocated_tokens[s.slot_idx]
             if s.is_prefilling():
-                input_ids_for_seq = s.prompt_token_ids
+                input_ids_for_seq = s.prompt_token_ids[s.position : s.position + allocated]
             else:
+                assert(allocated == 1)
                 input_ids_for_seq = s.output_token_ids[-1:]
+
+            num_news[s.slot_idx] = allocated
 
             input_ids[b][:len(input_ids_for_seq)] = torch.tensor(input_ids_for_seq, dtype=input_ids.dtype)
 
-        return input_ids
-
-    def _get_slot_metas(self):
-        return [
-            (
-                s.slot_idx,
-                s.position,
-                len(s.prompt_token_ids) if s.is_prefilling() else 1
-            )
-            for s in self.active_sequences.values()
-        ]
+        return input_ids, num_news
 
     def _allocate_free_slots(self):
         while self.queued_sequences:
