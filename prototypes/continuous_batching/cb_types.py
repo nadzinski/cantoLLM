@@ -32,6 +32,9 @@ class Sequence:
     finish_reason: FinishReason | None = None
     aborted: bool = False
 
+    def is_prefilling(self) -> bool:
+        return self.position < len(self.prompt_token_ids)
+
 
 @dataclass
 class TokenEvent:

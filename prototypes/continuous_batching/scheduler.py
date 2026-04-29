@@ -59,12 +59,11 @@ class ContinuousBatchingScheduler:
             # Append output token and advance position
             output_token = tokens[pos].item()
             s.output_token_ids.append(output_token)
-            num_new = len(s.prompt_token_ids) if s.position == 0 else 1
+            num_new = len(s.prompt_token_ids) if s.is_prefilling() else 1
             s.position += num_new
 
             finish_reason = None
             if output_token in s.stop_token_ids:
-                # todo: max tokens finish reason            
                 finish_reason = "end_turn"
             elif len(s.output_token_ids) == s.max_tokens:
                 finish_reason = "max_tokens"
@@ -93,9 +92,9 @@ class ContinuousBatchingScheduler:
     def _create_sequence_from_request(self, request: Request) -> Sequence:
         return Sequence(
             request_id=request.request_id,
-            prompt_token_ids=request.prompt_token_ids,
+            prompt_token_ids=list(request.prompt_token_ids),
             max_tokens=request.max_tokens,
-            stop_token_ids=request.stop_token_ids,
+            stop_token_ids=set(request.stop_token_ids),
         )
 
     def _get_input_ids(self):
@@ -106,12 +105,10 @@ class ContinuousBatchingScheduler:
         input_ids = torch.zeros(batch, self.cache.max_seq_len, dtype=torch.int64)
 
         for b, s in enumerate(self.active_sequences.values()):
-            if s.output_token_ids:
-                # decode
-                input_ids_for_seq = s.output_token_ids[-1:]
-            else:
-                # prefill
+            if s.is_prefilling():
                 input_ids_for_seq = s.prompt_token_ids
+            else:
+                input_ids_for_seq = s.output_token_ids[-1:]
 
             input_ids[b][:len(input_ids_for_seq)] = torch.tensor(input_ids_for_seq, dtype=input_ids.dtype)
 
@@ -120,9 +117,9 @@ class ContinuousBatchingScheduler:
     def _get_slot_metas(self):
         return [
             (
-                s.slot_idx, 
-                s.position, 
-                len(s.prompt_token_ids) if s.position == 0 else 1
+                s.slot_idx,
+                s.position,
+                len(s.prompt_token_ids) if s.is_prefilling() else 1
             )
             for s in self.active_sequences.values()
         ]
