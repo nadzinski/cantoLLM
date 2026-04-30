@@ -35,6 +35,17 @@ class Sequence:
     def is_prefilling(self) -> bool:
         return self.position < len(self.prompt_token_ids)
 
+    def input_tokens_at(self, start: int, n: int) -> list[int]:
+        """Tokens this sequence would feed in if a forward pass started at `start`.
+
+        During prefill, that's the next slice of the prompt. After prefill,
+        the only input is the most recently sampled output token.
+        """
+        if start < len(self.prompt_token_ids):
+            return self.prompt_token_ids[start : start + n]
+        assert n == 1, "decode rows feed back exactly one token"
+        return self.output_token_ids[-1:]
+
 
 @dataclass
 class TokenEvent:
