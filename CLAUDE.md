@@ -45,7 +45,7 @@ visualization should be updated too. Trace data regenerates via the commands
 in `viz/README.md`; diagram/structure changes mean editing `viz/index.html`.
 The same rule covers the two design-content tabs: the Roadmap tab mirrors
 PLAN.md's phase Status lines and the CB-wiring tab mirrors
-`continuous_batching.md` — when either document changes, ask whether the
+`continuous-batching-plan.md` — when either document changes, ask whether the
 corresponding tab should be updated.
 
 # PLAN.md

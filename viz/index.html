@@ -528,9 +528,9 @@
   <!-- ================= CB WIRING PLAN ================= -->
   <section id="view-wiring" data-view hidden>
     <p class="view-sub">
-      How the proven prototype lands inside <code>src/cantollm/</code> — from <code>continuous_batching.md</code>
-      (the design note) and <code>fable-review.md</code>. Step through the integration order: green pieces exist and are
-      pinned by tests, amber pieces get built, blue pieces don't change at all.
+      How the proven prototype lands inside <code>src/cantollm/</code> — from <code>continuous-batching-plan.md</code>
+      (the integration plan, source of truth; supersedes the <code>old_research_continuous_batching.md</code> design note).
+      Step through the plan order: green pieces exist and are pinned by tests, amber pieces get built, blue pieces don't change at all.
     </p>
     <div id="wr-body"></div>
   </section>
@@ -2701,7 +2701,7 @@ function initWiring() {
   mk('rect', { x: 340, y: 58, width: 420, height: 566, rx: 14, class: 'region-build' });
   mk('text', { x: 352, y: 76, class: 'dgt title' }, 'to build — phase 2');
   mk('rect', { x: 788, y: 58, width: 292, height: 566, rx: 14, class: 'region-worker' });
-  mk('text', { x: 800, y: 76, class: 'dgt title' }, 'prototype — proven by 14 tests');
+  mk('text', { x: 800, y: 76, class: 'dgt title' }, 'prototype — proven by 29 tests');
 
   const nodes = {};
   const nd = (key, cx, cy, w, h, lines, cls, badge) => {
@@ -2730,38 +2730,42 @@ function initWiring() {
   note(38, 420, 'speculative models', 'start'); note(38, 434, 'register here', 'start');
 
   // middle: to build
-  nd('cbe', 550, 122, 388, 56, ['ContinuousBatchingEngine', 'scheduler thread → per-request async queues'], 'n-exec', '5');
-  nd('sched', 550, 218, 372, 56, ['ContinuousBatchingScheduler ✍', 'promote → water-fill → forward → sample → finalize'], 'n-exec', '5');
-  nd('fwd', 550, 314, 388, 56, ['Qwen3.forward — per-row start_pos / num_new', 'RoPE offset gather · mask (B, num_new_max, S)'], 'n-exec', '2');
-  nd('attn', 550, 410, 388, 56, ['PaddedAttentionMethod', 'today: raise NotImplementedError'], 'n-exec', '1+4');
-  nd('pool', 550, 506, 388, 56, ['multi-layer PaddedKVCache pool', 'runtime-owned · Sequence.cache → slot handle'], 'n-exec', '3');
-  edge('e-c1', [[550, 150], [550, 190]]);
-  edge('e-c2', [[550, 246], [550, 286]]);
-  edge('e-c3', [[550, 342], [550, 382]]);
-  edge('e-c4', [[550, 438], [550, 478]]);
-  note(566, 172, 'bypasses InferenceBackend — hits the AttentionMethod seam directly', 'start');
+  nd('cbe', 550, 122, 388, 52, ['ContinuousBatchingEngine', 'command queue → scheduler thread → per-request queues'], 'n-exec', '6·9');
+  nd('sched', 550, 202, 372, 56, ['ContinuousBatchingScheduler ✍', 'promote → water-fill → forward → sample → finalize'], 'n-exec', '8');
+  nd('fwd', 550, 282, 388, 56, ['Qwen3.forward_batched — per-row start_pos/num_new', 'RoPE gather · 3D mask · last-token gather → (B, vocab)'], 'n-exec', '4');
+  nd('attn', 550, 362, 388, 56, ['PaddedAttentionMethod ✍', 'today: raise NotImplementedError'], 'n-exec', '2·5');
+  nd('pool', 550, 442, 388, 56, ['multi-layer PaddedKVCache pool', 'runtime-owned memory · scheduler-owned allocator'], 'n-exec', '3');
+  nd('sampler', 550, 530, 388, 52, ['shared sampler', 'pipeline + sample() extracted from StandardBackend'], 'n-exec', '1');
+  edge('e-c1', [[550, 148], [550, 174]]);
+  edge('e-c2', [[550, 230], [550, 254]]);
+  edge('e-c3', [[550, 310], [550, 334]]);
+  edge('e-c4', [[550, 390], [550, 414]]);
+  note(566, 164, 'bypasses InferenceBackend — batched-forward protocol via ModelRuntime', 'start');
+  note(550, 492, 'called per row by the scheduler after each forward', 'middle');
 
   // right: prototype
   nd('prun', 934, 122, 244, 52, ['runner.run_to_completion', '+ run_with_late_arrivals'], 'n-worker');
-  nd('psched', 934, 218, 244, 56, ['ContinuousBatchingScheduler', 'water-fill · chunked prefill'], 'n-worker');
-  nd('ptoy', 934, 314, 244, 56, ['ToyModel.forward', '(input_ids, slot_metas, kv)'], 'n-worker');
-  nd('ppool', 934, 506, 244, 56, ['PaddedKVCache', 'single-layer slot pool'], 'n-worker');
+  nd('psched', 934, 202, 244, 56, ['ContinuousBatchingScheduler', 'water-fill · chunked prefill'], 'n-worker');
+  nd('ptoy', 934, 282, 244, 56, ['ToyModel.forward', '(input_ids, slot_metas, kv)'], 'n-worker');
+  nd('ppool', 934, 442, 244, 56, ['PaddedKVCache', 'single-layer slot pool'], 'n-worker');
+  nd('psamp', 934, 530, 244, 52, ['greedy_sample', 'sampler.py — argmax'], 'n-worker');
   edge('m-run', [[812, 122], [748, 122]], { dash: true });
-  edge('m-sched', [[812, 218], [740, 218]], { dash: true });
-  edge('m-toy', [[812, 314], [748, 314]], { dash: true });
-  edge('m-pool', [[812, 506], [748, 506]], { dash: true });
+  edge('m-sched', [[812, 202], [740, 202]], { dash: true });
+  edge('m-toy', [[812, 282], [748, 282]], { dash: true });
+  edge('m-pool', [[812, 442], [748, 442]], { dash: true });
+  edge('m-samp', [[812, 530], [748, 530]], { dash: true });
   note(780, 106, 'morphs into', 'middle');
 
   // left → middle wiring
   edge('e-iface', [[295, 292], [322, 292], [322, 122], [352, 122]]);
   note(322, 200, 'same', 'middle'); note(322, 214, 'submit()', 'middle');
-  note(934, 570, 'see the Continuous batching tab', 'middle');
+  note(934, 586, 'see the Continuous batching tab', 'middle');
 
   const scroll = el('div', 'kv-scroll');
   scroll.appendChild(svg);
 
   /* ---------- stages ---------- */
-  const MIDDLE = ['cbe', 'sched', 'fwd', 'attn', 'pool'];
+  const MIDDLE = ['cbe', 'sched', 'fwd', 'attn', 'pool', 'sampler'];
   const cbStat = CB ? `${Object.keys(CB.requests).length} requests · ${CB.steps.length} steps, token-for-token vs SequentialReference` : 'token-for-token vs SequentialReference';
   const para = (html) => { const p = el('p', 'panel-note'); p.innerHTML = html; return p; };
   const bullets = (items) => {
@@ -2773,81 +2777,136 @@ function initWiring() {
 
   const STAGES = [
     { name: 'Today — two working worlds', on: [], morphs: [], cur: [], card: (c) => {
-      c.appendChild(para('Left: the sequential stack serving real traffic. Right: the prototype, pinned by 14 tests (' + cbStat +
-        ' — replay it on the <a href="#/batching">Continuous batching</a> tab). The amber column is what Phase 2 builds between them. ' +
-        'Prereqs already landed: the <code>AttentionMethod</code> seam (+ <code>EinsumAttentionMethod</code> reference and the ' +
-        '<code>PaddedAttentionMethod</code> stub), the logits-processor pipeline, the <code>Sequence</code> dataclass, and the tiny-Qwen3 test fixture.'));
+      c.appendChild(para('Left: the sequential stack serving real traffic. Right: the prototype, pinned by 29 tests (' + cbStat +
+        ' — replay it on the <a href="#/batching">Continuous batching</a> tab). The amber column is what gets built between them, per ' +
+        '<code>continuous-batching-plan.md</code> (source of truth; supersedes the design note, kept as <code>old_research_continuous_batching.md</code>): ' +
+        'steps 0–9 plus close-out, each one focused session, independently landable, suite green at the end.'));
       c.appendChild(bullets([
-        '<b>The mapping</b> (continuous_batching.md): <code>PaddedKVCache</code> → runtime-owned multi-layer pool · <code>ToyModel.forward</code> → per-row <code>Qwen3.forward</code> + <code>PaddedAttentionMethod</code> · prototype scheduler → <code>ContinuousBatchingEngine</code> · <code>runner</code> → async multiplexer',
-        '<b>Author note (PLAN.md):</b> the scheduler, batched forward, and padded KV are hand-written by Nadia for learning — the prereq refactors and the engine/queue multiplexing (step 5) are fair game for assistants ✍',
+        '<b>The mapping:</b> <code>PaddedKVCache</code> → runtime-owned multi-layer pool · <code>ToyModel.forward</code> → batched-forward protocol fronted by <code>ModelRuntime</code> · <code>greedy_sample</code> → shared sampler · prototype scheduler → <code>ContinuousBatchingScheduler</code> · <code>runner</code> → engine shell + async multiplexer',
+        '<b>Division of labor (settled):</b> Nadia hand-writes the <code>PaddedAttentionMethod</code> math (step 5) and the scheduler port (step 8) ✍ — pure red→green against pre-landed xfail suites; Claude writes everything else (pre-work, sampler, stubs, pool, plumbing, shell, admission, tests)',
+        '<b>Scope (settled):</b> bench spec consciously skipped (rough <code>bench.py</code> numbers only) · logprobs + stop strings as optional tail steps · process split and batched speculation out of scope',
       ]));
     }},
-    { name: '1 · widen the AttentionMethod seam', on: ['attn'], morphs: [], cur: ['attn'], card: (c) => {
-      c.appendChild(para('Settle the batched signature while the padded variant still stubs. The current protocol is shaped for one sequence:'));
+    { name: '0 · SequentialEngine lock fix', on: [], morphs: [], cur: ['seq'], card: (c) => {
+      c.appendChild(para('Fable-review #1 first: <code>submit()</code> spawns a worker thread per request with <b>no lock</b>, and <code>SpeculativeBackend</code> ' +
+        'keeps shared draft-cache state — two engines behind one API make the hole <i>more</i> reachable, not less. A lock serializes the ' +
+        '<code>reset()+generate()</code> region, with a stop_event check after acquiring so an aborted waiter exits without generating.'));
       c.appendChild(bullets([
-        '<code>build_mask(start_pos, seq_len, device)</code> returns a 2D <code>(seq_len, start_pos+seq_len)</code> mask — batching needs a per-row variant producing <b>(B, num_new_max, max_history_len)</b>, accounting for ragged <code>num_new</code> and per-row history (tricky point 4)',
-        '<code>forward_prefill/forward_decode</code> take one sequence’s Q/K/V — they need per-row slot metadata, the same <code>(slot_idx, start_pos, num_new)</code> triple the prototype passes around',
+        'New <code>tests/test_sequential_engine.py</code>: a fake backend proves no overlap; abort-while-waiting → <code>finish_reason="abort"</code> with zero tokens',
+        '<b>Housekeeping:</b> the design note lives on as <code>old_research_continuous_batching.md</code>; <code>continuous-batching-plan.md</code> is the source of truth from here',
       ]));
     }},
-    { name: '2 · per-row Qwen3.forward + RoPE', on: ['attn', 'fwd'], morphs: ['m-toy'], cur: ['fwd'], card: (c) => {
-      c.appendChild(para('<code>Qwen3.forward(tokens, start_pos: int, kv_cache)</code> has a <b>scalar</b> start_pos, consumed by RoPE ' +
-        '(<code>apply_rotary_emb(offset=start_pos)</code>), <code>_validate_cache</code>, and mask construction (tricky point 3). All become per-row.'));
+    { name: '1 · shared sampler + greedy fix', on: ['sampler'], morphs: ['m-samp'], cur: ['sampler'], card: (c) => {
+      c.appendChild(para('Bypassing <code>InferenceBackend</code> leaves sampling <b>homeless</b>: the logits-processor pipeline and greedy/multinomial ' +
+        'sampling live on <code>StandardBackend.get_probs/sample</code>. Extract into <code>engine/sampler.py</code> — module functions taking ' +
+        '<b>(vocab,)</b> and <b>(B, vocab)</b> — consumed by both engine paths; the backend methods become thin delegates (speculative still calls them).'));
       c.appendChild(bullets([
-        'RoPE is on the hot path: either a per-row Python loop or a <b>(B, num_new_max)</b> position gather over <code>freqs_cis</code>',
-        'The toy model dodges all of this with one head and a per-row loop — the real model has GQA (16 heads / 8 KV groups), QK-norm, and 28 layers',
+        '<b>Fix the greedy shortcut once</b> (fable-review #4): greedy now runs the pipeline <i>then</i> argmax — fine for temperature/top-p, silently wrong the day repetition penalty or logit bias lands. <code>tests/test_sampler.py</code> pins it with a ranking-inverting processor that fails on the old code',
+        'Greedy is also the only mode where batched-vs-sequential equivalence tests are <i>possible</i> — multinomial draws RNG in a different order across the two paths by construction',
       ]));
     }},
-    { name: '3 · runtime-owned KV pool', on: ['attn', 'fwd', 'pool'], morphs: ['m-toy', 'm-pool'], cur: ['pool'], card: (c) => {
-      c.appendChild(para('The KV cache shape is <b>the</b> load-bearing decision (tricky point 1): per-request grow-by-cat <code>KVCache</code> and a shared ' +
-        'slot-indexed pool can’t unify. Decision (endorsed by fable-review): <code>ModelRuntime</code> owns the pool, <code>Sequence.cache</code> becomes a slot handle — ' +
-        'because Phase 4’s paged cache is the <i>same shape</i> (a block table is also a handle into a runtime-owned pool). Design the seam once.'));
+    { name: '2 · design pass — seam stubs as code', on: ['sampler', 'fwd', 'attn', 'pool'], morphs: ['m-samp'], cur: ['fwd', 'attn', 'pool'], card: (c) => {
+      c.appendChild(para('The protocol signature depends on the pool layout, so settle them together — as committed, importable stubs Nadia signs off ' +
+        'before merge: <code>BatchMeta</code>, two batched protocol additions, <code>PaddedKVPool</code>, <code>BatchingConfig</code>, ' +
+        '<code>Qwen3.forward_batched</code>, and the <code>ModelRuntime</code> front (decision 4: the engine never imports <code>Qwen3</code>). ' +
+        'Every later step is body-filling only.'));
       c.appendChild(bullets([
-        'Config switch: sequential runtimes keep handing out per-request <code>KVCache</code>s',
-        '<b>Memory is real now</b> (tricky point 9): 0.6B at max_batch=8 × 4096 ctx ≈ 3.8 GB of KV (fable-review corrected the note’s ~6 GB) — the model’s max_seq_len=40,960 is far too big to preallocate, so a separate per-sequence cap enters the config: two “max seq lens” coexist',
+        '<b>The prefill/decode dichotomy dissolves:</b> a CB step mixes prefill-chunk and decode rows in one forward — the existing <code>padded.py</code> stub still carries the old <code>forward_prefill/forward_decode</code> split and gets reshaped to a single mixed-batch entrypoint',
+        '<b>Add new batched methods; don’t widen the sequential signatures</b> — <code>EinsumAttentionMethod</code> stays the frozen correctness reference and raises on the batched ones',
+        '<code>BatchMeta</code> carries both worlds: a <code>rows</code> list for loop-the-writes, <b>(B,)</b> tensors + <b>(B, num_new_max)</b> positions for vectorized gathers',
       ]));
     }},
-    { name: '4 · fill PaddedAttentionMethod', on: ['attn', 'fwd', 'pool'], morphs: ['m-toy', 'm-pool'], cur: ['attn'], card: (c) => {
-      c.appendChild(para('Replace the <code>NotImplementedError</code> with the real batched math (tricky point 5). The prototype’s per-row Python loop is the ' +
-        'simplest correctness path but devastating for perf on a real model — the padded path wants the vectorized batched einsum that ' +
-        '<code>EinsumAttentionMethod</code> mostly already has; the genuinely new bit is <b>per-row history slicing</b> against the slot pool.'));
+    { name: '3 · KV pool + slot allocator', on: ['sampler', 'fwd', 'attn', 'pool'], morphs: ['m-samp', 'm-pool'], cur: ['pool'], card: (c) => {
+      c.appendChild(para('Decision 1: <code>ModelRuntime</code> owns the pool <b>memory</b> (<code>new_kv_pool(config)</code> from <code>spec.arch</code>), ' +
+        'the scheduler owns the <b>allocator</b> state, and a sequence carries a slot handle — Phase 4’s paged cache is the <i>same shape</i> ' +
+        '(a block table is also a handle into a runtime-owned pool). Design the seam once. <code>SlotAllocator</code> uses a deque free list in ' +
+        'ascending order, fixing the prototype’s nondeterministic <code>set.pop</code>.'));
       c.appendChild(bullets([
-        'Validate against <code>EinsumAttentionMethod</code> on a single-row prefill before trusting batches',
-        'Tests at two layers (tricky point 10): keep the fast toy-model scheduler tests <i>and</i> add tiny-Qwen3 batched-vs-sequential token-for-token equivalence',
+        '<b>Memory is real now:</b> ~112 KB/token for 0.6B → ≈ 3.8 GB at max_batch=8 × 4096 ctx — the per-sequence cap is <i>engine config</i> (<code>BatchingConfig</code>), not ModelSpec (decision 7): two “max seq lens” coexist',
+        '<code>tests/test_kv_pool.py</code> ports the prototype suite + view-aliasing and FIFO-determinism pins',
       ]));
     }},
-    { name: '5 · engine + async multiplexer', on: MIDDLE, morphs: ['m-toy', 'm-pool', 'm-sched', 'm-run'], cur: ['cbe', 'sched'], card: (c) => {
-      c.appendChild(para('The scheduler drops in behind a new <code>ContinuousBatchingEngine</code> — same <code>InferenceEngine</code> protocol, but it ' +
-        '<b>bypasses <code>InferenceBackend</code></b> (whose <code>generate(seq)</code> is one-driver-one-request by construction, tricky point 2) and calls the model ' +
-        'directly through the widened AttentionMethod seam. One scheduler thread now feeds <b>N</b> <code>submit()</code> iterators via per-request queues keyed by <code>request_id</code>.'));
+    { name: '4 · batched entrypoints (not the math)', on: ['sampler', 'fwd', 'attn', 'pool'], morphs: ['m-samp', 'm-pool', 'm-toy'], cur: ['fwd'], card: (c) => {
+      c.appendChild(para('Everything of the batched model path except the attention math: <code>apply_rotary_emb_batched</code> — a <b>(B, S)</b> gather over ' +
+        '<code>freqs_cis</code>, pinned by exact-equality tests against the scalar path — <code>build_batched_mask</code> (pure per-row causal), ' +
+        '<code>forward_batched</code> through GQA/Transformer/Qwen3 (no cache-emptiness dispatch), and the runtime front + attention-method switch.'));
       c.appendChild(bullets([
-        '<b>Abort is the trickiest sub-case</b> (tricky point 7): setting <code>stop_event</code> must free the slot, emit <code>finish_reason="abort"</code>, and close that queue without leaving the scheduler blocked on a put; the scheduler polls all stop_events between steps (point 8)',
-        'Sampling: real <code>SamplingParams</code>/<code>LogitsProcessor</code> pipeline per row after the batched forward — loop rows first, optimize later; greedy is just argmax (point 6)',
-        '<b>Stop-token contract</b> (fable-review): the prototype emits the stop token then finishes; <code>StandardBackend</code> returns <i>without</i> yielding it — the check must move before emission or token-for-token tests diverge on the final token. And <code>TokenEvent</code> populates exactly one field, so finish becomes its own event',
-        '<b>Admission control</b> (fable-review): reject <code>prompt_len + max_tokens &gt; cap</code> up front — one overlong request would crash the whole shared batch step',
+        '<b>Return shape:</b> gather each row’s last real token <i>before</i> the lm_head → <code>(B, vocab)</code> — avoids ~150 MB of logits per 512-wide prefill row in bf16 (mid-prefill lm_head skip = explicit Phase-3 TODO)',
+        '<b>Mask insight worth pinning:</b> pure per-row causality (<code>j &gt; start_pos[b]+i</code>) also hides stale K/V from previous slot occupants and keeps pad rows finite — no slot-zeroing on free, no NaN handling',
+        '<b>Nadia’s step-5 suite pre-lands here as xfail(NotImplementedError):</b> mixed batch vs per-row sequential oracle, pad-invariance, pool-write pin, stale-slot reuse, bounds assert',
       ]));
     }},
-    { name: 'After — two engines, one API', on: MIDDLE, morphs: ['m-toy', 'm-pool', 'm-sched', 'm-run'], cur: ['iface', 'registry', 'seq'], card: (c) => {
+    { name: '5 · padded attention math ✍', on: ['sampler', 'fwd', 'attn', 'pool'], morphs: ['m-samp', 'm-pool', 'm-toy'], cur: ['attn'], card: (c) => {
+      c.appendChild(para('Nadia’s hand-written math, pure red→green against the pre-landed suite (Claude interprets test failures only). ' +
+        '<b>Vectorize the math, loop the writes:</b> gather <code>layer_k[slots, :max_hist]</code> in one index op, the two einsums from ' +
+        '<code>EinsumAttentionMethod._attend</code> with the 3D mask broadcast over group/head dims, and a small per-row loop of slice-assignments ' +
+        'for the ragged KV writes (bookkeeping, not math).'));
+      c.appendChild(bullets([
+        '<b>Bounds trap:</b> pad columns writing K/V past a row’s real tokens are harmless (next step overwrites) — <i>except</i> when <code>start_pos + num_new_max</code> overruns the slot. Hard assert on the write, not just the row',
+        '<b>Equivalence is softer on the real stack:</b> strict token-for-token only on float32 CPU tiny-Qwen3; logit-tolerance on MPS — a vectorized kernel has a different reduction order',
+      ]));
+    }},
+    { name: '6 · engine shell + multiplexer', on: ['sampler', 'fwd', 'attn', 'pool', 'cbe'], morphs: ['m-samp', 'm-pool', 'm-toy', 'm-run'], cur: ['cbe'], card: (c) => {
+      c.appendChild(para('The shell has <b>zero model dependency</b>, so it’s built and tested against a scripted fake scheduler — the threading code gets its own ' +
+        'fast, torch-free suite instead of being debugged through an end-to-end tube. One command queue drained at step start (decision 6); the scheduler ' +
+        'thread <b>blocks</b> on it when idle; one <code>call_soon_threadsafe</code> hop <i>per step, not per token</i> — deliberately IPC-shaped.'));
+      c.appendChild(bullets([
+        '<b>Backpressure (decision 5):</b> per-request queues are unbounded, <code>put_nowait</code> cannot fail — a stalled SSE client can’t freeze the batch; disconnect→abort frees the slot',
+        '<b>Gaps the note missed, defined here:</b> step-failure policy (a <code>step()</code> exception is batch-wide → error events to every in-flight request, engine marked failed) and the shutdown path (join the thread, abort-finish in-flight so no iterator hangs)',
+        'The idle no-spin test — go idle, a late submit must wake the thread — doubles as the pin for fable-review #5’s late-arrival idle-drop trap',
+      ]));
+    }},
+    { name: '7 · admission control → 400', on: ['sampler', 'fwd', 'attn', 'pool', 'cbe'], morphs: ['m-samp', 'm-pool', 'm-toy', 'm-run'], cur: ['api', 'registry'], card: (c) => {
+      c.appendChild(para('One overlong request would crash the whole shared batch step, so it never reaches the engine: <code>RegistryEntry</code> grows ' +
+        '<code>max_request_tokens</code>, and the <code>prompt_len + max_tokens &le; cap</code> check lives beside <code>tokenize_and_build_request</code> — ' +
+        'the first place prompt length exists — mapping to a 400 that names prompt tokens, max_tokens, and the cap, in both dialects.'));
+      c.appendChild(bullets([
+        'Contract tests: capless entry → no check; <code>== cap</code> → 200; <code>+1</code> → 400 and <code>FakeEngine.submit</code> never called',
+        '<b>Defense-in-depth lands elsewhere:</b> the scheduler re-validates on <code>add_request</code> (step 8 — non-API callers exist) and the pool write hard-asserts (step 5)',
+      ]));
+    }},
+    { name: '8 · scheduler port ✍', on: MIDDLE, morphs: ['m-samp', 'm-pool', 'm-toy', 'm-sched', 'm-run'], cur: ['sched'], card: (c) => {
+      c.appendChild(para('Nadia ports the prototype scheduler onto the real types against a pre-landed toy-stepper suite — <code>water_fill</code> and ' +
+        '<code>Row</code> come over verbatim (proven, not the learning target); <code>CBSequence</code> avoids colliding with <code>engine/types.Sequence</code> ' +
+        '(decision 2). The constructor takes <code>(forward_fn, pool, allocator, config)</code>: the scheduler never sees <code>Qwen3</code> or ' +
+        '<code>ModelRuntime</code>, which is exactly what lets the toy tests exist.'));
+      c.appendChild(bullets([
+        '<b>Port checklist, each item pinned by a test:</b> stop token suppressed — check <i>before</i> emission (decision 3) · finish as its own event · <code>&gt;=</code> on max_tokens · <code>max_tokens&le;0</code> short-circuit (the <code>&gt;=</code> fix alone still emits one token) · abort for running <i>and</i> still-queued requests · cap re-check on <code>add_request</code> · no sampling mid-prefill',
+        '<b>Chunked prefill is not scheduled separately</b> — it falls out of <code>water_fill</code> and the ported prototype tests',
+      ]));
+    }},
+    { name: '9 · wire-up + registration', on: MIDDLE, morphs: ['m-samp', 'm-pool', 'm-toy', 'm-sched', 'm-run'], cur: ['cbe', 'registry'], card: (c) => {
+      c.appendChild(para('Compose shell + scheduler + <code>runtime.forward_batched</code> into the registrable engine. <code>main.py</code> grows ' +
+        '<code>serve --engine {sequential,batched}</code> (default sequential until soak-tested), batching-config flags, and an argparse error on ' +
+        '<code>--engine batched --speculative</code>.'));
+      c.appendChild(bullets([
+        '<b>The headline test:</b> N concurrent <code>submit()</code>s through <code>ContinuousBatchingEngine</code>, token-for-token vs <code>StandardBackend.generate</code> on tiny-Qwen3 float32 CPU greedy — viable <i>only</i> because step 8 fixed the stop contract',
+        'Plus staggered arrivals, abort-under-load frees capacity, API-level SSE smoke + over-cap 400, and an MPS logit-tolerance variant',
+        '<b>Manual smoke:</b> <code>serve --engine batched</code> handles 3+ concurrent chat clients on the Mac',
+      ]));
+    }},
+    { name: 'After — two engines, one API', on: MIDDLE, morphs: ['m-samp', 'm-pool', 'm-toy', 'm-sched', 'm-run'], cur: ['iface', 'registry', 'seq'], card: (c) => {
       c.appendChild(para('The registry holds both engines side-by-side: speculative models stay on <code>SequentialEngine</code>, dense models route to ' +
         '<code>ContinuousBatchingEngine</code>. Nothing above the engine seam noticed: same <code>submit()/abort()</code>, same <code>InferenceRequest</code> in and ' +
         '<code>TokenEvent</code>s out, API-side tokenization untouched.'));
       c.appendChild(bullets([
-        '<b>Deliberately later:</b> the API/engine <i>process split</i> is a separate second piece — in-process scheduler first, IPC boundary after (tricky point 11)',
-        '<b>Explicit non-goal:</b> batched speculative decoding — don’t unify the two engine paths (point 12)',
-        '<b>Phase 4 inherits the seam:</b> the paged KV cache is the same runtime-owned-pool-plus-handle shape, with 16-token blocks and a block table instead of one slot index',
+        '<b>Close-out (steps 10–11):</b> rough sequential-vs-batched <code>bench.py</code> numbers (formal spec consciously deferred), PLAN.md Phase 2 Status line updated, postscript in <code>old_research_continuous_batching.md</code>, and a viz/ refresh (traces, diagram, Roadmap tab)',
+        '<b>Optional tail (steps 12–13):</b> logprobs (<code>TokenEvent</code> widening; the shared sampler already returns probs) then stop strings (decoder backtracking) — each its own small session',
+        '<b>Deliberately later:</b> the API/engine process split (the command queue is already IPC-shaped) · batched speculation stays a non-goal · Phase 4’s paged cache inherits the runtime-owned-pool-plus-handle seam',
       ]));
     }},
   ];
 
   const transport = makeTransport({
     max: STAGES.length - 1,
-    labelFn: (i) => `step ${i} / ${STAGES.length - 1} — ${STAGES[i].name}`,
+    labelFn: (i) => `stage ${i} / ${STAGES.length - 1} — ${STAGES[i].name}`,
     onSet: setStage,
     playMs: 3200,
   });
   activeTransports['wiring'] = transport;
 
   const diagPanel = el('section', 'panel');
-  diagPanel.appendChild(el('h2', null, 'Integration order — from continuous_batching.md'));
+  diagPanel.appendChild(el('h2', null, 'Integration order — from continuous-batching-plan.md'));
   diagPanel.appendChild(scroll);
 
   const cardPanel = el('section', 'panel');
@@ -2861,7 +2920,7 @@ function initWiring() {
   function setStage(i) {
     const st = STAGES[i];
     MIDDLE.forEach(k => nodes[k].classList.toggle('ghost', !st.on.includes(k)));
-    ['m-run', 'm-sched', 'm-toy', 'm-pool'].forEach(k => edges[k].classList.toggle('ghost', !st.morphs.includes(k)));
+    ['m-run', 'm-sched', 'm-toy', 'm-pool', 'm-samp'].forEach(k => edges[k].classList.toggle('ghost', !st.morphs.includes(k)));
     ['e-c1', 'e-c2', 'e-c3', 'e-c4', 'e-iface'].forEach(k => edges[k].classList.toggle('ghost', st.on.length === 0));
     Object.keys(nodes).forEach(k => nodes[k].classList.toggle('cur', st.cur.includes(k)));
     cardTitle.textContent = st.name;

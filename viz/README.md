@@ -48,12 +48,13 @@ detail lives behind the zoom targets):
 - **Continuous batching** — the `prototypes/continuous_batching/` scheduler
   step-debugger: Gantt timeline, water-fill plan, padded batch tensor,
   sample/emit outcomes, KV slot pool, per-request output streams.
-- **CB wiring** — the integration plan from `continuous_batching.md` +
-  `fable-review.md` as a steppable diagram: what stays untouched, what gets
-  built (in the doc's 5-step prereq order), and which prototype piece morphs
-  into which real module — with the tricky points and review findings attached
-  to the step they bite. Static design content, no trace needed; update it if
-  the integration plan changes.
+- **CB wiring** — the integration plan from `continuous-batching-plan.md`
+  (the source of truth; supersedes the `old_research_continuous_batching.md`
+  design note) as a steppable diagram: what stays untouched, what gets built
+  (steps 0–9, lock fix through wire-up, with owners), and which prototype
+  piece morphs into which real module — with the decisions, tricky points,
+  and review findings attached to the step they bite. Static design content,
+  no trace needed; update it if the integration plan changes.
 
 ## Regenerating the traces
 
