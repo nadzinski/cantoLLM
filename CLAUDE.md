@@ -28,6 +28,26 @@ uv add <package>              # runtime dependency
 uv add --dev <package>        # dev-only dependency
 ```
 
+# viz/ — architecture explorer maintenance
+
+`viz/` holds an interactive architecture visualization (see `viz/README.md`):
+trace harnesses that instrument the real code at runtime plus a static
+`viz/index.html`. It is a snapshot of the architecture, so architectural
+changes can make it stale or break the harnesses — e.g. renaming/moving
+modules or methods that the harnesses wrap (`StandardBackend.forward/sample`,
+`attention_method.build_mask`, `apply_rotary_emb`, `SequentialEngine.submit`,
+the CB prototype's `_plan_step`/`_build_input_ids`), changing engine/queue
+mechanics, or landing new subsystems (e.g. the continuous-batching engine).
+
+**Do not update viz/ by default.** When you make (or are asked to plan) an
+architectural change that would affect it, always ask the user whether the
+visualization should be updated too. Trace data regenerates via the commands
+in `viz/README.md`; diagram/structure changes mean editing `viz/index.html`.
+The same rule covers the two design-content tabs: the Roadmap tab mirrors
+PLAN.md's phase Status lines and the CB-wiring tab mirrors
+`continuous_batching.md` — when either document changes, ask whether the
+corresponding tab should be updated.
+
 # PLAN.md
 
 `PLAN.md` is the long-horizon roadmap for the project and is written as a

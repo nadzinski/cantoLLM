@@ -1,0 +1,2878 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CantoLLM · Architecture Explorer</title>
+<style>
+  :root {
+    --plane: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --ring: rgba(11, 11, 11, 0.10);
+    --good: #0ca30c;
+    --good-text: #006300;
+    --sA: #2a78d6;
+    --sB: #1baf7a;
+    --sC: #eda100;
+    --sD: #008300;
+    --think: #eda100;
+    --speak: #2a78d6;
+    --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  /* Deliberately single-theme: always renders light. */
+  :root { color-scheme: light; }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--plane);
+    color: var(--ink);
+    font-family: var(--sans);
+    margin: 0;
+    padding: 24px 20px 64px;
+    line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; margin-bottom: 2px; }
+  header h1 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  header h1 a { color: inherit; text-decoration: none; }
+  nav { display: flex; flex-wrap: wrap; gap: 4px; }
+  nav a {
+    font: 600 12.5px var(--sans); color: var(--ink2); text-decoration: none;
+    padding: 4px 11px; border-radius: 999px; border: 1px solid transparent;
+  }
+  nav a:hover { border-color: var(--axis); }
+  nav a.active { background: var(--surface); border-color: var(--ring); color: var(--ink); }
+
+  section[data-view] { display: flex; flex-direction: column; gap: 14px; }
+  section[data-view][hidden] { display: none; }
+  .view-sub { color: var(--ink2); font-size: 13px; margin: -6px 0 0; max-width: 84ch; }
+
+  .transport {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--ring); border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .transport button {
+    font: 600 13px var(--sans); color: var(--ink);
+    background: var(--plane); border: 1px solid var(--axis); border-radius: 6px;
+    padding: 5px 12px; cursor: pointer;
+  }
+  .transport button:hover { border-color: var(--muted); }
+  .transport button:focus-visible, button.gantt-col:focus-visible, .zoombox:focus-visible {
+    outline: 2px solid var(--sA); outline-offset: 2px;
+  }
+  .transport input[type="range"] { flex: 1; min-width: 140px; accent-color: var(--sA); }
+  .step-label { font: 600 13px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .kbd-hint { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .kbd-hint kbd {
+    font: 11px var(--mono); border: 1px solid var(--axis); border-bottom-width: 2px;
+    border-radius: 4px; padding: 0 4px; color: var(--ink2);
+  }
+
+  .stages { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--ink2); }
+  .stage { background: var(--surface); border: 1px solid var(--ring); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+  .stage b { color: var(--ink); font-weight: 600; }
+  .stage-arrow { color: var(--muted); }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--ring); border-radius: 8px;
+    padding: 14px 16px 16px;
+  }
+  .panel h2 {
+    margin: 0 0 4px; font-size: 11px; font-weight: 650; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .panel .panel-note { font-size: 12px; color: var(--ink2); margin: 0 0 10px; }
+  .panel code, .box code { font-family: var(--mono); font-size: 0.92em; }
+
+  .cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+  @media (max-width: 900px) { .cols, .cols-2 { grid-template-columns: 1fr; } }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font: 600 12px var(--mono); color: var(--ink);
+  }
+  .chip .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+
+  .missing {
+    border: 1px dashed var(--axis); border-radius: 8px; background: var(--surface);
+    padding: 18px; color: var(--ink2); font-size: 13.5px;
+  }
+  .missing code { display: inline-block; background: var(--plane); border: 1px solid var(--grid); border-radius: 5px; padding: 2px 8px; margin: 4px 0; font-family: var(--mono); font-size: 12.5px; }
+
+  /* ---- overview map ---- */
+  .map { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 18px; align-items: start; }
+  @media (max-width: 900px) { .map { grid-template-columns: 1fr; } }
+  .flow { display: flex; flex-direction: column; }
+  .flow-arrow { text-align: center; color: var(--muted); font-size: 15px; line-height: 1.3; padding: 1px 0; }
+  .flow-arrow small { font-size: 11px; font-family: var(--mono); color: var(--muted); }
+  .box {
+    background: var(--surface); border: 1px solid var(--ring); border-radius: 8px;
+    padding: 10px 14px 11px; position: relative;
+  }
+  .box .box-title { font: 650 13.5px var(--sans); display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .box .box-path { font: 11px var(--mono); color: var(--muted); }
+  .box .box-desc { font-size: 12.5px; color: var(--ink2); margin-top: 2px; }
+  .box .box-stat { font: 600 11.5px var(--mono); color: var(--ink2); margin-top: 5px; background: var(--plane); border: 1px solid var(--grid); border-radius: 5px; padding: 3px 8px; display: inline-block; }
+  .box .box-stat.nodata { color: var(--muted); font-weight: 400; font-style: italic; font-family: var(--sans); border-style: dotted; }
+  .zoombox { cursor: pointer; transition: border-color .12s ease, box-shadow .12s ease; border-width: 1px; text-align: left; width: 100%; font: inherit; color: inherit; }
+  .zoombox:hover { border-color: var(--sA); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sA) 18%, transparent); }
+  .zoom-tag {
+    font: 600 10.5px var(--sans); letter-spacing: .04em; text-transform: uppercase;
+    color: var(--sA); border: 1px solid color-mix(in srgb, var(--sA) 45%, transparent);
+    border-radius: 999px; padding: 1px 8px; margin-left: auto;
+  }
+  .badge-wip {
+    font: 600 10.5px var(--sans); letter-spacing: .03em; text-transform: uppercase;
+    color: #8a5a00; background: color-mix(in srgb, var(--sC) 18%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--sC) 55%, transparent);
+    border-radius: 999px; padding: 1px 8px;
+  }
+  .sidecar { border-style: dashed; background: var(--plane); }
+  .cb-arrow { border-left: 2px dashed var(--axis); margin: 4px 0 4px 18px; padding: 6px 0 6px 12px; color: var(--muted); font-size: 12px; }
+
+  /* ---- token chips ---- */
+  .tok {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 26px; height: 24px; padding: 0 5px; border-radius: 4px;
+    font: 600 12px var(--mono); background: var(--plane); border: 1px solid var(--grid);
+  }
+  .tokline { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .tok .tid { font-weight: 400; color: var(--muted); font-size: 10px; margin-left: 4px; }
+  .tok.special { border-color: var(--axis); background: var(--surface); color: var(--ink2); border-style: double; border-width: 3px; }
+
+  /* ---- anatomy ---- */
+  .anat { display: flex; flex-direction: column; gap: 0; margin-top: 6px; }
+  .anat-row { display: grid; grid-template-columns: minmax(180px, 1.4fr) minmax(0, 2fr); gap: 12px; padding: 5px 8px; border-radius: 5px; align-items: baseline; }
+  .anat-row:nth-child(odd) { background: var(--plane); }
+  .anat-op { font: 600 12px var(--mono); }
+  .anat-op small { font: 11px var(--sans); color: var(--muted); font-weight: 400; }
+  .anat-shapes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font: 11.5px var(--mono); color: var(--ink2); }
+  .shape { background: var(--surface); border: 1px solid var(--grid); border-radius: 4px; padding: 1px 6px; font: 600 11px var(--mono); color: var(--ink); white-space: nowrap; }
+  .shape.hl { border-color: var(--sA); }
+  .anat-note { font: 11px var(--sans); color: var(--muted); }
+  .anat-block { border: 1px solid var(--axis); border-radius: 8px; margin: 6px 0; overflow: hidden; }
+  .anat-block-head { display: flex; align-items: center; gap: 10px; padding: 7px 10px; background: var(--plane); border-bottom: 1px solid var(--grid); font: 650 12px var(--sans); }
+  .xN { font: 600 11px var(--mono); background: var(--ink); color: var(--plane); border-radius: 999px; padding: 1px 9px; }
+  .seg { display: inline-flex; border: 1px solid var(--axis); border-radius: 6px; overflow: hidden; }
+  .seg button { font: 600 12px var(--sans); border: 0; background: var(--surface); color: var(--ink2); padding: 4px 12px; cursor: pointer; }
+  .seg button.on { background: var(--ink); color: var(--plane); }
+
+  /* ---- anatomy diagram (SVG) ---- */
+  .anat-svg { display: block; min-width: 860px; width: 100%; height: auto; margin-top: 10px; }
+  .anat-svg .dgb { fill: var(--surface); stroke: var(--axis); stroke-width: 1.2; }
+  .anat-svg .dgb.outer { fill: var(--plane); }
+  .anat-svg .dgb.blue { fill: color-mix(in srgb, var(--sA) 9%, var(--surface)); stroke: var(--sA); }
+  .anat-svg .dgb.dark { fill: var(--ink); stroke: var(--ink); }
+  .anat-svg .dgb.inset { fill: var(--surface); stroke: var(--ring); }
+  .anat-svg .dgb.badge { fill: var(--ink); stroke: var(--ink); }
+  .anat-svg .dgt { font: 600 12.5px var(--sans); fill: var(--ink); text-anchor: middle; }
+  .anat-svg .dgt.small { font-size: 11px; }
+  .anat-svg .dgt.mono { font: 600 11.5px var(--mono); }
+  .anat-svg .dgt.inv { fill: var(--plane); }
+  .anat-svg .dgt.title { font: 650 11px var(--sans); letter-spacing: .08em; text-transform: uppercase; fill: var(--muted); text-anchor: start; }
+  .anat-svg .dgt.note { font: 400 10.5px var(--sans); fill: var(--muted); }
+  .anat-svg .dgp { fill: var(--plane); stroke: var(--grid); }
+  .anat-svg .dgpt { font: 600 10.5px var(--mono); fill: var(--ink); text-anchor: middle; }
+  .anat-svg .dge { stroke: var(--ink2); stroke-width: 1.6; fill: none; }
+  .anat-svg .dge.dash { stroke: var(--muted); stroke-width: 1.3; stroke-dasharray: 5 4; }
+
+  /* ---- plumbing diagram ---- */
+  .flow-svg .dg-node { cursor: pointer; }
+  .flow-svg .dg-node:hover rect { stroke-width: 2; }
+  .flow-svg .dg-node.cur rect { stroke: var(--ink); stroke-width: 2.4; }
+  .flow-svg .n-loop { stroke: var(--sA); }
+  .flow-svg .n-worker { stroke: var(--sB); }
+  .flow-svg .n-exec { stroke: var(--sC); }
+  .flow-svg .n-obj { fill: var(--plane); stroke: var(--ink2); }
+  .flow-svg .n-queue { fill: var(--plane); stroke: var(--ink); }
+  .flow-svg .region-loop { fill: color-mix(in srgb, var(--sA) 5%, transparent); stroke: color-mix(in srgb, var(--sA) 32%, transparent); stroke-dasharray: 7 5; }
+  .flow-svg .region-worker { fill: color-mix(in srgb, var(--sB) 5%, transparent); stroke: color-mix(in srgb, var(--sB) 35%, transparent); stroke-dasharray: 7 5; }
+  .flow-svg .region-build { fill: color-mix(in srgb, var(--sC) 5%, transparent); stroke: color-mix(in srgb, var(--sC) 45%, transparent); stroke-dasharray: 7 5; }
+  .flow-svg .dg-node.ghost { opacity: 0.26; }
+  .flow-svg .dg-node, .flow-svg .dge { transition: opacity 0.3s ease; }
+  .flow-svg path.ghost { opacity: 0.15; }
+  .flow-svg .stepnum { font: 700 11px var(--mono); fill: var(--plane); }
+
+  /* ---- roadmap metro line ---- */
+  .rm-svg .stop { cursor: pointer; }
+  .rm-svg .stop circle.face { fill: var(--surface); stroke: var(--axis); stroke-width: 2; }
+  .rm-svg .stop.done circle.face { fill: color-mix(in srgb, var(--sB) 70%, var(--surface)); stroke: var(--sB); }
+  .rm-svg .stop.active circle.face { fill: color-mix(in srgb, var(--sC) 75%, var(--surface)); stroke: var(--sC); }
+  .rm-svg .stop .pnum { font: 700 11px var(--mono); fill: var(--ink); text-anchor: middle; }
+  .rm-svg .stop.done .pnum, .rm-svg .stop.active .pnum { fill: var(--ink); }
+  .rm-svg .stop text.ttl { font: 600 11.5px var(--sans); fill: var(--ink); text-anchor: middle; }
+  .rm-svg .stop text.hw { font: 10px var(--mono); fill: var(--muted); text-anchor: middle; }
+  .rm-svg .stop.cur circle.face { stroke: var(--ink); stroke-width: 3; }
+  .rm-svg .stop:hover circle.face { stroke-width: 3; }
+  .commit-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .commit-chips .statchip b { font-weight: 650; }
+  .rm-status { display: inline-flex; align-items: center; font: 600 11px var(--sans); letter-spacing: .03em; text-transform: uppercase; border-radius: 999px; padding: 2px 10px; border: 1.5px solid var(--axis); color: var(--ink2); }
+  .rm-status.done { border-color: var(--sB); color: #0a6b45; }
+  .rm-status.active { border-color: var(--sC); color: #8a5a00; }
+  .flow-svg .dg-dot { transition: transform 0.45s ease; }
+  @media (prefers-reduced-motion: reduce) { .flow-svg .dg-dot { transition: none; } }
+  .th-chip { display: inline-flex; align-items: center; gap: 5px; font: 600 11px var(--sans); letter-spacing: .03em; text-transform: uppercase; border-radius: 999px; padding: 2px 10px; border: 1.5px solid var(--axis); color: var(--ink2); }
+  .th-chip.loop { border-color: var(--sA); }
+  .th-chip.worker { border-color: var(--sB); }
+  .th-chip.exec { border-color: var(--sC); }
+  .stage-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .stage-head .code-ref { font: 11.5px var(--mono); color: var(--muted); }
+
+  /* ---- speculative ---- */
+  .sp-strip { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 10px; align-items: flex-end; }
+  .sp-col { display: flex; flex-direction: column-reverse; gap: 1px; border: 0; background: none; padding: 2px; cursor: pointer; border-radius: 4px; }
+  .sp-col.cur { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .sp-cell { width: 13px; height: 7px; border-radius: 2px; background: var(--plane); border: 1px solid var(--grid); }
+  .sp-cell.acc { background: color-mix(in srgb, var(--sB) 62%, var(--surface)); border-color: var(--sB); }
+  .sp-cell.rej { background: repeating-linear-gradient(45deg, color-mix(in srgb, #c0392b 55%, var(--surface)) 0 3px, var(--surface) 3px 5px); border-color: #c0392b; }
+  .sp-cell.tail { background: color-mix(in srgb, var(--sA) 65%, var(--surface)); border-color: var(--sA); }
+  .tok.acc { background: color-mix(in srgb, var(--sB) 28%, var(--surface)); border-color: var(--sB); }
+  .tok.rej { background: color-mix(in srgb, #c0392b 16%, var(--surface)); border-color: #c0392b; }
+  .tok.moot { opacity: 0.4; }
+  .tok.tailtok { background: color-mix(in srgb, var(--sA) 30%, var(--surface)); border-color: var(--sA); }
+  .sp-timing { display: grid; grid-template-columns: 130px 1fr 70px; gap: 8px; align-items: center; margin-top: 7px; }
+  .sp-timing .lab { font: 600 11.5px var(--mono); text-align: right; color: var(--ink2); }
+  .sp-timing .val { font: 600 11.5px var(--mono); color: var(--ink2); }
+
+  /* ---- weights ---- */
+  .wbar { display: flex; height: 36px; border-radius: 6px; overflow: hidden; gap: 2px; margin-top: 12px; }
+  .wseg { min-width: 2px; }
+  .wleg { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 12.5px; color: var(--ink2); }
+  .wleg .sw { width: 11px; height: 11px; border-radius: 3px; display: inline-block; margin-right: 6px; vertical-align: -1px; }
+  .wleg b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* ---- top-k bars ---- */
+  .bars { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+  .bar-row { display: grid; grid-template-columns: 118px 1fr 64px; gap: 10px; align-items: center; }
+  .bar-lab { font: 600 12px var(--mono); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { position: relative; height: 14px; background: var(--plane); border: 1px solid var(--grid); border-radius: 4px; overflow: hidden; }
+  .bar-fill { position: absolute; inset: 0 auto 0 0; border-radius: 3px 0 0 3px; background: color-mix(in srgb, var(--sA) 34%, var(--surface)); }
+  .bar-row.picked .bar-fill { background: color-mix(in srgb, var(--sA) 78%, var(--surface)); }
+  .bar-val { font: 600 11.5px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink2); }
+  .bar-row.picked .bar-lab::after { content: " ✓"; color: var(--good-text); }
+
+  /* ---- kv meter + sparkline ---- */
+  .meter { position: relative; height: 18px; background: var(--plane); border: 1px solid var(--grid); border-radius: 5px; overflow: hidden; margin-top: 8px; }
+  .meter-fill { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--sB) 55%, var(--surface)); border-right: 2px solid var(--sB); }
+  .spark { width: 100%; height: 64px; margin-top: 10px; display: block; }
+  .stat-line { font: 600 12px var(--mono); color: var(--ink2); margin-top: 6px; }
+  .stat-line b { color: var(--ink); }
+
+  /* ---- chatml ---- */
+  .chatml { background: var(--plane); border: 1px solid var(--grid); border-radius: 6px; padding: 10px 12px; font: 12.5px var(--mono); white-space: pre-wrap; word-break: break-word; margin-top: 6px; }
+  .chatml .sp { background: color-mix(in srgb, var(--sD) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--sD) 45%, transparent); border-radius: 4px; padding: 0 3px; font-weight: 600; color: var(--good-text); }
+
+  /* ---- token timeline (tokenflow) ---- */
+  .ttl { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 10px; }
+  .ttl-cell {
+    width: 15px; height: 18px; border-radius: 3px; border: 1px solid var(--grid);
+    background: var(--plane); cursor: pointer; position: relative; padding: 0;
+  }
+  .ttl-cell.thinking { background: color-mix(in srgb, var(--think) 34%, var(--surface)); border-color: color-mix(in srgb, var(--think) 60%, var(--grid)); }
+  .ttl-cell.text { background: color-mix(in srgb, var(--speak) 40%, var(--surface)); border-color: color-mix(in srgb, var(--speak) 60%, var(--grid)); }
+  .ttl-cell.marker { border: 2px solid var(--ink); }
+  .ttl-cell.buffered::after { content: ""; position: absolute; left: 3px; right: 3px; bottom: 2px; height: 2px; background: var(--ink2); border-radius: 1px; }
+  .ttl-cell.past { opacity: 1; }
+  .ttl-cell.future { opacity: 0.28; }
+  .ttl-cell.cursor { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .textpane { background: var(--plane); border: 1px solid var(--grid); border-radius: 6px; padding: 10px 12px; font: 13px var(--mono); white-space: pre-wrap; word-break: break-word; min-height: 42px; margin-top: 6px; max-height: 300px; overflow-y: auto; }
+  .textpane.thinkpane { border-left: 3px solid var(--think); }
+  .textpane.speakpane { border-left: 3px solid var(--speak); }
+  .pane-title { font: 650 11px var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-top: 10px; }
+  .cursor-caret { display: inline-block; width: 7px; height: 14px; background: var(--ink); vertical-align: text-bottom; animation: blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .statgrid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .statchip { background: var(--plane); border: 1px solid var(--grid); border-radius: 6px; padding: 5px 10px; font: 600 12px var(--mono); color: var(--ink2); }
+  .statchip b { color: var(--ink); }
+
+  .fin-chip {
+    display: inline-flex; align-items: center; gap: 4px; border-radius: 999px;
+    font: 600 11px var(--sans); padding: 2px 9px; border: 1px solid var(--ring);
+  }
+  .fin-chip.end_turn { color: var(--good-text); border-color: var(--good); }
+  .fin-chip.max_tokens { color: var(--ink2); border-color: var(--axis); }
+  .fin-chip.abort { color: var(--ink2); border-color: var(--axis); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 12px; color: var(--ink2); align-items: center; }
+  .legend .kv-cell, .legend .gantt-cell { width: 26px; height: 20px; flex: none; }
+  .legend .ttl-cell { cursor: default; }
+
+  pre.jsonbox { background: var(--plane); border: 1px solid var(--grid); border-radius: 6px; padding: 10px 12px; font: 12px var(--mono); margin: 6px 0 0; white-space: pre-wrap; }
+
+  /* ---- tokenizer playground ---- */
+  .tz-input {
+    width: 100%; min-height: 92px; resize: vertical;
+    font: 13px var(--mono); color: var(--ink);
+    background: var(--plane); border: 1px solid var(--grid); border-radius: 6px;
+    padding: 10px 12px; margin-top: 6px;
+  }
+  .tz-input:focus-visible { outline: 2px solid var(--sA); outline-offset: 1px; }
+  .tz-opts { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 8px; font-size: 12.5px; color: var(--ink2); }
+  .tz-opts label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .tz-status { font: 600 11px var(--sans); letter-spacing: .03em; text-transform: uppercase; border-radius: 999px; padding: 1px 9px; border: 1px solid var(--good); color: var(--good-text); margin-left: auto; }
+  .tz-status.err { border-color: var(--sC); color: #8a5a00; }
+  .tz-table { border-collapse: collapse; margin-top: 8px; width: 100%; font-size: 12.5px; }
+  .tz-table th { font: 650 11px var(--sans); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); text-align: left; padding: 4px 10px 6px 0; border-bottom: 1px solid var(--grid); }
+  .tz-table td { padding: 5px 10px 5px 0; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  .tz-table td.mono { font: 600 12px var(--mono); white-space: nowrap; }
+  .tz-table td.num { font: 600 12px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink2); }
+  .tz-table .note { color: var(--ink2); font-size: 12px; }
+  .tz-table .no { color: var(--muted); }
+  .tz-ins { font: 600 11px var(--sans); color: var(--ink2); background: var(--plane); border: 1px solid var(--axis); border-radius: 5px; padding: 1px 8px; cursor: pointer; }
+  .tz-ins:hover { border-color: var(--muted); }
+  .yes-mark { color: var(--good-text); font-weight: 700; }
+
+  /* ---- CB view (ported from cb-debugger.html) ---- */
+  .gantt { display: grid; gap: 2px; overflow-x: auto; padding-bottom: 2px; }
+  .gantt-label { font: 600 12px var(--mono); color: var(--ink2); align-self: center; padding-right: 8px; display: flex; align-items: center; gap: 6px; }
+  button.gantt-col { position: relative; border: 0; padding: 0; background: none; cursor: pointer; display: grid; gap: 2px; border-radius: 4px; font: inherit; }
+  .gantt-cell {
+    height: 22px; border-radius: 3px; background: var(--plane);
+    border: 1px solid var(--grid);
+    display: flex; align-items: center; justify-content: center;
+    font: 600 10px var(--mono); color: var(--ink2);
+  }
+  .gantt-cell.pre { border-style: dotted; background: transparent; }
+  .gantt-cell.done { background: transparent; border-style: dotted; color: var(--muted); }
+  .gantt-cell.queued {
+    background: repeating-linear-gradient(45deg, transparent 0 3px, var(--grid) 3px 5px);
+    color: var(--ink2);
+  }
+  .gantt-head {
+    font: 600 11px var(--mono); font-variant-numeric: tabular-nums; color: var(--muted);
+    text-align: center; padding-bottom: 2px;
+  }
+  button.gantt-col.current { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .fin-mark { font-size: 9px; margin-left: 3px; }
+
+  .wf-row { display: grid; grid-template-columns: 74px 1fr; gap: 8px; align-items: center; margin-top: 8px; }
+  .wf-track { position: relative; height: 20px; background: var(--plane); border: 1px solid var(--grid); border-radius: 4px; overflow: hidden; }
+  .wf-fill { position: absolute; inset: 0 auto 0 0; border-radius: 3px 0 0 3px; }
+  .wf-cap { position: absolute; top: -1px; bottom: -1px; width: 0; border-right: 2px dashed var(--muted); }
+  .wf-num { position: absolute; right: 6px; top: 0; bottom: 0; display: flex; align-items: center; font: 600 11px var(--mono); color: var(--ink2); }
+  .wf-budget { font: 600 12px var(--mono); color: var(--ink2); margin-top: 2px; }
+  .phase-tag { font: 600 10px var(--sans); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+
+  .matrix { border-collapse: separate; border-spacing: 3px; margin-top: 6px; }
+  .matrix td, .matrix th { font: 600 12px var(--mono); font-variant-numeric: tabular-nums; text-align: center; }
+  .matrix th { color: var(--muted); font-weight: 600; padding-right: 6px; text-align: right; white-space: nowrap; }
+  .matrix td { width: 34px; height: 28px; border-radius: 4px; background: var(--plane); border: 1px solid var(--grid); color: var(--ink); }
+  .matrix td.pad { color: var(--muted); border-style: dotted; background: transparent; }
+  .meta-line { font: 11px var(--mono); color: var(--muted); margin-top: 2px; }
+
+  .sample-row { display: flex; align-items: center; gap: 8px; margin-top: 9px; flex-wrap: wrap; font-size: 12.5px; }
+  .sample-verdict { color: var(--ink2); }
+  .sample-verdict.drop { color: var(--muted); font-style: italic; }
+
+  .kv-scroll { overflow-x: auto; }
+  .kv-grid { display: grid; gap: 3px; margin-top: 8px; width: max-content; }
+  .kv-slotlabel { font: 600 11px var(--mono); color: var(--ink2); display: flex; align-items: center; gap: 6px; padding-right: 10px; white-space: nowrap; }
+  .kv-cell {
+    width: 34px; height: 30px; border-radius: 4px;
+    background: var(--plane); border: 1px solid var(--grid);
+    display: flex; align-items: center; justify-content: center;
+    font: 600 11px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink);
+    position: relative;
+  }
+  .kv-cell.fresh { box-shadow: 0 0 0 2px var(--ink); z-index: 1; }
+  .kv-cell.stale { opacity: 0.38; }
+  .kv-cell.stale::after {
+    content: ""; position: absolute; inset: 0; border-radius: 3px;
+    background: repeating-linear-gradient(45deg, transparent 0 4px, var(--plane) 4px 7px);
+  }
+  .kv-ruler { font: 10px var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); text-align: center; }
+
+  .stream { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .stream .tok.prompt-tok { color: var(--muted); border-style: dotted; background: transparent; }
+  .stream-sep { color: var(--muted); font: 11px var(--sans); }
+  .stream-state { font-size: 12px; color: var(--muted); font-style: italic; }
+
+  .queue-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; font-size: 12.5px; color: var(--ink2); }
+  .queue-empty { color: var(--muted); font-style: italic; }
+
+  .tooltip {
+    position: fixed; z-index: 10; pointer-events: none;
+    background: var(--ink); color: var(--plane);
+    font: 11.5px var(--mono); padding: 6px 9px; border-radius: 6px;
+    max-width: 280px; display: none; white-space: pre;
+  }
+
+  footer { color: var(--muted); font-size: 12px; max-width: 78ch; }
+  footer code { font-family: var(--mono); font-size: 11.5px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .kv-cell, .gantt-cell, .wf-fill, .bar-fill, .meter-fill { transition: opacity 0.15s ease, box-shadow 0.15s ease, width 0.15s ease; }
+  }
+  @media (prefers-reduced-motion: reduce) { .cursor-caret { animation: none; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1><a href="#/">CantoLLM — architecture explorer</a></h1>
+    <nav id="nav">
+      <a href="#/" data-route="">Overview</a>
+      <a href="#/roadmap" data-route="roadmap">Roadmap</a>
+      <a href="#/plumbing" data-route="plumbing">Plumbing</a>
+      <a href="#/model" data-route="model">Model forward</a>
+      <a href="#/speculative" data-route="speculative">Speculative</a>
+      <a href="#/tokenflow" data-route="tokenflow">Token flow</a>
+      <a href="#/tokenizer" data-route="tokenizer">Tokenizer</a>
+      <a href="#/weights" data-route="weights">Weights</a>
+      <a href="#/batching" data-route="batching">Continuous batching</a>
+      <a href="#/wiring" data-route="wiring">CB wiring</a>
+    </nav>
+  </header>
+
+  <!-- ================= OVERVIEW ================= -->
+  <section id="view-" data-view>
+    <p class="view-sub">
+      The request path through <code>src/cantollm/</code>, top to bottom. Every number on this page was
+      recorded from the real code at runtime (torch forward hooks + method wrapping — no source changes).
+      Click a highlighted box to zoom in.
+    </p>
+    <div class="map" id="ov-map"></div>
+  </section>
+
+  <!-- ================= ROADMAP ================= -->
+  <section id="view-roadmap" data-view hidden>
+    <p class="view-sub">
+      The whole arc of <code>PLAN.md</code>: from a from-scratch Qwen3 to an engine walkable end-to-end — attention kernel up
+      through the paged KV allocator, the continuous-batching scheduler, and the multi-GPU collective path.
+      A learning project: <i>educational detours over the optimal path; performance is measured, not targeted.</i>
+      Click a stop or scrub.
+    </p>
+    <div id="rm-body"></div>
+  </section>
+
+  <!-- ================= PLUMBING ================= -->
+  <section id="view-plumbing" data-view hidden>
+    <p class="view-sub">
+      The round trip of one real request: how data gets packaged into objects on the way down
+      (messages → ids → <code>InferenceRequest</code> → <code>Sequence</code> → tensors) and unpacked on the way back
+      (token_id → <code>TokenEvent</code> → queue → <code>StreamEvent</code> → SSE) — plus the threads, the queue, and the
+      yield loop that carry it. Click any node, or scrub / play.
+    </p>
+    <div id="pl-body"></div>
+  </section>
+
+  <!-- ================= MODEL FORWARD ================= -->
+  <section id="view-model" data-view hidden>
+    <p class="view-sub">
+      One real greedy generation of <span id="mf-promptline" class="mono"></span> through Qwen3-0.6B.
+      Scrub across forward passes: pass 0 is the <b>prefill</b> (whole prompt at once), every later pass is a
+      one-token <b>decode</b> against the growing KV cache.
+    </p>
+    <div id="mf-body"></div>
+  </section>
+
+  <!-- ================= TOKEN FLOW ================= -->
+  <section id="view-tokenflow" data-view hidden>
+    <p class="view-sub">
+      The same request seen as a lifecycle: messages → ChatML → token ids → <code>SequentialEngine</code> worker
+      → <code>TokenEvent</code> queue → incremental decode → thinking/text phases. Scrub the timeline to replay the stream.
+    </p>
+    <div id="tf-body"></div>
+  </section>
+
+  <!-- ================= SPECULATIVE ================= -->
+  <section id="view-speculative" data-view hidden>
+    <p class="view-sub">
+      One real speculative run: <span id="sp-models">draft + main</span>, greedy. The draft proposes up to 10 tokens;
+      the main model verifies them all in <b>one</b> forward, keeps the matching prefix, fixes the first mismatch
+      (or banks a bonus token), and both KV caches roll back the rest. The final output is
+      <b>token-for-token identical</b> to running the main model alone — that's the correctness property.
+    </p>
+    <div id="sp-body"></div>
+  </section>
+
+  <!-- ================= TOKENIZER ================= -->
+  <section id="view-tokenizer" data-view hidden>
+    <p class="view-sub">
+      A live playground for the real <code>Qwen3Tokenizer</code> — every keystroke is tokenized by the actual
+      Rust tokenizer through a tiny local API (<code>viz/tokenizer_server.py</code>), not a reimplementation.
+    </p>
+    <div id="tz-body"></div>
+  </section>
+
+  <!-- ================= WEIGHTS ================= -->
+  <section id="view-weights" data-view hidden>
+    <p class="view-sub">
+      Where the parameters live and how the checkpoint becomes the model: read straight from the
+      safetensors <b>headers</b> of every downloaded Qwen3 (shapes, dtypes, tying — no tensor data loaded),
+      mapped through <code>weights.py</code>'s HF-name → cantollm-module table.
+    </p>
+    <div id="wt-body"></div>
+  </section>
+
+  <!-- ================= CONTINUOUS BATCHING ================= -->
+  <section id="view-batching" data-view hidden>
+    <p class="view-sub">
+      The <code>prototypes/continuous_batching/</code> scheduler, step by step — not yet wired into the engine
+      (<a href="#/wiring">how it will be → CB wiring</a>).
+      Four toy requests (A–D) share <span id="cb-cfgline">a small</span> KV slot pool under a per-step token budget.
+    </p>
+    <div id="cb-body"></div>
+  </section>
+
+  <!-- ================= CB WIRING PLAN ================= -->
+  <section id="view-wiring" data-view hidden>
+    <p class="view-sub">
+      How the proven prototype lands inside <code>src/cantollm/</code> — from <code>continuous_batching.md</code>
+      (the design note) and <code>fable-review.md</code>. Step through the integration order: green pieces exist and are
+      pinned by tests, amber pieces get built, blue pieces don't change at all.
+    </p>
+    <div id="wr-body"></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script src="data/trace_forward.js"></script>
+<script src="data/trace_tokenflow.js"></script>
+<script src="data/trace_cb.js"></script>
+<script src="data/trace_spec.js"></script>
+<script src="data/trace_weights.js"></script>
+<script>
+'use strict';
+
+/* =============== shared helpers =============== */
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined) n.textContent = text;
+  return n;
+};
+const frag = (...kids) => { const f = document.createDocumentFragment(); kids.forEach(k => f.appendChild(k)); return f; };
+const disp = (piece) => piece === null || piece === undefined ? '' :
+  piece.replace(/ /g, '␣').replace(/\n/g, '⏎');
+const shapeStr = (s) => s ? `(${s.join(', ')})` : '?';
+const fmtMB = (bytes) => bytes >= 1024 * 1024 ? (bytes / 1048576).toFixed(1) + ' MB' : (bytes / 1024).toFixed(0) + ' KB';
+const FIN_GLYPH = { end_turn: '✓ end_turn', max_tokens: '⏹ max_tokens', abort: '✕ abort' };
+
+const tip = $('tooltip');
+function showTip(e) {
+  tip.textContent = e.currentTarget.dataset.tip;
+  tip.style.display = 'block';
+  const pad = 14;
+  let x = e.clientX + pad, y = e.clientY + pad;
+  const r = tip.getBoundingClientRect();
+  if (x + r.width > window.innerWidth - 8) x = e.clientX - r.width - pad;
+  if (y + r.height > window.innerHeight - 8) y = e.clientY - r.height - pad;
+  tip.style.left = x + 'px';
+  tip.style.top = y + 'px';
+}
+function hideTip() { tip.style.display = 'none'; }
+function tipify(node, text) {
+  node.dataset.tip = text;
+  node.addEventListener('mousemove', showTip);
+  node.addEventListener('mouseleave', hideTip);
+}
+
+/* A prev/play/next + range transport. Returns {set, get, root}. */
+function makeTransport({ max, labelFn, onSet, playMs = 1400, hint = 'to step', playLoopTo }) {
+  const root = el('div', 'transport');
+  const prev = el('button', null, '◀ Prev');
+  const play = el('button', null, '▶ Play');
+  const next = el('button', null, 'Next ▶');
+  const range = document.createElement('input');
+  range.type = 'range'; range.min = 0; range.max = max; range.step = 1; range.value = 0;
+  const label = el('span', 'step-label');
+  const kbd = el('span', 'kbd-hint');
+  kbd.innerHTML = `<kbd>←</kbd> <kbd>→</kbd> ${hint}`;
+  root.append(prev, play, next, range, label, kbd);
+
+  let cur = 0, timer = null;
+  const stop = () => { if (timer) { clearInterval(timer); timer = null; play.textContent = '▶ Play'; } };
+  const set = (v, fromPlay) => {
+    cur = Math.max(0, Math.min(max, v));
+    if (!fromPlay) stop();
+    range.value = cur;
+    label.textContent = labelFn(cur);
+    onSet(cur);
+  };
+  play.addEventListener('click', () => {
+    if (timer) { stop(); return; }
+    if (cur >= max) set(0, true);
+    play.textContent = '⏸ Pause';
+    timer = setInterval(() => {
+      if (cur >= max) { playLoopTo !== undefined ? set(playLoopTo, true) : stop(); }
+      else set(cur + 1, true);
+    }, playMs);
+  });
+  prev.addEventListener('click', () => set(cur - 1));
+  next.addEventListener('click', () => set(cur + 1));
+  range.addEventListener('input', (e) => set(Number(e.target.value)));
+  return { root, set, get: () => cur, stop };
+}
+
+function missingPanel(cmd, extra) {
+  const m = el('div', 'missing');
+  m.appendChild(el('div', null, 'No trace data for this view yet. Generate it from the repo root:'));
+  m.appendChild(el('code', null, cmd));
+  if (extra) m.appendChild(el('div', null, extra));
+  m.appendChild(el('div', null, 'Then reload this page.'));
+  return m;
+}
+
+/* =============== data =============== */
+
+const TF = window.TRACE_FORWARD || null;      // model forward + shapes
+const TK = window.TRACE_TOKENFLOW || null;    // request lifecycle
+const CB = window.TRACE_CB || null;           // continuous batching prototype
+const TS = window.TRACE_SPEC || null;         // speculative decoding
+const TW = window.TRACE_WEIGHTS || null;      // weights / parameters
+
+/* =============== router =============== */
+
+const initialized = {};
+const activeTransports = {};   // route -> transport (for arrow keys)
+
+const VIEW_INIT = {
+  '': initOverview,
+  'roadmap': initRoadmap,
+  'plumbing': initPlumbing,
+  'model': initModel,
+  'speculative': initSpeculative,
+  'tokenflow': initTokenflow,
+  'tokenizer': initTokenizer,
+  'weights': initWeights,
+  'batching': initBatching,
+  'wiring': initWiring,
+};
+
+function route() {
+  const h = location.hash.replace(/^#\/?/, '');
+  const r = (h in VIEW_INIT) ? h : '';
+  document.querySelectorAll('section[data-view]').forEach(s => { s.hidden = s.id !== 'view-' + r; });
+  document.querySelectorAll('nav a').forEach(a => a.classList.toggle('active', a.dataset.route === r));
+  if (!initialized[r]) { initialized[r] = true; VIEW_INIT[r](); }
+  window.scrollTo(0, 0);
+  return r;
+}
+window.addEventListener('hashchange', route);
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const r = location.hash.replace(/^#\/?/, '');
+  const t = activeTransports[(r in VIEW_INIT) ? r : ''];
+  if (!t) return;
+  t.set(t.get() + (e.key === 'ArrowRight' ? 1 : -1));
+  e.preventDefault();
+});
+
+/* =============== overview =============== */
+
+function ovBox({ title, path, desc, stat, nodata, zoom, badge }) {
+  const b = el(zoom ? 'button' : 'div', 'box' + (zoom ? ' zoombox' : ''));
+  const t = el('div', 'box-title');
+  t.appendChild(el('span', null, title));
+  if (path) t.appendChild(el('span', 'box-path', path));
+  if (badge) t.appendChild(el('span', 'badge-wip', badge));
+  if (zoom) t.appendChild(el('span', 'zoom-tag', 'zoom ⤤'));
+  b.appendChild(t);
+  if (desc) { const d = el('div', 'box-desc'); d.innerHTML = desc; b.appendChild(d); }
+  if (stat) b.appendChild(el('div', 'box-stat', stat));
+  else if (nodata) b.appendChild(el('div', 'box-stat nodata', nodata));
+  if (zoom) b.addEventListener('click', () => { location.hash = zoom; });
+  return b;
+}
+const arrow = (note) => {
+  const a = el('div', 'flow-arrow');
+  a.appendChild(el('div', null, '↓'));
+  if (note) { const s = document.createElement('small'); s.textContent = note; a.appendChild(s); }
+  return a;
+};
+
+function initOverview() {
+  const map = $('ov-map');
+  const flow = el('div', 'flow');
+
+  flow.appendChild(ovBox({
+    title: 'Clients', path: 'clients/',
+    desc: '<code>canto chat</code> REPL &middot; web chat UI &middot; <code>canto bench</code> — all speak the HTTP APIs below',
+  }));
+  flow.appendChild(arrow('HTTP + SSE'));
+
+  flow.appendChild(ovBox({
+    title: 'FastAPI surface', path: 'api/',
+    desc: '<code>POST /v1/messages</code> (Anthropic) &middot; <code>POST /v1/chat/completions</code> (OpenAI) — per-dialect routers + adapters; ' +
+      'tokenization runs API-side on a <code>ThreadPoolExecutor</code>; <code>phase.py</code> classifies thinking vs text on the way out',
+    stat: TK ? `traced: ${TK.request.max_tokens}-cap request → finish ${TK.finish.finish_reason} · ttft ${TK.timing.ttft_ms}ms` : null,
+    nodata: TK ? null : 'no trace yet — run viz/trace_forward.py',
+    zoom: '#/tokenflow',
+  }));
+  flow.appendChild(arrow('InferenceRequest (token ids)'));
+
+  flow.appendChild(ovBox({
+    title: 'EngineRegistry', path: 'registry.py',
+    desc: 'model name → (<code>ModelRuntime</code>, <code>InferenceEngine</code>); both API dialects share it',
+  }));
+  flow.appendChild(arrow('submit(req) → AsyncIterator[TokenEvent]'));
+
+  flow.appendChild(ovBox({
+    title: 'SequentialEngine', path: 'engine/sequential.py',
+    desc: 'one request at a time: worker thread runs the backend, tokens bridge back through a bounded <code>asyncio.Queue(256)</code> with real backpressure',
+    stat: TK ? `traced: worker thread ${TK.engine.worker_thread} → consumer ${TK.engine.consumer_thread} · ${TK.finish.counts.total} TokenEvents` : null,
+    nodata: TK ? null : 'no trace yet — run viz/trace_forward.py',
+    zoom: '#/plumbing',
+  }));
+  flow.appendChild(arrow('generate(Sequence) — prefill, then token-by-token'));
+
+  flow.appendChild(ovBox({
+    title: 'StandardBackend', path: 'standard.py',
+    desc: '<code>forward → sample(greedy | temperature/top-p pipeline) → yield</code> loop; stop-token check before emit; ' +
+      'sibling <code>SpeculativeBackend</code> (draft + verify) shares the seam',
+    stat: TF ? `traced: ${TF.totals.forwards} forwards · ${TF.totals.decode_tok_per_s} tok/s decode on ${TF.meta.device}` : null,
+    nodata: TF ? null : 'no trace yet — run viz/trace_forward.py',
+    zoom: '#/model',
+  }));
+  flow.appendChild(arrow('tokens (1, L) → logits (1, L, 151936)'));
+
+  flow.appendChild(ovBox({
+    title: 'Qwen3 model', path: 'models/qwen3/model.py',
+    desc: TF
+      ? `embedding → ${TF.meta.arch.layers}× Transformer blocks (GQA ${TF.meta.arch.heads} heads / ${TF.meta.arch.groups} KV groups, RoPE, SwiGLU FF) → lm head; ` +
+        'attention math + KV update live behind the <code>AttentionMethod</code> seam (<code>EinsumAttentionMethod</code> today, padded/batched next)'
+      : 'embedding → N× Transformer blocks (GQA, RoPE, SwiGLU FF) → lm head; attention behind the <code>AttentionMethod</code> seam',
+    stat: TF ? `traced: ${TF.meta.model} ${TF.meta.dtype} · dim ${TF.meta.arch.dim} · head_dim ${TF.meta.arch.head_dim} · KV grows (1, pos, ${TF.meta.arch.groups}, ${TF.meta.arch.head_dim}) × ${TF.meta.arch.layers} layers` : null,
+    nodata: TF ? null : 'no trace yet — run viz/trace_forward.py',
+    zoom: '#/model',
+  }));
+
+  const side = el('div', 'flow');
+  side.appendChild(ovBox({
+    title: 'Qwen3Tokenizer', path: 'models/qwen3/tokenizer.py',
+    desc: 'ChatML wrapping (<code>&lt;|im_start|&gt;</code>…), special-token-aware split, <code>&lt;think&gt;</code>/<code>&lt;/think&gt;</code> ids, ' +
+      '<code>IncrementalDecoder</code> emits only UTF-8-stable text',
+    zoom: '#/tokenizer',
+  }));
+  side.appendChild(el('div', 'cb-arrow', 'feeds the API layer (encode) and the decode path (stream)'));
+
+  side.appendChild(ovBox({
+    title: 'Continuous batching', path: 'prototypes/continuous_batching/',
+    badge: 'in progress',
+    desc: '<code>ContinuousBatchingScheduler</code>: water-fill token budget, chunked prefill, one batched forward per step; ' +
+      '<code>PaddedKVCache</code> slot pool. Lands as a <code>ContinuousBatchingEngine</code> beside <code>SequentialEngine</code> (Phase 2)',
+    stat: CB ? `traced: ${Object.keys(CB.requests).length} requests · ${CB.steps.length} steps · budget ${CB.config.budget} tok/step · ${CB.config.max_batch} slots` : null,
+    nodata: CB ? null : 'no trace yet — run viz/trace_cb.py',
+    zoom: '#/batching',
+  }));
+  side.appendChild(el('div', 'cb-arrow', 'will drop in beside SequentialEngine — same InferenceEngine protocol, but the scheduler calls the model directly through the AttentionMethod seam'));
+
+  side.appendChild(ovBox({
+    title: 'SpeculativeBackend', path: 'speculative.py',
+    desc: 'draft model proposes K tokens, main verifies them in one forward, caches roll back rejects — output provably identical to main alone',
+    stat: TS ? `traced: ${TS.meta.draft} drafts for ${TS.meta.main} · ${Math.round(TS.stats.acceptance_rate * 100)}% accepted · ${TS.stats.tokens_per_iteration} tok/iter` : null,
+    nodata: TS ? null : 'no trace yet — run viz/trace_speculative.py',
+    zoom: '#/speculative',
+  }));
+
+  side.appendChild(ovBox({
+    title: 'ModelRuntime + ModelSpec', path: 'runtime.py · spec.py',
+    desc: 'declarative recipe (arch dict, weights loader, tokenizer factory) → on-device model + backend; hands out fresh <code>KVCache</code>s',
+    stat: TW ? `weights on disk: ${TW.order.map(s => `Qwen3-${s}`).join(' · ')}` : null,
+    nodata: TW ? null : 'no trace yet — run viz/trace_weights.py',
+    zoom: '#/weights',
+  }));
+
+  map.append(flow, side);
+
+  $('foot').innerHTML =
+    'Traces are generated by <code>viz/trace_forward.py</code> (real Qwen3-0.6B run; torch forward hooks + ' +
+    'instance/module wrapping) and <code>viz/trace_cb.py</code> (prototype scheduler). Neither modifies any source. ' +
+    'Regenerate any time: <code>.venv/bin/python viz/trace_forward.py && .venv/bin/python viz/trace_cb.py</code>';
+}
+
+/* =============== roadmap view =============== */
+
+function initRoadmap() {
+  const body = $('rm-body');
+
+  // status: 'done' | 'loose' (done w/ open items) | 'active' | 'future'
+  const PHASES = [
+    { id: '0', title: 'rename + bench spec', hw: 'Mac', status: 'loose',
+      statusLine: 'Status (2026-04-19): rename done (src/cantollm/, Qwen3 under models/qwen3/). Open: the benchmark harness spec document.',
+      goal: 'Small housekeeping before real work; costs a day, pays dividends forever.',
+      items: [
+        'Rename <code>src/qwen3/</code> → <code>src/cantollm/</code>; generic code (engine, api, kv_cache) moves up ✓',
+        '<b>Benchmark harness spec</b> (the deliverable is the document): prompt sets, concurrency ramps, TTFT p50/p90/p99, ITL, aggregate tok/s, KV utilization, finish-reason distribution — some metrics only become instrumentable as later phases land the contracts',
+        'fable-review flag: this spec has been “Open” since Phase 0 but Phase 2’s exit bench depends on it — time-box it before the scheduler finishes',
+      ] },
+    { id: '1a', title: 'engine seams', hw: 'Mac', status: 'done',
+      statusLine: 'Status (2026-04-19): Complete.',
+      goal: 'Land the architectural hygiene continuous batching will need — stay single-process, but shape every interface so the Phase 2 process split is an afternoon’s work, not a rewrite.',
+      items: [
+        '<code>InferenceBackend</code> Protocol + Standard/Speculative split · <code>ModelSpec</code> / <code>ModelRuntime</code> / <code>EngineRegistry</code> · cache via <code>runtime.new_cache()</code>',
+        '<code>TokenEvent</code> widened (finish_reason / error / request_id) — the adapter no longer guesses stop_reason',
+        'API-side tokenization on a ThreadPoolExecutor, per-model via the registry (fail fast, protect the future scheduler, engine stays tokenizer-ignorant — the vLLM precedent)',
+        'HTTP/SSE contract test suite; two latent bugs fixed (the ~1.68 GB preallocated causal mask; the tokenizer special-token shortcut)',
+      ] },
+    { id: '1b', title: 'OpenAI surface', hw: 'Mac', status: 'loose',
+      statusLine: 'Status (2026-04-19): /v1/chat/completions landed; per-dialect routers + shared phase/tokenize helpers; thinking as reasoning_content; CLI --api. Open: stream error-event parity, X-Request-ID middleware, raw-tokens NDJSON endpoint.',
+      goal: 'Exercise the registry by adding OpenAI, and pick up the small reliability wins from the 1a refactors.',
+      items: [
+        'Second adapter proves the multi-surface story before batching lands',
+        'Thinking tokens emitted DeepSeek-R1-style as <code>reasoning_content</code>',
+        'Deferred to 3.5: the production-hygiene bundle (metrics are uninteresting until there’s a scheduler to measure)',
+      ] },
+    { id: '2', title: 'continuous batching + split', hw: '5090 · 1 H100 day', status: 'active',
+      statusLine: 'Status (2026-04-25): all four prereq refactors landed (AttentionMethod seam, logits-processor pipeline, Sequence dataclass, tiny test model). Open: (1) in-process scheduler + batched forward + padded KV — author hand-writing ✍ — then (2) the API/engine process split.',
+      goal: 'The headline feature: many concurrent requests share each forward pass. Padded KV, no paging yet. Correctness-first attention path — perf work deliberately deferred to Phase 3.',
+      items: [
+        'Scheduler: FCFS queue, running set, per-step token budget, decode priority; <b>chunked prefill</b>, logprobs, and stop strings fall out alongside',
+        'Process split second: engine becomes a sync busy loop in its own process; ZMQ or mp queues, events batched per step (per-token IPC would eat every win); uvloop on the API side',
+        'Batched speculation explicitly disabled — ragged accept counts stay a Phase-10 research detour',
+        'Bench: aggregate tok/s steps up dramatically; per-request TTFT may worsen under load — make the tradeoff visible. These numbers become Phase 3’s “before” baseline',
+        '→ See the <a href="#/batching">Continuous batching</a> and <a href="#/wiring">CB wiring</a> tabs',
+      ] },
+    { id: '3', title: 'CUDA beachhead', hw: '5090 · 1 H100 day', status: 'future',
+      goal: 'First real perf-tuning pass, against a target whose shape is finally stable.',
+      items: [
+        '<code>SDPABackend</code> (F.scaled_dot_product_attention) becomes the CUDA default; einsum stays the correctness reference and Mac fallback',
+        '<code>torch.compile</code> on the batched forward — dynamic shapes will fight back; compile per batch-size bucket; budget a day of <code>torch._dynamo.explain()</code>',
+        'CUDA graphs for steady-state decode, captured per batch-size bucket (1, 4, 16, 32) with eager fallback — “this is exactly how vLLM does it; the implementation detail <i>is</i> the lesson”',
+        'First true before/after bench vs Phase 2’s numbers',
+      ] },
+    { id: '3.5', title: 'prod hygiene', hw: '5090', status: 'future',
+      goal: 'Now that the engine is a separate process and metrics show real things, pick up the production basics deferred from Phase 1.',
+      items: [
+        '<code>/metrics</code> Prometheus: queue depth, batch size, KV utilization, preemption count, TTFT/ITL, event-loop lag; local Grafana',
+        'Admission control (429 + Retry-After) · <code>/ready</code> vs <code>/health</code> with warm-up · graceful shutdown with a 30s drain · model reload via registry swap',
+        'Exit criterion: 50 concurrent clients run clean; kill -9 the engine → API serves 503 → restart → recovery. Auth stays a sidecar non-goal',
+      ] },
+    { id: '4', title: 'paged KV', hw: '5090', status: 'future',
+      goal: 'Replace padded contiguous KV with a block-indexed pool + block tables. The memory-management lesson.',
+      items: [
+        '16-token blocks in one preallocated pool; per-request block tables mapping logical position → block id',
+        'Allocator with free-list, refcounts, eviction; preemption via recompute-on-resume (swap-to-CPU as the fancy alternative)',
+        '<code>PagedBackend</code> slots into the same AttentionMethod seam — and inherits Phase 2’s runtime-owned-pool + handle shape (see the Weights tab for why: KV = the whole checkpoint at ~13k tokens)',
+        'Bench: KV utilization and max concurrency climb materially',
+      ] },
+    { id: '5', title: 'prefix cache + routing', hw: '5090', status: 'future',
+      goal: 'Reuse prefixes across requests — the natural stack on top of paging — then learn the distributed half.',
+      items: [
+        'Block-content hashing (position + prev-block hash), <code>block_hash → block_id</code> lookup, longest-cached-prefix skips prefill, refcounted so in-use blocks survive eviction',
+        'Cache-aware routing experiment: 2 API + 2 engine processes cohabiting the 5090, consistent hashing on session id — measure hit rate with vs without sticky routing',
+      ] },
+    { id: '6', title: 'Gemma 4', hw: '5090', status: 'future',
+      goal: 'Prove the abstractions with a genuinely different family: architecture, tokenizer, weight layout.',
+      items: [
+        'Refactors first: per-layer config (sliding window alternates with global attention), weight-loader abstraction, tokenizer interface (SentencePiece — Qwen3Tokenizer becomes one implementation), tied embeddings',
+        'Sliding-window attention as a new attention-method variant',
+      ] },
+    { id: '7', title: 'MoE: Qwen3-30B-A3B', hw: '5090 INT4 · H100 bf16', status: 'future',
+      goal: 'MoE architecture on a single GPU first — teeing up parallelism.',
+      items: [
+        '<b>Prereq: INT8 weight-only quant</b>, built on the dense models first (debug the quant path on models whose quality you know), then INT4 so A3B fits the 5090 (~15 GB)',
+        'Router / top-k gating, expert layers, token dispatch (group by expert → run → scatter back), load-imbalance metrics (tokens per expert per step)',
+      ] },
+    { id: '8', title: 'multi-GPU TP/EP', hw: 'cloud-primary · $60–100', status: 'future',
+      goal: 'The big cloud session — non-optional: understanding collectives and sharding is half of what a modern engine does.',
+      items: [
+        'Local first: TP/EP shapes with PyTorch distributed on <code>gloo</code>/CPU — zero perf signal, pure correctness; expect real debugging in the cloud on top',
+        '4–8×H100: tensor parallelism on the dense models (all-reduce per layer), expert parallelism on A3B; benchmark vs single-GPU',
+        'One focused weekend, 2–3 sessions — the bulk of the ~$150 total cloud budget',
+      ] },
+    { id: '9', title: 'quantization, deeper', hw: '5090 · H100 for FP8', status: 'future',
+      goal: 'INT8 weight-only landed as Phase 7’s prereq; this is where quant gets serious.',
+      items: [
+        'FP8/INT8 KV cache with per-block scales — doubles effective KV capacity; scale factors interact with paged blocks',
+        'AWQ — activation-aware, a conceptual step past uniform per-channel scaling',
+        'Quality evals (needle-in-haystack, reasoning) across the full matrix: bf16 / INT8-w / INT4 / INT8-w+INT8-KV / FP8-KV-on-Hopper',
+      ] },
+    { id: '10', title: 'bonus track', hw: 'varies', status: 'future',
+      goal: 'Pick by interest — all self-contained after Phase 5.',
+      items: [
+        'Guided decoding (FSM logit masking via xgrammar/outlines) · multi-LoRA serving · disaggregated prefill/decode (meaningful even single-node) · vision/multimodal (the biggest lift)',
+        'Batched speculative decoding — revisiting the Phase 2 punt; ragged accept counts across sequences is a genuinely interesting research problem (see the <a href="#/speculative">Speculative</a> tab for the batch-1 version)',
+      ] },
+  ];
+  const ACTIVE_IDX = PHASES.findIndex(p => p.status === 'active');
+
+  /* --- metro line SVG --- */
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 1100 250');
+  svg.setAttribute('class', 'anat-svg rm-svg');
+  const mk = (tag, attrs, text, parent) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (text !== undefined && text !== null) n.textContent = text;
+    (parent || svg).appendChild(n);
+    return n;
+  };
+  const X0 = 60, X1 = 1050, LY = 130;
+  const xAt = (i) => X0 + (X1 - X0) * i / (PHASES.length - 1);
+  // line: solid where done, dashed into the future
+  const xActive = xAt(ACTIVE_IDX);
+  mk('path', { d: `M${X0},${LY} L${xActive},${LY}`, style: 'stroke:var(--sB);stroke-width:4;fill:none' });
+  mk('path', { d: `M${xActive},${LY} L${X1},${LY}`, style: 'stroke:var(--axis);stroke-width:3;fill:none;stroke-dasharray:7 6' });
+
+  const stops = [];
+  PHASES.forEach((p, i) => {
+    const x = xAt(i);
+    const g = mk('g', { class: 'stop ' + (p.status === 'done' || p.status === 'loose' ? 'done' : p.status === 'active' ? 'active' : '') });
+    mk('circle', { cx: x, cy: LY, r: p.status === 'active' ? 15 : 12, class: 'face' }, null, g);
+    mk('text', { x, y: LY + 4, class: 'pnum' }, p.id, g);
+    if (p.status === 'loose') mk('circle', { cx: x + 9, cy: LY - 9, r: 4, style: 'fill:var(--sC);stroke:var(--surface);stroke-width:1.5' }, null, g);
+    const above = i % 2 === 0;
+    const ty = above ? LY - 34 : LY + 42;
+    mk('path', { d: `M${x},${above ? LY - 14 : LY + 14} L${x},${above ? ty + 10 : ty - 16}`, style: 'stroke:var(--grid);stroke-width:1.2' }, null, g);
+    mk('text', { x, y: ty, class: 'ttl' }, p.title, g);
+    mk('text', { x, y: above ? ty - 14 : ty + 15, class: 'hw' }, p.hw.split(' · ')[0], g);
+    g.addEventListener('click', () => transport.set(i));
+    stops.push(g);
+  });
+  // "you are here" flag
+  mk('text', { x: xActive, y: LY + 68, style: 'font:700 11px var(--sans);letter-spacing:.06em;fill:#8a5a00;text-anchor:middle' }, '▲ YOU ARE HERE');
+  mk('text', { x: xActive, y: LY + 84, style: 'font:10.5px var(--sans);fill:var(--muted);text-anchor:middle' }, 'scheduler being hand-written ✍');
+
+  const diagPanel = el('section', 'panel');
+  diagPanel.appendChild(el('h2', null, 'The line — phases 0 → 10, from PLAN.md'));
+  const scroll = el('div', 'kv-scroll');
+  scroll.appendChild(svg);
+  diagPanel.appendChild(scroll);
+
+  /* --- transport + card --- */
+  const transport = makeTransport({
+    max: PHASES.length - 1,
+    labelFn: (i) => `phase ${PHASES[i].id} — ${PHASES[i].title}`,
+    onSet: setPhase,
+    playMs: 3000,
+    hint: 'to ride the line',
+  });
+  activeTransports['roadmap'] = transport;
+
+  const cardPanel = el('section', 'panel');
+  const cardHead = el('div', 'stage-head');
+  const cardTitle = el('h2', null, '');
+  const statusChip = el('span', 'rm-status');
+  const hwChip = el('span', 'code-ref');
+  cardHead.append(cardTitle, statusChip, hwChip);
+  cardPanel.appendChild(cardHead);
+  const cardBody = el('div');
+  cardPanel.appendChild(cardBody);
+
+  /* --- cross-cutting commitments --- */
+  const commitPanel = el('section', 'panel');
+  commitPanel.appendChild(el('h2', null, 'Cross-cutting commitments — every phase, no exceptions'));
+  const chipsRow = el('div', 'commit-chips');
+  [['bench on the 5090', 'ends every phase; committed to the dashboard — no unmeasured optimization'],
+   ['parity vs HF transformers', 'for every new backend (padded, paged, quant, TP) — compare_implementations.py is the seed'],
+   ['vLLM side-by-side', 'at every major milestone from Phase 3 on'],
+   ['one-page design note', 'per phase, in-repo — the walk-through-able end state is the point'],
+   ['Nsight capture', 'at each milestone — the “oh that’s where the time goes” moment'],
+   ['just-in-time refactors', 'bundled with the phase that needs them, never upfront en masse'],
+  ].forEach(([b, rest]) => {
+    const c = el('span', 'statchip');
+    c.appendChild(el('b', null, b));
+    c.appendChild(document.createTextNode(' — ' + rest));
+    chipsRow.appendChild(c);
+  });
+  commitPanel.appendChild(chipsRow);
+  const budget = el('p', 'panel-note');
+  budget.innerHTML = 'Hardware cadence: Mac (phases 0–1b) → 5090-primary (2–7, 9) → <b>cloud-primary Phase 8</b>. Total cloud budget ≈ <b>$150</b>, front-loaded on the multi-GPU weekend.';
+  commitPanel.appendChild(budget);
+
+  body.append(diagPanel, transport.root, cardPanel, commitPanel);
+
+  function setPhase(i) {
+    stops.forEach((s, j) => s.classList.toggle('cur', j === i));
+    const p = PHASES[i];
+    cardTitle.textContent = `Phase ${p.id} — ${p.title}`;
+    statusChip.textContent = p.status === 'done' ? 'complete' : p.status === 'loose' ? 'done · loose ends' : p.status === 'active' ? 'in progress — you are here' : 'future';
+    statusChip.className = 'rm-status ' + (p.status === 'done' || p.status === 'loose' ? 'done' : p.status === 'active' ? 'active' : '');
+    hwChip.textContent = 'hardware: ' + p.hw;
+    cardBody.innerHTML = '';
+    const g = el('p', 'panel-note');
+    g.innerHTML = '<b>Goal:</b> ' + p.goal;
+    cardBody.appendChild(g);
+    if (p.statusLine) {
+      const s = el('p', 'panel-note');
+      s.innerHTML = '<i>' + p.statusLine + '</i>';
+      s.style.borderLeft = '3px solid var(--sB)';
+      s.style.paddingLeft = '10px';
+      cardBody.appendChild(s);
+    }
+    const ul = document.createElement('ul');
+    ul.style.cssText = 'margin:6px 0 0; padding-left:20px; font-size:12.5px; color:var(--ink2); display:flex; flex-direction:column; gap:5px;';
+    p.items.forEach(h => { const li = document.createElement('li'); li.innerHTML = h; ul.appendChild(li); });
+    cardBody.appendChild(ul);
+  }
+  transport.set(ACTIVE_IDX);
+  transport.stop();
+}
+
+/* =============== plumbing view =============== */
+
+function initPlumbing() {
+  const body = $('pl-body');
+  if (!TK) {
+    body.appendChild(missingPanel('.venv/bin/python viz/trace_forward.py',
+      'One harness run produces the lifecycle trace this view replays.'));
+    return;
+  }
+  const req = TK.request, eng = TK.engine, fin = TK.finish, tim = TK.timing;
+  const arch = TK.meta.arch;
+  const nTok = fin.counts.total;
+  const bufferedCount = TK.events.filter(e => e.buffered).length;
+  const firstEvt = TK.events[0];
+  const firstText = (TK.events.find(e => e.emitted_text) || {}).emitted_text || '';
+  const lastKv = TF ? TF.steps[TF.steps.length - 1].kv_after : req.prompt.ids.length + nTok;
+  const shortId = req.request_id.slice(0, 8) + '…';
+
+  /* ---------- SVG horseshoe ---------- */
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 1100 545');
+  svg.setAttribute('class', 'anat-svg flow-svg');
+  const mk = (tag, attrs, text, parent) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (text !== undefined && text !== null) n.textContent = text;
+    (parent || svg).appendChild(n);
+    return n;
+  };
+  const defs = mk('defs', {});
+  const marr = mk('marker', { id: 'pl-arr', viewBox: '0 0 10 10', refX: 8.5, refY: 5, markerWidth: 6.5, markerHeight: 6.5, orient: 'auto-start-reverse' }, null, defs);
+  mk('path', { d: 'M0,0 L10,5 L0,10 z', style: 'fill:var(--ink2);stroke:none' }, null, marr);
+  const marrm = mk('marker', { id: 'pl-arrm', viewBox: '0 0 10 10', refX: 8.5, refY: 5, markerWidth: 6.5, markerHeight: 6.5, orient: 'auto-start-reverse' }, null, defs);
+  mk('path', { d: 'M0,0 L10,5 L0,10 z', style: 'fill:var(--muted);stroke:none' }, null, marrm);
+
+  const edge = (pts, opts) => {
+    opts = opts || {};
+    mk('path', { d: 'M' + pts.map(p => p.join(',')).join(' L'), class: 'dge' + (opts.dash ? ' dash' : ''), 'marker-end': opts.noArrow ? '' : `url(#${opts.dash ? 'pl-arrm' : 'pl-arr'})` });
+  };
+  const note = (x, y, t, anchor) => mk('text', { x, y, class: 'dgt note', style: `text-anchor:${anchor || 'middle'}` }, t);
+
+  // thread regions (painted first)
+  mk('rect', { x: 128, y: 78, width: 652, height: 104, rx: 12, class: 'region-loop' });
+  mk('text', { x: 140, y: 94, class: 'dgt title' }, 'event-loop thread (async)');
+  mk('rect', { x: 128, y: 404, width: 505, height: 106, rx: 12, class: 'region-loop' });
+  mk('text', { x: 140, y: 418, class: 'dgt title' }, 'event-loop thread (async)');
+  mk('rect', { x: 790, y: 78, width: 300, height: 432, rx: 12, class: 'region-worker' });
+  mk('text', { x: 802, y: 94, class: 'dgt title' }, 'worker thread (sync torch)');
+
+  // nodes: one clickable <g> per stage
+  const nodeGroups = [];
+  const node = (stage, cx, cy, w, h, lines, cls, tcls, sub) => {
+    const gEl = mk('g', { class: 'dg-node' });
+    mk('rect', { x: cx - w / 2, y: cy - h / 2, width: w, height: h, rx: 8, class: 'dgb ' + (cls || '') }, null, gEl);
+    lines.forEach((t, i) => mk('text', { x: cx, y: cy + (i - (lines.length - 1) / 2) * 14 + 4, class: 'dgt small ' + (tcls || '') }, t, gEl));
+    if (sub) mk('text', { x: cx, y: cy + h / 2 + 13, class: 'dgt note' }, sub, gEl);
+    gEl.addEventListener('click', () => transport.set(stage));
+    nodeGroups[stage] = gEl;
+    return gEl;
+  };
+
+  // top row (request path, left → right)
+  node(0, 60, 300, 80, 380, ['Client', 'chat · web', '· bench'], '', '');
+  node(1, 195, 131, 122, 56, ['FastAPI router', '+ adapter'], 'n-loop', '', 'api/');
+  node(2, 370, 131, 142, 56, ['tokenize_and_', 'build_request()'], 'n-loop', 'mono', 'api/common.py');
+  node(3, 545, 131, 142, 56, ['InferenceRequest', '(dataclass)'], 'n-obj', 'mono', 'engine/types.py');
+  node(4, 710, 131, 132, 56, ['engine.submit()', 'SequentialEngine'], 'n-loop', '', 'engine/sequential.py');
+  node(5, 890, 131, 140, 56, ['Sequence', '+ fresh KVCache'], 'n-obj', 'mono', 'built on the worker');
+  // executor chip
+  const execG = mk('g', {});
+  mk('rect', { x: 292, y: 192, width: 156, height: 26, rx: 8, class: 'dgb n-exec' }, null, execG);
+  mk('text', { x: 370, y: 209, class: 'dgt small' }, 'ThreadPoolExecutor', execG);
+  edge([[370, 159], [370, 190]], { dash: true });
+
+  // generate-loop container (stage 6)
+  const loopG = mk('g', { class: 'dg-node' });
+  mk('rect', { x: 805, y: 218, width: 280, height: 172, rx: 12, class: 'dgb inset n-worker' }, null, loopG);
+  mk('text', { x: 945, y: 240, class: 'dgt small' }, `generate() — yield loop ×${nTok}`, loopG);
+  mk('rect', { x: 835, y: 254, width: 220, height: 46, rx: 8, class: 'dgb dark' }, null, loopG);
+  mk('text', { x: 945, y: 272, class: 'dgt small inv' }, 'Qwen3 forward (black box)', loopG);
+  mk('text', { x: 945, y: 286, class: 'dgt small inv mono' }, `(1, L) → (1, L, ${arch.vocab})`, loopG);
+  mk('rect', { x: 850, y: 322, width: 190, height: 36, rx: 8, class: 'dgb' }, null, loopG);
+  mk('text', { x: 945, y: 344, class: 'dgt small' }, 'sample → token_id', loopG);
+  loopG.addEventListener('click', () => transport.set(6));
+  nodeGroups[6] = loopG;
+  edge([[945, 300], [945, 320]]);
+  edge([[853, 340], [822, 340], [822, 277], [833, 277]]);
+  note(818, 310, 'feed', 'end'); note(818, 322, 'back', 'end');
+
+  // bottom row (response path, right → left)
+  node(7, 890, 450, 176, 56, ['TokenEvent', 'token|finish|error'], 'n-obj', 'mono', 'one per token');
+  node(8, 710, 450, 148, 60, ['asyncio.Queue', 'maxsize=256'], 'n-queue', 'mono');
+  node(9, 545, 450, 146, 56, ['async for evt', 'in submit()'], 'n-loop', 'mono', 'the consumer');
+  node(10, 370, 450, 158, 56, ['phase_tagged_events', '+ StreamingDecoder'], 'n-loop', '', 'api/phase.py · decoder.py');
+  node(11, 195, 450, 130, 56, ['SSE adapter', 'message_* / chunks'], 'n-loop', '', 'api/*_adapter.py');
+
+  // edges — request path
+  edge([[100, 131], [132, 131]]);
+  edge([[257, 131], [297, 131]]);
+  edge([[442, 131], [472, 131]]);
+  edge([[617, 131], [642, 131]]);
+  edge([[777, 131], [818, 131]]);
+  edge([[890, 159], [890, 216]]);
+  note(902, 190, 'generate(seq)', 'start');
+  // yield → TokenEvent
+  edge([[890, 390], [890, 420]]);
+  note(902, 408, `yield ×${nTok}`, 'start');
+  // response path
+  edge([[800, 450], [786, 450]]);
+  note(802, 496, 'put_threadsafe', 'middle');
+  edge([[634, 450], [620, 450]]);
+  note(627, 496, 'await get()', 'middle');
+  edge([[470, 450], [451, 450]]);
+  edge([[289, 450], [262, 450]]);
+  edge([[128, 450], [102, 450]]);
+
+  // moving dot
+  const dotG = mk('g', { class: 'dg-dot' });
+  mk('circle', { cx: 0, cy: 0, r: 7, style: 'fill:var(--ink);stroke:var(--surface);stroke-width:2' }, null, dotG);
+  const DOT = [[60, 96], [195, 96], [370, 96], [545, 96], [710, 96], [890, 96], [945, 205], [890, 415], [710, 412], [545, 415], [370, 415], [195, 415]];
+
+  /* ---------- stage cards (real data) ---------- */
+  const pre = (t) => { const p = el('pre', 'jsonbox'); p.textContent = t; return p; };
+  const chips = (...pairs) => {
+    const s = el('div', 'statgrid');
+    pairs.forEach(([v, l]) => { const c = el('span', 'statchip'); c.appendChild(el('b', null, v)); c.appendChild(document.createTextNode(' ' + l)); s.appendChild(c); });
+    return s;
+  };
+  const para = (html) => { const p = el('p', 'panel-note'); p.innerHTML = html; return p; };
+
+  const STAGES = [
+    { name: 'Request in', thread: ['loop', 'client → event loop'], code: 'POST /v1/messages · /v1/chat/completions', card: (c) => {
+      c.appendChild(para('The client sends an Anthropic- or OpenAI-shaped body. This traced run took ' +
+        `<b>${(tim.total_ms / 1000).toFixed(1)}s</b> end to end, first token after <b>${tim.ttft_ms}ms</b>.`));
+      c.appendChild(pre(JSON.stringify({ messages: req.messages, max_tokens: req.max_tokens, temperature: 0 }, null, 2)));
+    }},
+    { name: 'Route + normalize', thread: ['loop', 'event loop'], code: 'api/anthropic_router.py · api/openai_router.py', card: (c) => {
+      c.appendChild(para('Pydantic validates the wire types; the dialect adapter normalizes them to one internal shape: ' +
+        '<code>messages</code> (content blocks flattened to text), <code>system</code>, and ' +
+        '<code>SamplingParams.from_temperature_top_p(0.0, 1.0)</code> → <code>greedy=True</code>, empty processor pipeline. ' +
+        'Everything Anthropic/OpenAI-specific stays in this layer.'));
+      c.appendChild(chips(['2 dialects', 'share one engine seam'], ['greedy', 'temperature=0 shortcut'], [String(req.max_tokens), 'max_tokens']));
+    }},
+    { name: 'Tokenize (off the loop)', thread: ['exec', 'ThreadPoolExecutor'], code: 'api/common.py:32 tokenize_and_build_request → _build_sync', card: (c) => {
+      c.appendChild(para('<code>encode_conversation()</code> builds the ChatML string and encodes it — dispatched to a ' +
+        '<code>ThreadPoolExecutor</code> because the Rust tokenizer releases the GIL, keeping the event loop free. ' +
+        `Result: <b>${req.prompt.ids.length} prompt ids</b>.`));
+      const chat = el('div', 'chatml');
+      String(req.chatml_text || '').split(/(<\|[^>]+?\|>|<think>|<\/think>)/).forEach(part => {
+        if (!part) return;
+        if (/^<\|[^>]+?\|>$|^<think>$|^<\/think>$/.test(part)) chat.appendChild(el('span', 'sp', part));
+        else chat.appendChild(document.createTextNode(part));
+      });
+      c.appendChild(chat);
+      c.appendChild(pre('ids = [' + req.prompt.ids.slice(0, 12).join(', ') + ', … ×' + req.prompt.ids.length + ']'));
+    }},
+    { name: 'Packed: InferenceRequest', thread: ['loop', 'event loop'], code: 'engine/types.py:41 — “the sole contract between the HTTP layer and the engine”', card: (c) => {
+      c.appendChild(para('Token-level and framework-agnostic — no Anthropic/OpenAI concepts survive past this point, ' +
+        'which is what lets a batching engine drop in later without touching the API surface.'));
+      c.appendChild(pre(
+        'InferenceRequest(\n' +
+        `  request_id      = "${shortId}"          # uuid4\n` +
+        `  prompt_token_ids= [${req.prompt.ids.slice(0, 5).join(', ')}, …]  # ${req.prompt.ids.length} ids\n` +
+        '  sampling_params = SamplingParams(greedy=True, processors=[])\n' +
+        `  max_tokens      = ${req.max_tokens}\n` +
+        `  stop_token_ids  = {${req.stop_token_ids.join(', ')}}     # <|endoftext|>, <|im_end|>\n)`));
+    }},
+    { name: 'submit() — the async generator', thread: ['loop', 'event loop'], code: 'engine/sequential.py:41', card: (c) => {
+      c.appendChild(para('<code>submit()</code> returns an <code>AsyncIterator[TokenEvent]</code>. It creates the bounded queue and a ' +
+        '<code>threading.Event</code> (the abort flag, registered in <code>_active</code>), then spawns the generation on a worker thread. ' +
+        'The same coroutine is also the consumer — see stage 10.'));
+      c.appendChild(pre(
+        'queue = asyncio.Queue(maxsize=256)\n' +
+        'stop_event = threading.Event()          # abort(request_id) sets it\n' +
+        'worker_task = asyncio.create_task(asyncio.to_thread(run))\n' +
+        'while (evt := await queue.get()) is not None:\n' +
+        '    yield evt                           # → adapter’s async for'));
+    }},
+    { name: 'Unpacked: Sequence', thread: ['worker', `worker thread ${eng.worker_thread}`], code: 'engine/types.py:50 — built inside run() at submit time', card: (c) => {
+      c.appendChild(para('On the worker thread, the request is unpacked into engine-side runtime state: the same fields ' +
+        'plus a <b>fresh KVCache</b> from <code>runtime.new_cache()</code> and the abort flag. Backends read it; the engine ticks ' +
+        '<code>tokens_emitted</code> per consumed token to derive the finish reason afterwards.'));
+      c.appendChild(pre(
+        'Sequence(\n' +
+        `  …InferenceRequest fields…\n` +
+        `  cache          = KVCache(${arch.layers})   # empty → grows to (1, ${lastKv}, ${arch.groups}, ${arch.head_dim}) per layer\n` +
+        '  stop_event     = <threading.Event>\n' +
+        `  tokens_emitted = 0 → ${nTok}\n)`));
+    }},
+    { name: 'generate() — the yield loop', thread: ['worker', `worker thread ${eng.worker_thread}`], code: 'standard.py:80 — sync generator, one torch forward per token', card: (c) => {
+      c.appendChild(para(`Prefill once, then one-token steps. The stop check runs <b>before</b> yield, so the stop token is never emitted — ` +
+        `this run sampled <code>&lt;|im_end|&gt;</code> on forward ${nTok + 1} and returned. Tensor internals live on the ` +
+        '<a href="#/model">Model forward</a> tab.'));
+      c.appendChild(pre(
+        `logits = forward(prompt_ids, cache, 0)     # (1, ${req.prompt.ids.length}, ${arch.vocab})\n` +
+        `tok, _ = sample(logits[:, -1])             # argmax → ${firstEvt.token_id} ${JSON.stringify(firstEvt.piece)}\n` +
+        'if tok in stop_token_ids: return           # ← stop check BEFORE yield\n' +
+        'yield tok\n' +
+        'for _ in range(max_tokens - 1):\n' +
+        '    if stop_event.is_set(): return         # cooperative abort\n' +
+        '    logits = forward([tok], cache, cache.position)\n' +
+        '    tok, _ = sample(logits[:, -1])\n' +
+        '    if tok in stop_token_ids: return\n' +
+        '    yield tok'));
+      c.appendChild(chips([String(nTok + 1), 'forwards'], [String(nTok), 'yields'], ['<|im_end|>', 'sampled last, never emitted']));
+    }},
+    { name: 'Packed: TokenEvent', thread: ['worker', `worker thread ${eng.worker_thread}`], code: 'engine/types.py:84', card: (c) => {
+      c.appendChild(para('Each yielded int is wrapped in the engine’s only cross-thread object. The contract: <b>exactly one</b> of ' +
+        '<code>token_id</code> / <code>finish_reason</code> / <code>error</code> is set; <code>request_id</code> always — ' +
+        'load-bearing once a batching scheduler multiplexes many requests into shared streams.'));
+      c.appendChild(pre(
+        `TokenEvent(token_id=${firstEvt.token_id}, request_id="${shortId}")   # t=+${firstEvt.t_ms}ms (first)\n` +
+        `        …×${nTok}…\n` +
+        `TokenEvent(finish_reason="${fin.finish_reason}", request_id="${shortId}")  # terminal\n` +
+        'None                                              # queue terminator'));
+    }},
+    { name: 'The queue — thread boundary', thread: ['worker', 'worker → event loop'], code: 'engine/sequential.py:48 put_threadsafe', card: (c) => {
+      c.appendChild(para('<code>run_coroutine_threadsafe(queue.put(evt), loop)</code> — and then <code>.result()</code> <b>blocks the worker</b> ' +
+        'until the loop-side put completes. A slow client stops draining → the queue fills to 256 → the worker pauses mid-generation: ' +
+        'real backpressure, no unbounded buffering. On disconnect, the consumer’s <code>finally</code> sets <code>stop_event</code> and drains ' +
+        'the queue so the blocked worker can wake, notice the flag, and exit.'));
+      c.appendChild(chips(['256', 'maxsize'], [String(nTok + 1) + ' + None', 'items through'], ['blocks', 'worker on full queue']));
+    }},
+    { name: 'Consumer — back on the loop', thread: ['loop', `event-loop thread ${eng.consumer_thread}`], code: 'engine/sequential.py:94', card: (c) => {
+      c.appendChild(para('The other half of <code>submit()</code>: <code>while (evt := await queue.get()) is not None: yield evt</code>. ' +
+        'Each event crosses from thread ' + `<code>${eng.worker_thread}</code> to <code>${eng.consumer_thread}</code> here. ` +
+        'Its <code>finally</code> is the cleanup path: set <code>stop_event</code>, deregister from <code>_active</code>, drain until the ' +
+        'worker exits, then <code>await worker_task</code> so nothing leaks on client disconnect.'));
+      c.appendChild(chips([String(eng.worker_thread), 'producer thread'], [String(eng.consumer_thread), 'consumer thread'], ['1', 'object type crossing: TokenEvent']));
+    }},
+    { name: 'Unpacked: ids → text + phases', thread: ['loop', 'event loop'], code: 'api/phase.py:43 · decoder.py · tokenizer.py IncrementalDecoder', card: (c) => {
+      c.appendChild(para('<code>phase_tagged_events</code> buckets every token into <b>thinking</b> or <b>text</b> (flipping on ' +
+        '<code>&lt;think&gt;</code>/<code>&lt;/think&gt;</code>) and drives a <code>StreamingDecoder</code>: the <code>IncrementalDecoder</code> ' +
+        'holds tokens back until the UTF-8 is stable, so multi-byte chars never stream as garbage. Out come ' +
+        '<code>(phase, StreamEvent)</code> pairs; <code>DecodeState</code> keeps the counts for the usage block.'));
+      c.appendChild(pre(
+        `("thinking", ThinkingStartEvent())        # token ${TK.events[0].token_id} <think>\n` +
+        `("thinking", TextChunk(${JSON.stringify(firstText)}))\n` +
+        '…\n' +
+        `("text",     TextChunk("\\n\\n56"))\n` +
+        `DecodeState(thinking=${fin.counts.thinking}, text=${fin.counts.text}, total=${fin.counts.total}, finish_reason="${fin.finish_reason}")`));
+      c.appendChild(chips([String(fin.counts.thinking), 'thinking tokens'], [String(fin.counts.text), 'text tokens'], [String(bufferedCount), 'buffered by IncrementalDecoder']));
+    }},
+    { name: 'SSE out → client', thread: ['loop', 'event loop'], code: 'api/anthropic_adapter.py · api/openai_adapter.py (15s ping keepalive)', card: (c) => {
+      c.appendChild(para('The adapter packs StreamEvents into the wire format. Anthropic: content blocks with ' +
+        '<code>thinking_delta</code>/<code>text_delta</code>; OpenAI: <code>chat.completion.chunk</code> deltas routing thinking into ' +
+        '<code>reasoning_content</code>, ending with <code>data: [DONE]</code>. Reconstructed from the traced events:'));
+      c.appendChild(pre(
+        `event: message_start          {"message":{"id":"${shortId}"}}\n` +
+        'event: content_block_start    {"content_block":{"type":"thinking"}}\n' +
+        `data: {"delta":{"type":"thinking_delta","thinking":${JSON.stringify(firstText)}}}\n` +
+        `  … ${fin.counts.thinking} thinking deltas …\n` +
+        'data: {"delta":{"type":"text_delta","text":"\\n\\n56"}}\n' +
+        `event: message_delta          {"delta":{"stop_reason":"${fin.finish_reason}"},"usage":{"output_tokens":${fin.counts.total}}}\n` +
+        'event: message_stop'));
+      c.appendChild(chips([tim.ttft_ms + ' ms', 'time to first event'], [(tim.total_ms / 1000).toFixed(1) + ' s', 'stream duration'], [fin.finish_reason, 'stop_reason']));
+    }},
+  ];
+
+  /* ---------- transport + card wiring ---------- */
+  const cardPanel = el('section', 'panel');
+  const cardHead = el('div', 'stage-head');
+  const cardTitle = el('h2', null, '');
+  const threadChip = el('span', 'th-chip');
+  const codeRef = el('span', 'code-ref');
+  cardHead.append(cardTitle, threadChip, codeRef);
+  cardPanel.appendChild(cardHead);
+  const cardBody = el('div');
+  cardPanel.appendChild(cardBody);
+
+  const transport = makeTransport({
+    max: STAGES.length - 1,
+    labelFn: (i) => `stage ${i + 1} / ${STAGES.length} — ${STAGES[i].name}`,
+    onSet: setStage,
+    playMs: 2200,
+    playLoopTo: 6,
+    hint: 'to walk the pipe',
+  });
+  activeTransports['plumbing'] = transport;
+
+  const diagPanel = el('section', 'panel');
+  diagPanel.appendChild(el('h2', null, 'One request, round trip — objects · threads · queue · yield loop'));
+  diagPanel.appendChild(el('p', 'panel-note', 'Request flows left → right along the top, descends into the worker thread and the generate loop, and streams back right → left along the bottom. Dashed regions are threads; dashed-border nodes are the data objects being packed/unpacked. Play loops the token cycle.'));
+  const scroll = el('div', 'kv-scroll');
+  scroll.appendChild(svg);
+  diagPanel.appendChild(scroll);
+
+  body.append(transport.root, diagPanel, cardPanel);
+
+  function setStage(i) {
+    nodeGroups.forEach((gEl, j) => gEl && gEl.classList.toggle('cur', j === i));
+    dotG.style.transform = `translate(${DOT[i][0]}px, ${DOT[i][1]}px)`;
+    const st = STAGES[i];
+    cardTitle.textContent = `${i + 1} · ${st.name}`;
+    threadChip.textContent = st.thread[1];
+    threadChip.className = 'th-chip ' + st.thread[0];
+    codeRef.textContent = st.code;
+    cardBody.innerHTML = '';
+    st.card(cardBody);
+  }
+  transport.set(0);
+}
+
+/* =============== model forward view =============== */
+
+function tokChip(pieceText, id, cls) {
+  const t = el('span', 'tok' + (cls ? ' ' + cls : ''));
+  t.appendChild(el('span', null, disp(pieceText)));
+  if (id !== undefined) t.appendChild(el('span', 'tid', String(id)));
+  return t;
+}
+
+function initModel() {
+  const body = $('mf-body');
+  if (!TF) {
+    $('mf-promptline').textContent = 'a prompt';
+    body.appendChild(missingPanel('.venv/bin/python viz/trace_forward.py',
+      'Loads the real Qwen3-0.6B weights (~30s) and records one short greedy generation.'));
+    return;
+  }
+  const arch = TF.meta.arch;
+  const steps = TF.steps;
+  $('mf-promptline').textContent = JSON.stringify(TF.meta.prompt_text);
+
+  /* --- transport --- */
+  const transport = makeTransport({
+    max: steps.length - 1,
+    labelFn: (i) => `forward ${i} / ${steps.length - 1} (${steps[i].phase})`,
+    onSet: renderStep,
+    playMs: 350,
+  });
+  activeTransports['model'] = transport;
+  body.appendChild(transport.root);
+
+  /* --- stages strip --- */
+  const stages = el('div', 'stages');
+  [['tokens', 'ids in, (1, L)'], ['embed', '→ (1, L, ' + arch.dim + ')'],
+   ['×' + arch.layers + ' blocks', 'GQA + FF, KV cat'], ['lm head', '→ (1, L, ' + arch.vocab + ')'],
+   ['sample', 'argmax of last row']].forEach(([b, rest], i, all) => {
+    const s = el('span', 'stage');
+    s.appendChild(el('b', null, b + ' '));
+    s.appendChild(document.createTextNode(rest));
+    stages.appendChild(s);
+    if (i < all.length - 1) stages.appendChild(el('span', 'stage-arrow', '→'));
+  });
+  body.appendChild(stages);
+
+  /* --- panels --- */
+  const stepPanel = el('section', 'panel');
+  stepPanel.appendChild(el('h2', null, 'This forward pass'));
+  const stepNote = el('p', 'panel-note');
+  stepPanel.appendChild(stepNote);
+  const stepBody = el('div');
+  stepPanel.appendChild(stepBody);
+
+  const topkPanel = el('section', 'panel');
+  topkPanel.appendChild(el('h2', null, 'Sample — top-5 of 151,936 logits'));
+  const topkNote = el('p', 'panel-note', 'softmax over the last position’s logits; greedy → argmax. Sampling a stop token ends the request without emitting it.');
+  topkPanel.appendChild(topkNote);
+  const topkBody = el('div');
+  topkPanel.appendChild(topkBody);
+
+  const kvPanel = el('section', 'panel');
+  kvPanel.appendChild(el('h2', null, 'KV cache growth'));
+  kvPanel.appendChild(el('p', 'panel-note')).textContent =
+    `Per layer, keys and values are (1, pos, ${arch.groups}, ${arch.head_dim}) tensors grown by torch.cat every step ` +
+    `(EinsumAttentionMethod._attend). No paging yet — that’s Phase 4.`;
+  const kvBody = el('div');
+  kvPanel.appendChild(kvBody);
+
+  const two = el('div', 'cols-2');
+  two.append(stepPanel, topkPanel);
+  body.appendChild(two);
+  body.appendChild(kvPanel);
+
+  /* --- anatomy panel --- */
+  const anatPanel = el('section', 'panel');
+  anatPanel.appendChild(el('h2', null, 'Block anatomy — real shapes from forward hooks'));
+  const anatHead = el('div');
+  anatHead.style.display = 'flex'; anatHead.style.alignItems = 'center'; anatHead.style.gap = '12px'; anatHead.style.flexWrap = 'wrap';
+  const seg = el('div', 'seg');
+  const bPre = el('button', 'on', `prefill (L=${TF.prompt.len})`);
+  const bDec = el('button', null, 'decode (L=1)');
+  seg.append(bPre, bDec);
+  anatHead.appendChild(seg);
+  const anatNote = el('span', 'panel-note');
+  anatHead.appendChild(anatNote);
+  anatPanel.appendChild(anatHead);
+  const anatBody = el('div', 'kv-scroll');
+  anatPanel.appendChild(anatBody);
+  body.appendChild(anatPanel);
+
+  let anatPhase = 'prefill';
+  bPre.addEventListener('click', () => { anatPhase = 'prefill'; bPre.classList.add('on'); bDec.classList.remove('on'); renderAnatomy(); });
+  bDec.addEventListener('click', () => { anatPhase = 'decode'; bDec.classList.add('on'); bPre.classList.remove('on'); renderAnatomy(); });
+
+  function renderAnatomy() {
+    const d = TF.detailed[anatPhase];
+    anatBody.innerHTML = '';
+    const bm = {}; d.modules.block.forEach(r => { bm[r.name] = r; });
+    const tl = {}; d.modules.top_level.forEach(r => { tl[r.name] = r; });
+    const L = anatPhase === 'prefill' ? TF.prompt.len : 1;
+    const S = d.mask.shape[1];
+    const S0 = d.mask.start_pos;
+    const g = arch.groups, hp = arch.heads_per_group, hd = arch.head_dim;
+    const dim = arch.dim, qod = arch.q_out_dim, ff = arch.expanded_dim;
+    const ident = d.modules.repeated_layers;
+    anatNote.textContent = (anatPhase === 'prefill'
+      ? `captured on forward #0 — the whole ${L}-token prompt in one pass (no cache yet)`
+      : `captured on forward #1 — 1 new token against ${S0} cached positions; later decode steps differ only in S`) +
+      ` · flows bottom → top · hooks confirmed all ${ident.count} blocks shape-identical${ident.identical ? '' : ' — WARNING: NOT identical!'}`;
+
+    const so = (name, fb) => (bm[name] && bm[name].out) ? shapeStr(bm[name].out) : (tl[name] && tl[name].out) ? shapeStr(tl[name].out) : fb;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 1120 1290');
+    svg.setAttribute('class', 'anat-svg');
+    const mk = (tag, attrs, text, parent) => {
+      const n = document.createElementNS(NS, tag);
+      for (const k in attrs) n.setAttribute(k, attrs[k]);
+      if (text !== undefined && text !== null) n.textContent = text;
+      (parent || svg).appendChild(n);
+      return n;
+    };
+    // arrowheads (colored via CSS vars so they follow the theme)
+    const defs = mk('defs', {});
+    for (const [id, color] of [['dg-arr', 'var(--ink2)'], ['dg-arrm', 'var(--muted)']]) {
+      const m = mk('marker', { id, viewBox: '0 0 10 10', refX: 8.5, refY: 5, markerWidth: 6.5, markerHeight: 6.5, orient: 'auto-start-reverse' }, null, defs);
+      mk('path', { d: 'M0,0 L10,5 L0,10 z', style: `fill:${color};stroke:none` }, null, m);
+    }
+
+    const box = (bx, by, w, h, lines, cls, tcls) => {
+      mk('rect', { x: bx - w / 2, y: by - h / 2, width: w, height: h, rx: 8, class: 'dgb ' + (cls || '') });
+      lines.forEach((t, i) => mk('text', { x: bx, y: by + (i - (lines.length - 1) / 2) * 14 + 4, class: 'dgt ' + (tcls || '') }, t));
+    };
+    const pill = (x, y, t, anchor) => {
+      const w = t.length * 6.3 + 12;
+      const px = anchor === 'end' ? x - w : anchor === 'start' ? x : x - w / 2;
+      mk('rect', { x: px, y: y - 9, width: w, height: 18, rx: 4, class: 'dgp' });
+      mk('text', { x: px + w / 2, y: y + 3.5, class: 'dgpt' }, t);
+    };
+    const edge = (pts, opts) => {
+      opts = opts || {};
+      const dPath = 'M' + pts.map(p => p.join(',')).join(' L');
+      mk('path', { d: dPath, class: 'dge' + (opts.dash ? ' dash' : ''), 'marker-end': opts.noArrow ? '' : `url(#${opts.dash ? 'dg-arrm' : 'dg-arr'})` });
+    };
+    const circ = (ccx, ccy, sym) => {
+      mk('circle', { cx: ccx, cy: ccy, r: 13, class: 'dgb' });
+      mk('text', { x: ccx, y: ccy + 4.5, class: 'dgt' }, sym);
+    };
+    const note = (x, y, t, anchor) => mk('text', { x, y, class: 'dgt note', style: `text-anchor:${anchor || 'start'}` }, t);
+
+    /* ============ main spine (cx=250), bottom → top ============ */
+    const cx = 250;
+    // containers first (painted under everything)
+    mk('rect', { x: 100, y: 70, width: 320, height: 790, rx: 18, class: 'dgb outer' });
+    mk('rect', { x: 120, y: 252, width: 280, height: 492, rx: 14, class: 'dgb blue' });
+    mk('rect', { x: 336, y: 242, width: 48, height: 20, rx: 10, class: 'dgb badge' });
+    mk('text', { x: 360, y: 256, class: 'dgt small inv' }, '×' + ident.count);
+
+    // sample text + tokenized
+    const promptShort = TF.meta.prompt_text.length > 40 ? TF.meta.prompt_text.slice(0, 38) + '…' : TF.meta.prompt_text;
+    note(cx, 1012, '“' + promptShort + '”', 'middle');
+    note(cx, 1028, 'sample input text', 'middle');
+    edge([[cx, 995], [cx, 944]]);
+    box(cx, 920, 170, 44, ['Tokenized text']);
+    edge([[cx, 898], [cx, 830]]); pill(cx - 16, 864, `(1, ${L}) int64`, 'end');
+    box(cx, 806, 210, 44, ['Token embedding layer']);
+    edge([[cx, 784], [cx, 718]]); pill(cx - 16, 750, so('initial_embedding_layer', `(1, ${L}, ${dim})`) + ' ' + TF.meta.dtype, 'end');
+    // block internals
+    box(cx, 694, 170, 44, ['RMSNorm 1']);
+    edge([[cx, 672], [cx, 639]]); pill(cx - 16, 656, so('RMSNorm_1', `(1, ${L}, ${dim})`), 'end');
+    box(cx, 610, 200, 54, ['Masked grouped-query', 'attention'], 'dark', 'inv small');
+    edge([[cx, 583], [cx, 543]]); pill(cx - 16, 562, so('GQA', `(1, ${L}, ${dim})`), 'end');
+    circ(cx, 528, '+');
+    edge([[cx, 515], [cx, 476]]); pill(cx - 16, 496, `(1, ${L}, ${dim})`, 'end');
+    box(cx, 452, 170, 44, ['RMSNorm 2']);
+    edge([[cx, 430], [cx, 400]]); pill(cx - 16, 415, so('RMSNorm_2', `(1, ${L}, ${dim})`), 'end');
+    box(cx, 376, 170, 44, ['Feed forward']);
+    edge([[cx, 354], [cx, 315]]); pill(cx - 16, 334, so('FF', `(1, ${L}, ${dim})`), 'end');
+    circ(cx, 300, '+');
+    edge([[cx, 287], [cx, 220]]); pill(cx - 16, 250, so('(block)', `(1, ${L}, ${dim})`) + ' → next block', 'end');
+    // residual bypasses (tap x before each norm, rejoin at +)
+    edge([[cx, 730], [385, 730], [385, 528], [265, 528]]);
+    edge([[cx, 500], [385, 500], [385, 300], [265, 300]]);
+    // final norm + head
+    box(cx, 196, 170, 44, ['Final RMSNorm']);
+    edge([[cx, 174], [cx, 134]]); pill(cx - 16, 154, so('output_RMSNorm', `(1, ${L}, ${dim})`), 'end');
+    box(cx, 112, 200, 44, ['Linear output layer']);
+    edge([[cx, 90], [cx, 42]]); pill(cx + 16, 62, 'logits ' + so('output_layer', `(1, ${L}, ${arch.vocab})`), 'start');
+    // callouts
+    note(30, 52, `vocab ${arch.vocab.toLocaleString()} · own lm_head weights`, 'start');
+    note(30, 66, '(0.6B ships lm_head; only 4B ties)', 'start');
+    edge([[100, 78], [140, 96]], { dash: true });
+    note(30, 806, `dim ${dim}`, 'start');
+    edge([[62, 798], [143, 792]], { dash: true });
+    box(72, 585, 88, 28, ['QK-Norm'], '', 'small');
+    edge([[116, 585], [148, 596]], { dash: true });
+    box(72, 641, 88, 28, ['RoPE'], '', 'small');
+    edge([[116, 641], [148, 626]], { dash: true });
+    note(345, 872, 'sampled token feeds back', 'start');
+    note(345, 886, 'as the next pass’s input', 'start');
+    // dashed connectors to insets
+    edge([[350, 610], [560, 610]], { dash: true });
+    note(430, 600, 'detail ↴', 'middle');
+    edge([[335, 376], [490, 376], [490, 1105], [560, 1105]], { dash: true });
+    note(430, 366, 'detail ↴', 'middle');
+
+    /* ============ GQA inset (x 560–1100, y 40–930), bottom → top ============ */
+    mk('rect', { x: 560, y: 40, width: 540, height: 890, rx: 14, class: 'dgb inset' });
+    mk('text', { x: 576, y: 916, class: 'dgt title' }, 'masked grouped-query attention — detail');
+    const qx = 660, kx = 830, vx = 1000;
+    pill(kx, 893, `x (1, ${L}, ${dim})`);
+    edge([[kx, 882], [kx, 868], [qx, 868], [qx, 834]]);
+    edge([[kx, 882], [kx, 834]]);
+    edge([[kx, 882], [kx, 868], [vx, 868], [vx, 834]]);
+    box(qx, 812, 120, 40, ['W_q']); box(kx, 812, 120, 40, ['W_k']); box(vx, 812, 120, 40, ['W_v']);
+    edge([[qx, 792], [qx, 748]]); pill(qx, 770, so('GQA.W_q', `(1, ${L}, ${qod})`));
+    edge([[kx, 792], [kx, 748]]); pill(kx, 770, so('GQA.W_k', `(1, ${L}, ${g * hd})`));
+    edge([[vx, 792], [vx, 748]]); pill(vx, 770, so('GQA.W_v', `(1, ${L}, ${g * hd})`));
+    box(qx, 728, 94, 36, ['.view'], '', 'small'); box(kx, 728, 94, 36, ['.view'], '', 'small'); box(vx, 728, 94, 36, ['.view'], '', 'small');
+    edge([[qx, 710], [qx, 664]]); pill(qx, 688, `(1, ${L}, ${g}, ${hp}, ${hd})`);
+    edge([[kx, 710], [kx, 664]]); pill(kx, 688, `(1, ${L}, ${g}, ${hd})`);
+    edge([[vx, 710], [vx, 512]]); pill(vx, 688, `(1, ${L}, ${g}, ${hd})`);
+    note(vx - 10, 600, 'no norm, no RoPE', 'end');
+    box(qx, 644, 110, 36, ['q_norm'], '', 'small'); box(kx, 644, 110, 36, ['k_norm'], '', 'small');
+    edge([[qx, 626], [qx, 590]]); edge([[kx, 626], [kx, 590]]);
+    note((qx + kx) / 2, 614, `RMSNorm over head_dim ${hd}`, 'middle');
+    box(qx, 562, 120, 52, ['RoPE', `offset=${S0}`], '', 'small');
+    box(kx, 562, 120, 52, ['RoPE', `offset=${S0}`], '', 'small');
+    note((qx + kx) / 2, 530, `freqs_cis slice (${L}, ${hd / 2}) ℂ`, 'middle');
+    edge([[qx, 536], [qx, 398]]);
+    edge([[kx, 536], [kx, 510]]);
+    const kvLines = anatPhase === 'prefill'
+      ? ['KV cache (per layer, was empty)', `write K,V (1, ${L}, ${g}, ${hd})`]
+      : [`KV cache: cat (1, ${S0}, ${g}, ${hd})`, `⧺ (1, ${L}, ${g}, ${hd}) → (1, ${S}, ${g}, ${hd})`];
+    box((kx + vx) / 2, 480, 300, 56, kvLines, '', 'small');
+    edge([[kx, 452], [kx, 398]]); pill(kx + 8, 424, `K (1, ${S}, ${g}, ${hd})`, 'start');
+    edge([[vx, 452], [vx, 232]]); pill(vx - 8, 340, `V (1, ${S}, ${g}, ${hd})`, 'end');
+    box(745, 372, 230, 48, ['scores =', 'einsum("bighd,bjgd→bghij")'], '', 'mono small');
+    edge([[745, 348], [745, 328]]); pill(745, 338, `(1, ${g}, ${hp}, ${L}, ${S})`);
+    box(745, 288, 230, 52, [`mask (${L}, ${S}) → −inf`, `softmax(scores / √${hd})`], '', 'small');
+    edge([[745, 262], [745, 232]]);
+    box(855, 206, 310, 48, ['z = einsum("bghij,bjgd→bighd")'], '', 'mono small');
+    edge([[855, 182], [855, 152]]); pill(855, 166, `(1, ${L}, ${g}, ${hp}, ${hd})`);
+    box(855, 116, 310, 52, [`.reshape → (1, ${L}, ${qod})`, `out_proj → (1, ${L}, ${dim})`], '', 'small');
+    edge([[855, 90], [855, 62]]); note(870, 72, 'back to + (residual)', 'start');
+
+    /* ============ FF inset (x 560–1100, y 950–1270), bottom → top ============ */
+    mk('rect', { x: 560, y: 950, width: 540, height: 320, rx: 14, class: 'dgb inset' });
+    mk('text', { x: 576, y: 1256, class: 'dgt title' }, 'feed forward (SwiGLU) — detail');
+    const gx = 730, ux = 930;
+    pill(830, 1232, `x (1, ${L}, ${dim})`);
+    edge([[830, 1221], [830, 1208], [gx, 1208], [gx, 1202]]);
+    edge([[830, 1221], [830, 1208], [ux, 1208], [ux, 1202]]);
+    box(gx, 1180, 150, 40, ['linear_1 (gate)'], '', 'small'); box(ux, 1180, 150, 40, ['linear_2 (value)'], '', 'small');
+    edge([[gx, 1160], [gx, 1124]]); pill(gx, 1142, so('FF.linear_1', `(1, ${L}, ${ff})`));
+    edge([[ux, 1160], [ux, 1058], [845, 1058]]); pill(ux, 1142, so('FF.linear_2', `(1, ${L}, ${ff})`));
+    box(gx, 1104, 130, 36, ['SiLU'], '', 'small');
+    edge([[gx, 1086], [gx, 1058], [815, 1058]]);
+    circ(830, 1058, '×');
+    edge([[830, 1044], [830, 1024]]); pill(852, 1034, `(1, ${L}, ${ff})`, 'start');
+    box(830, 1002, 130, 36, ['linear_3'], '', 'small');
+    edge([[830, 984], [830, 962]]); pill(852, 972, so('FF.linear_3', `(1, ${L}, ${dim})`), 'start');
+
+    anatBody.appendChild(svg);
+  }
+  renderAnatomy();
+
+  /* --- KV sparkline (built once) --- */
+  const dtypeBytes = TF.meta.dtype === 'bfloat16' || TF.meta.dtype === 'float16' ? 2 : 4;
+  const kvBytesPerPos = 2 /*K+V*/ * arch.layers * arch.groups * arch.head_dim * dtypeBytes;
+  const maxPos = steps[steps.length - 1].kv_after;
+  const meter = el('div', 'meter');
+  const meterFill = el('div', 'meter-fill');
+  meter.appendChild(meterFill);
+  const kvStat = el('div', 'stat-line');
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('class', 'spark');
+  svg.setAttribute('viewBox', '0 0 600 64');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  const poly = document.createElementNS(svgNS, 'polyline');
+  poly.setAttribute('fill', 'none');
+  poly.setAttribute('stroke', 'var(--sB)');
+  poly.setAttribute('stroke-width', '2');
+  poly.setAttribute('points', steps.map((s, i) =>
+    `${(i / (steps.length - 1)) * 596 + 2},${62 - (s.kv_after / maxPos) * 58}`).join(' '));
+  const dot = document.createElementNS(svgNS, 'circle');
+  dot.setAttribute('r', '4'); dot.setAttribute('fill', 'var(--sB)');
+  dot.setAttribute('stroke', 'var(--surface)'); dot.setAttribute('stroke-width', '2');
+  svg.append(poly, dot);
+  kvBody.append(kvStat, meter, svg);
+
+  /* --- per-step renderers --- */
+  function renderStep(i) {
+    const s = steps[i];
+    stepNote.textContent = s.phase === 'prefill'
+      ? `The whole prompt runs in one batched pass; only the last position’s logits get sampled.`
+      : `One token in, one token out — all context comes from the KV cache.`;
+    stepBody.innerHTML = '';
+    const toks = el('div', 'tokline');
+    s.input_ids.forEach((id, j) => {
+      const c = tokChip(s.input_pieces[j], id, TK && (id === (TK.special_tokens.think_start.id) || id === TK.special_tokens.think_end.id || String(s.input_pieces[j]).startsWith('<|')) ? 'special' : null);
+      toks.appendChild(c);
+    });
+    stepBody.appendChild(toks);
+    const facts = el('div', 'statgrid');
+    const fact = (label, value) => { const c = el('span', 'statchip'); c.appendChild(el('b', null, value)); c.appendChild(document.createTextNode(' ' + label)); return c; };
+    facts.appendChild(fact('start_pos', String(s.start_pos)));
+    facts.appendChild(fact('mask (q × kv)', s.mask ? `${s.mask[0]} × ${s.mask[1]}` : '—'));
+    facts.appendChild(fact('logits', shapeStr(s.logits_shape)));
+    facts.appendChild(fact('wall time', s.ms + ' ms'));
+    stepBody.appendChild(facts);
+
+    /* top-k bars */
+    topkBody.innerHTML = '';
+    const bars = el('div', 'bars');
+    const maxP = Math.max(...s.topk.probs, 1e-9);
+    s.topk.ids.forEach((id, j) => {
+      const isPick = id === s.picked.id;
+      const row = el('div', 'bar-row' + (isPick ? ' picked' : ''));
+      const lab = el('span', 'bar-lab', disp(s.topk.pieces[j]));
+      lab.title = `token ${id}`;
+      const track = el('div', 'bar-track');
+      const fill = el('div', 'bar-fill');
+      fill.style.width = (s.topk.probs[j] / maxP * 100) + '%';
+      track.appendChild(fill);
+      tipify(track, `${JSON.stringify(s.topk.pieces[j])}\ntoken ${id}\np = ${s.topk.probs[j]}`);
+      row.append(lab, track, el('span', 'bar-val', s.topk.probs[j].toFixed(3)));
+      bars.appendChild(row);
+    });
+    topkBody.appendChild(bars);
+    const verdict = el('div', 'stat-line');
+    if (s.is_stop) {
+      verdict.innerHTML = `picked <b>${disp(s.picked.piece)}</b> (${s.picked.id}) — a stop token → <b>generation ends; token not emitted</b>`;
+    } else {
+      verdict.innerHTML = `picked <b>${disp(s.picked.piece)}</b> (${s.picked.id}) → emitted, fed back as forward ${i + 1}’s input`;
+    }
+    topkBody.appendChild(verdict);
+
+    /* KV meter */
+    const bytes = s.kv_after * kvBytesPerPos;
+    kvStat.innerHTML = `kv_cache position <b>${s.kv_before} → ${s.kv_after}</b> · per layer ${shapeStr(s.kv_layer_shape)} · ` +
+      `${arch.layers} layers × K+V ≈ <b>${fmtMB(bytes)}</b> (${fmtMB(kvBytesPerPos)}/token) · model max_seq_len ${arch.max_seq_len.toLocaleString()}`;
+    meterFill.style.width = (s.kv_after / maxPos * 100) + '%';
+    dot.setAttribute('cx', String((i / (steps.length - 1)) * 596 + 2));
+    dot.setAttribute('cy', String(62 - (s.kv_after / maxPos) * 58));
+  }
+
+  transport.set(0);
+}
+
+/* =============== speculative decoding view =============== */
+
+function initSpeculative() {
+  const body = $('sp-body');
+  if (!TS) {
+    body.appendChild(missingPanel('.venv/bin/python viz/trace_speculative.py',
+      'Loads BOTH models (draft 0.6B + main 1.7B, ~5 GB) and runs one speculative generation plus a main-only baseline — expect a couple of minutes.'));
+    return;
+  }
+  const ITS = TS.iterations, ST = TS.stats;
+  $('sp-models').textContent = `${TS.meta.draft} drafting for ${TS.meta.main}`;
+  const speedup = ST.spec_tok_per_s / ST.baseline_tok_per_s;
+  const mkstat = (label, value) => { const c = el('span', 'statchip'); c.appendChild(el('b', null, value)); c.appendChild(document.createTextNode(' ' + label)); return c; };
+
+  /* --- scoreboard --- */
+  const score = el('section', 'panel');
+  score.appendChild(el('h2', null, 'Scoreboard — measured, not targeted'));
+  const sg = el('div', 'statgrid');
+  sg.appendChild(mkstat('draft tokens accepted', `${ST.accepted} / ${ST.proposed} (${Math.round(ST.acceptance_rate * 100)}%)`));
+  sg.appendChild(mkstat('tokens per main forward', String(ST.tokens_per_iteration)));
+  sg.appendChild(mkstat('iterations', String(ST.iterations)));
+  sg.appendChild(mkstat('speculative', ST.spec_tok_per_s + ' tok/s'));
+  sg.appendChild(mkstat('main alone', ST.baseline_tok_per_s + ' tok/s'));
+  sg.appendChild(mkstat(speedup >= 1 ? 'speedup' : '— slower here!', speedup.toFixed(2) + '×'));
+  score.appendChild(sg);
+  const verdict = el('p', 'panel-note');
+  verdict.innerHTML = (ST.outputs_match
+    ? '✓ <b>Outputs match token-for-token</b> — the speculative run produced exactly the main model’s greedy output. '
+    : '⚠ Outputs diverged from the baseline (batched-vs-single forward numerics). ') +
+    (speedup < 1
+      ? `The honest catch on this hardware: ${ST.baseline_tokens} main forwards were traded for ${ST.proposed} draft forwards + ` +
+        `${ST.iterations} wider main forwards — and on ${TS.meta.device} the 0.6B draft isn’t cheap enough relative to 1.7B, so it nets out ` +
+        `<b>${(1 / speedup).toFixed(1)}× slower</b>. The same math flips positive when the draft is relatively much faster (bigger main, CUDA).`
+      : `Net win: ${ST.tokens_per_iteration} tokens per expensive main forward.`);
+  score.appendChild(verdict);
+  body.appendChild(score);
+
+  /* --- iteration strip --- */
+  const stripPanel = el('section', 'panel');
+  stripPanel.appendChild(el('h2', null, 'All iterations — accept / reject rhythm'));
+  stripPanel.appendChild(el('p', 'panel-note', 'One column per iteration, one cell per proposed draft token (bottom-up), capped by the blue tail token main contributes. Hatched red = first mismatch. Click to inspect.'));
+  const strip = el('div', 'sp-strip');
+  const cols = [];
+  ITS.forEach((it) => {
+    const col = el('button', 'sp-col');
+    it.draft_tokens.forEach((_, j) => {
+      col.appendChild(el('span', 'sp-cell ' + (j < it.accepted ? 'acc' : j === it.accepted ? 'rej' : '')));
+    });
+    col.appendChild(el('span', 'sp-cell tail'));
+    tipify(col, `iteration ${it.i}\n${it.accepted}/${it.draft_tokens.length} accepted` +
+      (it.tail_is_bonus ? '\n+ bonus token' : `\nmain fixed: ${JSON.stringify(it.tail_piece)}`));
+    col.addEventListener('click', () => transport.set(it.i));
+    cols.push(col);
+    strip.appendChild(col);
+  });
+  stripPanel.appendChild(strip);
+  const leg = el('div', 'legend');
+  [['acc', 'accepted draft token'], ['rej', 'first mismatch (rejected)'], ['', 'discarded (after the mismatch)'], ['tail', 'main’s token (fix or bonus)']].forEach(([cls, label]) => {
+    const w = el('span'); w.style.display = 'inline-flex'; w.style.alignItems = 'center'; w.style.gap = '5px';
+    w.appendChild(el('span', 'sp-cell ' + cls));
+    w.appendChild(el('span', null, label));
+    leg.appendChild(w);
+  });
+  stripPanel.appendChild(leg);
+  body.appendChild(stripPanel);
+
+  /* --- transport + iteration detail --- */
+  const transport = makeTransport({
+    max: ITS.length - 1,
+    labelFn: (i) => `iteration ${i} / ${ITS.length - 1}`,
+    onSet: setIter,
+    playMs: 1000,
+  });
+  activeTransports['speculative'] = transport;
+  body.appendChild(transport.root);
+
+  const detail = el('section', 'panel');
+  detail.appendChild(el('h2', null, 'Iteration detail'));
+  const detailBody = el('div');
+  detail.appendChild(detailBody);
+  body.appendChild(detail);
+
+  const outPanel = el('section', 'panel');
+  outPanel.appendChild(el('h2', null, 'Output stream — who produced each token'));
+  outPanel.appendChild(el('p', 'panel-note', 'Green tokens came from the draft (verified by main); blue ones main produced itself (fix or bonus). Identical text either way — that’s the point.'));
+  const outChips = el('div', 'tokline');
+  outPanel.appendChild(outChips);
+  const finLine = el('div', 'statgrid');
+  outPanel.appendChild(finLine);
+  body.appendChild(outPanel);
+
+  function setIter(i) {
+    cols.forEach((c, j) => c.classList.toggle('cur', j === i));
+    const it = ITS[i];
+    detailBody.innerHTML = '';
+
+    const p1 = el('p', 'panel-note');
+    p1.innerHTML = `<b>1 · draft proposes</b> — ${TS.meta.draft} ran ${it.draft_tokens.length} forwards ` +
+      `(${it.draft_ms}ms), the first ingesting ${Array.isArray(it.draft_input) ? 'input ' + JSON.stringify(it.draft_input) : 'the ' + it.draft_input + '-token prompt'}:`;
+    detailBody.appendChild(p1);
+    const drow = el('div', 'tokline');
+    it.draft_pieces.forEach((pc, j) => {
+      const cls = j < it.accepted ? 'acc' : j === it.accepted ? 'rej' : 'moot';
+      const c = tokChip(pc, it.draft_tokens[j], cls);
+      tipify(c, j < it.accepted ? 'accepted — matches main’s argmax'
+        : j === it.accepted ? `rejected — main’s argmax here is ${JSON.stringify(it.tail_piece)}`
+        : 'moot — after the first mismatch everything is discarded');
+      drow.appendChild(c);
+    });
+    detailBody.appendChild(drow);
+
+    const p2 = el('p', 'panel-note');
+    p2.innerHTML = `<b>2 · main verifies</b> — ${TS.meta.main} ran <b>one</b> forward of ${it.main_n} tokens at position ${it.main_pos} ` +
+      `(${it.main_ms}ms): every position’s argmax is compared against the draft. ` +
+      (it.tail_is_bonus
+        ? `All ${it.accepted} accepted → the last logit row is a free <b>bonus token</b>:`
+        : `First ${it.accepted} matched, then main disagreed → main’s own pick replaces it:`);
+    detailBody.appendChild(p2);
+    const trow = el('div', 'tokline');
+    const tailChip = tokChip(it.tail_piece, it.tail, 'tailtok');
+    trow.appendChild(tailChip);
+    trow.appendChild(el('span', 'sample-verdict', it.tail_is_bonus ? '→ bonus (position after the last accepted draft)' : '→ the fix at the mismatch position'));
+    detailBody.appendChild(trow);
+
+    const p3 = el('p', 'panel-note');
+    const tr = it.truncates.map(t => `${t.cache} ${t.from}→${t.to}`).join(' · ');
+    p3.innerHTML = `<b>3 · emit + roll back</b> — yielded ${it.n_emitted} token${it.n_emitted === 1 ? '' : 's'}` +
+      (it.hit_stop ? ' then hit a stop token (not emitted)' : '') +
+      `; both KV caches truncate away the rejected suffix: <code>${tr || '—'}</code>.`;
+    detailBody.appendChild(p3);
+
+    const timing = el('div');
+    const mkbar = (lab, ms, maxMs, color) => {
+      const row = el('div', 'sp-timing');
+      row.appendChild(el('span', 'lab', lab));
+      const track = el('div', 'bar-track');
+      const fill = el('div', 'bar-fill');
+      fill.style.width = (ms / maxMs * 100) + '%';
+      fill.style.background = `color-mix(in srgb, ${color} 55%, var(--surface))`;
+      track.appendChild(fill);
+      row.appendChild(track);
+      row.appendChild(el('span', 'val', ms + ' ms'));
+      return row;
+    };
+    const maxMs = Math.max(it.draft_ms, it.main_ms, 1);
+    timing.appendChild(mkbar(`draft ×${it.draft_tokens.length} fwds`, it.draft_ms, maxMs, 'var(--sB)'));
+    timing.appendChild(mkbar('main ×1 fwd', it.main_ms, maxMs, 'var(--sA)'));
+    detailBody.appendChild(timing);
+
+    /* cumulative output up to this iteration */
+    outChips.innerHTML = '';
+    for (let k = 0; k <= i; k++) {
+      const itk = ITS[k];
+      const all = itk.draft_tokens.slice(0, itk.accepted).concat(itk.tail !== null ? [itk.tail] : []);
+      const pcs = itk.draft_pieces.slice(0, itk.accepted).concat(itk.tail !== null ? [itk.tail_piece] : []);
+      for (let j = 0; j < itk.n_emitted; j++) {
+        const c = tokChip(pcs[j], undefined, j < itk.accepted ? 'acc' : 'tailtok');
+        if (k === i) c.style.outline = '2px solid var(--ink)';
+        outChips.appendChild(c);
+      }
+    }
+    finLine.innerHTML = '';
+    if (i === ITS.length - 1) {
+      finLine.appendChild(el('span', 'fin-chip ' + TS.emitted.finish, FIN_GLYPH[TS.emitted.finish] || TS.emitted.finish));
+      finLine.appendChild(mkstat('tokens emitted', String(TS.emitted.ids.length)));
+    }
+  }
+  transport.set(0);
+}
+
+/* =============== weights view =============== */
+
+function initWeights() {
+  const body = $('wt-body');
+  if (!TW) {
+    body.appendChild(missingPanel('.venv/bin/python viz/trace_weights.py',
+      'Instant — it only parses safetensors headers, no tensor data.'));
+    return;
+  }
+  const CAT_META = [
+    ['embedding', 'var(--sA)', 'Token embedding'],
+    ['attention', 'var(--sB)', 'Attention (W_q/W_k/W_v/out_proj)'],
+    ['ffn', 'var(--sC)', 'Feed-forward (SwiGLU)'],
+    ['norms', 'var(--axis)', 'RMSNorms (all of them)'],
+    ['lm_head', 'var(--sD)', 'LM head'],
+  ];
+  const fmtM = (n) => n >= 1e9 ? (n / 1e9).toFixed(2) + 'B' : (n / 1e6).toFixed(1) + 'M';
+  const fmtGiB = (b) => (b / 2 ** 30).toFixed(2) + ' GiB';
+  const mkstat = (label, value) => { const c = el('span', 'statchip'); c.appendChild(el('b', null, value)); c.appendChild(document.createTextNode(' ' + label)); return c; };
+
+  /* model picker */
+  const picker = el('div', 'seg');
+  const distPanel = el('section', 'panel');
+  distPanel.appendChild(el('h2', null, 'Where the parameters live'));
+  const head = el('div');
+  head.style.display = 'flex'; head.style.gap = '14px'; head.style.alignItems = 'center'; head.style.flexWrap = 'wrap';
+  head.appendChild(picker);
+  const facts = el('div', 'statgrid');
+  distPanel.appendChild(head);
+  distPanel.appendChild(facts);
+  const bar = el('div', 'wbar');
+  const wleg = el('div', 'wleg');
+  distPanel.append(bar, wleg);
+  const layerLine = el('p', 'panel-note');
+  distPanel.appendChild(layerLine);
+
+  const mapPanel = el('section', 'panel');
+  mapPanel.appendChild(el('h2', null, 'One block’s weights — checkpoint name → cantollm module'));
+  mapPanel.appendChild(el('p', 'panel-note')).innerHTML =
+    'The mapping <code>weights.py:load_weights_into_model</code> applies to every layer, with real shapes from the header. ' +
+    'Note the GQA asymmetry: K/V projections are a fraction of Q because groups share them.';
+  const mapTable = el('table', 'tz-table');
+  mapPanel.appendChild(mapTable);
+
+  const kvPanel = el('section', 'panel');
+  kvPanel.appendChild(el('h2', null, 'Weights vs KV cache — why Phase 4 (paged KV) exists'));
+  const kvBody = el('p', 'panel-note');
+  kvPanel.appendChild(kvBody);
+
+  const cmpPanel = el('section', 'panel');
+  cmpPanel.appendChild(el('h2', null, 'Every downloaded checkpoint'));
+  cmpPanel.appendChild(el('p', 'panel-note', 'The embedding’s share shrinks as the stack grows — and tying is a per-checkpoint fact, not a family-wide one.'));
+  const cmpTable = el('table', 'tz-table');
+  cmpPanel.appendChild(cmpTable);
+
+  body.append(distPanel, mapPanel, kvPanel, cmpPanel);
+
+  const BLOCK_ORDER = ['q_proj', 'k_proj', 'v_proj', 'o_proj', 'q_norm', 'k_norm', 'input_layernorm', 'post_attention', 'gate_proj', 'up_proj', 'down_proj'];
+  const orderKey = (hf) => BLOCK_ORDER.findIndex(k => hf.includes(k));
+
+  const pickBtns = {};
+  TW.order.forEach((size, i) => {
+    const b = el('button', i === 0 ? 'on' : '', 'Qwen3-' + size);
+    b.addEventListener('click', () => { Object.values(pickBtns).forEach(x => x.classList.remove('on')); b.classList.add('on'); render(size); });
+    pickBtns[size] = b;
+    picker.appendChild(b);
+  });
+
+  function render(size) {
+    const m = TW.models[size];
+    const total = m.total_params;
+
+    facts.innerHTML = '';
+    facts.appendChild(mkstat('parameters', fmtM(total)));
+    facts.appendChild(mkstat('on disk', fmtGiB(m.disk_bytes)));
+    facts.appendChild(mkstat('dtype', m.dtype));
+    facts.appendChild(mkstat('layers', String(m.arch.layers)));
+    facts.appendChild(mkstat('tensors', String(m.num_tensors)));
+    facts.appendChild(mkstat('lm_head', m.tied ? 'tied to embedding' : 'separate weights'));
+
+    bar.innerHTML = ''; wleg.innerHTML = '';
+    CAT_META.forEach(([key, color, label]) => {
+      const params = m.categories[key];
+      const pct = params / total * 100;
+      if (params > 0) {
+        const seg = el('div', 'wseg');
+        seg.style.width = pct + '%';
+        seg.style.background = `color-mix(in srgb, ${color} 60%, var(--surface))`;
+        tipify(seg, `${label}\n${fmtM(params)} params (${pct.toFixed(1)}%)`);
+        bar.appendChild(seg);
+      }
+      const item = el('span');
+      const sw = el('span', 'sw');
+      sw.style.background = `color-mix(in srgb, ${color} 60%, var(--surface))`;
+      sw.style.border = `1px solid ${color}`;
+      item.appendChild(sw);
+      item.appendChild(document.createTextNode(label + ' '));
+      item.appendChild(el('b', null, params > 0 ? `${fmtM(params)} (${pct.toFixed(1)}%)` : '0 — tied'));
+      wleg.appendChild(item);
+    });
+    layerLine.innerHTML = `${m.arch.layers} × <b>${fmtM(m.per_layer_params)}</b> per block + ` +
+      `<b>${fmtM(m.categories.embedding)}</b> embedding` +
+      (m.categories.lm_head ? ` + <b>${fmtM(m.categories.lm_head)}</b> lm_head` : ' (lm_head reuses it)') +
+      ` = ${fmtM(total)} · derived from shapes alone: dim ${m.arch.dim}, ${m.arch.heads} heads / ${m.arch.groups} KV groups × head_dim ${m.arch.head_dim}, FF ${m.arch.expanded_dim}, vocab ${m.arch.vocab.toLocaleString()}`;
+
+    mapTable.innerHTML = '';
+    const thead = el('tr');
+    ['checkpoint tensor (layer 0)', 'cantollm target', 'shape', 'params'].forEach(h => thead.appendChild(el('th', null, h)));
+    mapTable.appendChild(thead);
+    m.block_tensors.slice().sort((a, b) => orderKey(a.hf) - orderKey(b.hf)).forEach(t => {
+      const tr = el('tr');
+      tr.appendChild(el('td', 'mono', t.hf.replace('model.layers.0.', '…')));
+      tr.appendChild(el('td', 'mono', t.canto));
+      tr.appendChild(el('td', 'num', '(' + t.shape.join(', ') + ')'));
+      tr.appendChild(el('td', 'num', t.params.toLocaleString()));
+      mapTable.appendChild(tr);
+    });
+
+    const kvTok = m.kv_bytes_per_token;
+    const weightBytes = m.total_params * 2;
+    const maxCtx = 40960;
+    kvBody.innerHTML = `Per token of context this model banks <b>${(kvTok / 1024).toFixed(0)} KB</b> of K/V ` +
+      `(2 × ${m.arch.layers} layers × ${m.arch.groups} groups × ${m.arch.head_dim} dims × 2 bytes). ` +
+      `At <b>${m.kv_crossover_tokens.toLocaleString()} tokens</b> the KV cache equals the entire checkpoint (${fmtGiB(weightBytes)}) — ` +
+      `and one single full-context request (${maxCtx.toLocaleString()} tokens) would need <b>${fmtGiB(kvTok * maxCtx)}</b> of KV. ` +
+      `That arithmetic is why the contiguous grow-by-cat cache gives way to a paged, block-allocated pool in Phase 4.`;
+  }
+
+  cmpTable.innerHTML = '';
+  const chead = el('tr');
+  ['model', 'params', 'layers', 'dim', 'embedding share', 'lm_head', 'KB of KV / token', 'disk'].forEach(h => chead.appendChild(el('th', null, h)));
+  cmpTable.appendChild(chead);
+  TW.order.forEach(size => {
+    const m = TW.models[size];
+    const tr = el('tr');
+    tr.appendChild(el('td', 'mono', 'Qwen3-' + size));
+    tr.appendChild(el('td', 'num', fmtM(m.total_params)));
+    tr.appendChild(el('td', 'num', String(m.arch.layers)));
+    tr.appendChild(el('td', 'num', String(m.arch.dim)));
+    tr.appendChild(el('td', 'num', (m.categories.embedding / m.total_params * 100).toFixed(1) + '%'));
+    const tied = el('td', null);
+    tied.appendChild(m.tied ? el('span', 'yes-mark', '✓ tied') : el('span', 'no', 'separate'));
+    tr.appendChild(tied);
+    tr.appendChild(el('td', 'num', (m.kv_bytes_per_token / 1024).toFixed(0)));
+    tr.appendChild(el('td', 'num', fmtGiB(m.disk_bytes)));
+    cmpTable.appendChild(tr);
+  });
+
+  render(TW.order[0]);
+}
+
+/* =============== token flow view =============== */
+
+function initTokenflow() {
+  const body = $('tf-body');
+  if (!TK) {
+    body.appendChild(missingPanel('.venv/bin/python viz/trace_forward.py',
+      'One harness run produces both the model-forward and token-flow traces.'));
+    return;
+  }
+  const ev = TK.events;
+
+  /* transport over token index; position -1 (before first token) not needed — start at 0 */
+  const transport = makeTransport({
+    max: ev.length - 1,
+    labelFn: (i) => `token ${i + 1} / ${ev.length}`,
+    onSet: renderCursor,
+    playMs: 45,
+    hint: 'to replay',
+  });
+  activeTransports['tokenflow'] = transport;
+
+  /* --- request panel --- */
+  const reqPanel = el('section', 'panel');
+  reqPanel.appendChild(el('h2', null, '1 · Request in'));
+  reqPanel.appendChild(el('p', 'panel-note', 'An Anthropic-style messages array arrives at the API; sampling params + max_tokens ride along.'));
+  const pre = el('pre', 'jsonbox', JSON.stringify({ messages: TK.request.messages, max_tokens: TK.request.max_tokens, temperature: 0 }, null, 2));
+  reqPanel.appendChild(pre);
+
+  /* --- chatml panel --- */
+  const chatPanel = el('section', 'panel');
+  chatPanel.appendChild(el('h2', null, '2 · ChatML template'));
+  chatPanel.appendChild(el('p', 'panel-note', 'encode_conversation() builds one string; special tokens (highlighted) are matched by regex and mapped straight to their ids — never BPE-split.'));
+  const chat = el('div', 'chatml');
+  String(TK.request.chatml_text || '').split(/(<\|[^>]+?\|>|<think>|<\/think>)/).forEach(part => {
+    if (!part) return;
+    if (/^<\|[^>]+?\|>$|^<think>$|^<\/think>$/.test(part)) chat.appendChild(el('span', 'sp', part));
+    else chat.appendChild(document.createTextNode(part));
+  });
+  chatPanel.appendChild(chat);
+
+  /* --- prompt tokens panel --- */
+  const promptPanel = el('section', 'panel');
+  promptPanel.appendChild(el('h2', null, `3 · Prompt tokens (${TK.request.prompt.ids.length})`));
+  promptPanel.appendChild(el('p', 'panel-note', 'Tokenized API-side on a ThreadPoolExecutor, then wrapped into an InferenceRequest.'));
+  const ptoks = el('div', 'tokline');
+  TK.request.prompt.ids.forEach((id, j) => {
+    const piece = TK.request.prompt.pieces[j];
+    ptoks.appendChild(tokChip(piece, id, /^<\|.*\|>$|^<\/?think>$/.test(piece) ? 'special' : null));
+  });
+  promptPanel.appendChild(ptoks);
+  const reqMeta = el('div', 'statgrid');
+  const mkstat = (label, value) => { const c = el('span', 'statchip'); c.appendChild(el('b', null, value)); c.appendChild(document.createTextNode(' ' + label)); return c; };
+  reqMeta.appendChild(mkstat('request_id', TK.request.request_id.slice(0, 8) + '…'));
+  reqMeta.appendChild(mkstat('max_tokens', String(TK.request.max_tokens)));
+  reqMeta.appendChild(mkstat('stop_token_ids', TK.request.stop_token_ids.join(', ')));
+  reqMeta.appendChild(mkstat('sampling', TK.request.sampling));
+  promptPanel.appendChild(reqMeta);
+
+  /* --- engine panel --- */
+  const engPanel = el('section', 'panel');
+  engPanel.appendChild(el('h2', null, '4 · Engine hop — two threads, one queue'));
+  engPanel.appendChild(el('p', 'panel-note')).innerHTML =
+    `<code>SequentialEngine.submit()</code> builds a <code>Sequence</code> with a fresh KVCache and runs ` +
+    `<code>backend.generate()</code> on a worker thread (id <code>${TK.engine.worker_thread}</code>). Each token becomes a ` +
+    `<code>TokenEvent</code> pushed through a bounded <code>asyncio.Queue(${TK.engine.queue_maxsize})</code> — the put blocks the worker ` +
+    `until the consumer (event loop thread, id <code>${TK.engine.consumer_thread}</code>) drains: real backpressure. ` +
+    `A TokenEvent carries exactly one of <code>token_id</code> / <code>finish_reason</code> / <code>error</code>.`;
+
+  /* --- timeline panel --- */
+  const tlPanel = el('section', 'panel');
+  tlPanel.appendChild(el('h2', null, `5 · Token stream (${ev.length} TokenEvents)`));
+  tlPanel.appendChild(el('p', 'panel-note', 'One cell per generated token, in arrival order. phase.py buckets each into thinking or text; the StreamingDecoder turns ids into UTF-8-stable chunks. Click a cell to jump; hover for detail.'));
+  const ttl = el('div', 'ttl');
+  const cells = [];
+  ev.forEach((e) => {
+    const c = el('button', 'ttl-cell ' + e.phase + (e.marker ? ' marker' : '') + (e.buffered ? ' buffered' : ''));
+    tipify(c, `#${e.idx}  token ${e.token_id}\n${JSON.stringify(e.piece)}\n` +
+      `${e.marker ? 'phase boundary: ' + e.marker + '\n' : ''}phase ${e.phase} · t=${e.t_ms}ms` +
+      (e.buffered ? '\nbuffered (no stable text yet)' : ''));
+    c.addEventListener('click', () => transport.set(e.idx));
+    cells.push(c);
+    ttl.appendChild(c);
+  });
+  tlPanel.appendChild(ttl);
+  const tleg = el('div', 'legend');
+  const legCell = (cls, label) => {
+    const w = el('span'); w.style.display = 'inline-flex'; w.style.alignItems = 'center'; w.style.gap = '5px';
+    w.appendChild(el('span', 'ttl-cell ' + cls));
+    w.appendChild(el('span', null, label));
+    return w;
+  };
+  tleg.append(
+    legCell('thinking', 'thinking token'),
+    legCell('text', 'visible-text token'),
+    legCell('thinking marker', '<think> / </think> boundary'),
+    legCell('thinking buffered', 'buffered by IncrementalDecoder (no stable UTF-8 yet)'),
+  );
+  tlPanel.appendChild(tleg);
+
+  /* --- decoded output panel --- */
+  const outPanel = el('section', 'panel');
+  outPanel.appendChild(el('h2', null, '6 · Decoded stream — what the client sees'));
+  const outNote = el('p', 'panel-note');
+  outPanel.appendChild(outNote);
+  outPanel.appendChild(el('div', 'pane-title', 'thinking (reasoning_content / thinking block)'));
+  const thinkPane = el('div', 'textpane thinkpane');
+  outPanel.appendChild(thinkPane);
+  outPanel.appendChild(el('div', 'pane-title', 'visible text (content)'));
+  const speakPane = el('div', 'textpane speakpane');
+  outPanel.appendChild(speakPane);
+  const finLine = el('div', 'statgrid');
+  outPanel.appendChild(finLine);
+
+  body.append(reqPanel, chatPanel, promptPanel, engPanel, transport.root, tlPanel, outPanel);
+
+  /* cumulative text prefix sums for fast scrubbing */
+  const thinkPrefix = [], speakPrefix = [];
+  let th = '', sp = '';
+  ev.forEach((e) => {
+    if (e.emitted_text) { if (e.phase === 'thinking') th += e.emitted_text; else sp += e.emitted_text; }
+    thinkPrefix.push(th); speakPrefix.push(sp);
+  });
+
+  function renderCursor(i) {
+    cells.forEach((c, j) => {
+      c.classList.toggle('future', j > i);
+      c.classList.toggle('cursor', j === i);
+    });
+    const e = ev[i];
+    const atEnd = i === ev.length - 1;
+    thinkPane.textContent = thinkPrefix[i];
+    speakPane.textContent = speakPrefix[i] + (atEnd && TK.flush_text ? TK.flush_text : '');
+    if (!atEnd) (e.phase === 'thinking' ? thinkPane : speakPane).appendChild(el('span', 'cursor-caret'));
+    outNote.textContent = atEnd
+      ? 'End of stream. The terminal TokenEvent carries the finish_reason; DecodeState kept the token counts for the API usage block.'
+      : `t = ${e.t_ms}ms · replaying — ${i + 1} of ${ev.length} tokens`;
+    finLine.innerHTML = '';
+    if (atEnd) {
+      const fin = el('span', 'fin-chip ' + TK.finish.finish_reason, FIN_GLYPH[TK.finish.finish_reason] || TK.finish.finish_reason);
+      finLine.appendChild(fin);
+      finLine.appendChild(mkstat('thinking tokens', String(TK.finish.counts.thinking)));
+      finLine.appendChild(mkstat('text tokens', String(TK.finish.counts.text)));
+      finLine.appendChild(mkstat('ttft', TK.timing.ttft_ms + ' ms'));
+      finLine.appendChild(mkstat('total', (TK.timing.total_ms / 1000).toFixed(1) + ' s'));
+    }
+  }
+
+  transport.set(ev.length - 1); // land on the finished stream; scrub back to replay
+  transport.stop();
+}
+
+/* =============== tokenizer playground view =============== */
+
+const TOK_API = 'http://127.0.0.1:8765';
+const TZ_DEFAULT_TEXT = 'Tokenize me! The perambulating axolotl weighs 42.7 kg 👍🏽\n' +
+  "cantoLLM's tokenizer maps <|im_end|> straight to 151645 — added tokens are matched whole, never split.";
+
+function initTokenizer() {
+  const body = $('tz-body');
+  body.innerHTML = '';
+  fetch(TOK_API + '/api/meta')
+    .then(r => { if (!r.ok) throw new Error('bad status'); return r.json(); })
+    .then(meta => buildTokenizerUI(body, meta))
+    .catch(() => {
+      const m = el('div', 'missing');
+      m.appendChild(el('div', null, 'The tokenizer server isn’t running. Start it from the repo root:'));
+      m.appendChild(el('code', null, '.venv/bin/python viz/tokenizer_server.py'));
+      m.appendChild(el('div', null, 'It loads only tokenizer.json (starts instantly) and serves a local tokenize API on port 8765 — the real Rust tokenizer, no reimplementation.'));
+      const retry = el('button', 'tz-ins', 'Retry');
+      retry.style.marginTop = '10px';
+      retry.addEventListener('click', initTokenizer);
+      m.appendChild(retry);
+      body.appendChild(m);
+    });
+}
+
+function buildTokenizerUI(body, meta) {
+  body.innerHTML = '';
+  const specialIds = new Set(meta.specials.map(s => s.id));
+
+  /* --- input panel --- */
+  const inPanel = el('section', 'panel');
+  inPanel.appendChild(el('h2', null, 'Input'));
+  inPanel.appendChild(el('p', 'panel-note', 'Tokenized live through Qwen3Tokenizer.encode() on every keystroke. ' +
+    'Added tokens (like <|im_end|>) are matched whole before BPE runs; everything else is pre-split by regex, then byte-level BPE-merged.'));
+  const ta = document.createElement('textarea');
+  ta.className = 'tz-input';
+  ta.value = TZ_DEFAULT_TEXT;
+  ta.spellcheck = false;
+  inPanel.appendChild(ta);
+  const opts = el('div', 'tz-opts');
+  const wrapLab = el('label');
+  const wrapCb = document.createElement('input');
+  wrapCb.type = 'checkbox';
+  wrapLab.append(wrapCb, document.createTextNode('wrap in the ChatML chat template (user turn + assistant generation prompt)'));
+  const status = el('span', 'tz-status', 'live · real tokenizer');
+  opts.append(wrapLab, status);
+  inPanel.appendChild(opts);
+
+  /* --- output panel --- */
+  const outPanel = el('section', 'panel');
+  outPanel.appendChild(el('h2', null, 'Tokens'));
+  const statLine = el('div', 'statgrid');
+  const chips = el('div', 'tokline');
+  outPanel.append(statLine, chips);
+
+  /* --- specials panel --- */
+  const spPanel = el('section', 'panel');
+  spPanel.appendChild(el('h2', null, `Special tokens (${meta.specials.length} added tokens · vocab ${meta.vocab_size.toLocaleString()})`));
+  spPanel.appendChild(el('p', 'panel-note')).innerHTML =
+    'The vocab’s added tokens, ids <code>151643–151668</code>. BPE merges can never <em>produce</em> one of these — ' +
+    'instead the tokenizer’s added-vocabulary matcher extracts them from input text before BPE runs, so typing any of them ' +
+    'yields its single id. “project map” marks the ones in cantoLLM’s <code>_SPECIAL_TOKENS</code> (used for the ChatML split ' +
+    'and the single-token quick path); the load-bearing ones are eos/pad (<code>stop_token_ids</code> = ' +
+    `{${meta.stop_token_ids.join(', ')}}) and the think markers. “hf special” tokens are hidden by ` +
+    '<code>skip_special_tokens=True</code> decodes (cantoLLM decodes with <code>False</code>, so they round-trip).';
+  const table = el('table', 'tz-table');
+  const thead = el('tr');
+  ['id', 'token', 'project map', 'hf special', 'notes', ''].forEach(h => thead.appendChild(el('th', null, h)));
+  table.appendChild(thead);
+  for (const s of meta.specials) {
+    const tr = el('tr');
+    tr.appendChild(el('td', 'num', String(s.id)));
+    tr.appendChild(el('td', 'mono', s.token));
+    const rec = el('td', null);
+    rec.appendChild(s.recognized ? el('span', 'yes-mark', '✓') : el('span', 'no', '—'));
+    tr.appendChild(rec);
+    const hfs = el('td', null);
+    hfs.appendChild(s.hf_special ? el('span', 'yes-mark', '✓') : el('span', 'no', '—'));
+    tr.appendChild(hfs);
+    const note = el('td', 'note', s.note);
+    tr.appendChild(note);
+    const act = el('td');
+    const ins = el('button', 'tz-ins', 'insert');
+    ins.addEventListener('click', () => { ta.value += s.token; retokenize(); ta.focus(); });
+    act.appendChild(ins);
+    tr.appendChild(act);
+    table.appendChild(tr);
+  }
+  spPanel.appendChild(table);
+
+  body.append(inPanel, outPanel, spPanel);
+
+  /* --- live tokenize --- */
+  let timer = null, inflight = null;
+  function retokenize() {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      if (inflight) inflight.abort();
+      inflight = new AbortController();
+      try {
+        const r = await fetch(TOK_API + '/api/tokenize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: ta.value, chat_wrapped: wrapCb.checked }),
+          signal: inflight.signal,
+        });
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        render(d);
+        status.textContent = 'live · real tokenizer';
+        status.classList.remove('err');
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        status.textContent = 'server unreachable — restart it and retry';
+        status.classList.add('err');
+      }
+    }, 120);
+  }
+
+  function render(d) {
+    chips.innerHTML = '';
+    d.ids.forEach((id, j) => {
+      const c = tokChip(d.pieces[j], id, specialIds.has(id) ? 'special' : null);
+      tipify(c, `token ${id}\npiece ${JSON.stringify(d.pieces[j])}\nvocab entry ${JSON.stringify(d.vocab_tokens[j])}` +
+        (specialIds.has(id) ? '\nadded/special token — matched whole, never merged' : ''));
+      chips.appendChild(c);
+    });
+    if (!d.ids.length) chips.appendChild(el('span', 'queue-empty', 'nothing to tokenize'));
+    statLine.innerHTML = '';
+    const text = ta.value;
+    const codepoints = [...text].length;
+    const bytes = new TextEncoder().encode(text).length;
+    const mkstat = (label, value) => { const c = el('span', 'statchip'); c.appendChild(el('b', null, value)); c.appendChild(document.createTextNode(' ' + label)); return c; };
+    statLine.appendChild(mkstat('tokens', String(d.ids.length)));
+    statLine.appendChild(mkstat('characters', String(codepoints)));
+    statLine.appendChild(mkstat('utf-8 bytes', String(bytes)));
+    if (d.ids.length) statLine.appendChild(mkstat('bytes / token', (bytes / d.ids.length).toFixed(2)));
+    if (wrapCb.checked) statLine.appendChild(mkstat('(includes template tokens)', ''));
+  }
+
+  ta.addEventListener('input', retokenize);
+  wrapCb.addEventListener('change', retokenize);
+  retokenize();
+}
+
+/* =============== continuous batching view (ported cb-debugger) =============== */
+
+function initBatching() {
+  const body = $('cb-body');
+  if (!CB) {
+    body.appendChild(missingPanel('.venv/bin/python viz/trace_cb.py',
+      'Runs the toy-model scheduler scenario in a couple of seconds.'));
+    return;
+  }
+  const CFG = CB.config, REQ = CB.requests, STEPS = CB.steps;
+  const IDS = Object.keys(REQ);
+  const COLOR = { A: 'var(--sA)', B: 'var(--sB)', C: 'var(--sC)', D: 'var(--sD)' };
+  const wash = (id, pct) => `color-mix(in srgb, ${COLOR[id]} ${pct}%, var(--surface))`;
+  $('cb-cfgline').textContent = `a ${CFG.max_batch}×${CFG.max_seq_len}`;
+
+  function chip(id) {
+    const c = el('span', 'chip');
+    const s = el('span', 'swatch');
+    s.style.background = COLOR[id];
+    c.appendChild(s);
+    c.appendChild(document.createTextNode(id));
+    return c;
+  }
+
+  /* skeleton */
+  const stages = el('div', 'stages');
+  [['1 promote', 'queue → free slots'], ['2 plan', 'water-fill the token budget'], ['3 forward', 'one batched pass'],
+   ['4 sample', 'greedy, per row'], ['5 finalize', 'emit / finish / free slot']].forEach(([b, rest], i, all) => {
+    const s = el('span', 'stage');
+    s.appendChild(el('b', null, b + ' '));
+    s.appendChild(document.createTextNode(rest));
+    stages.appendChild(s);
+    if (i < all.length - 1) stages.appendChild(el('span', 'stage-arrow', '→'));
+  });
+
+  const mkPanel = (title, note) => {
+    const p = el('section', 'panel');
+    p.appendChild(el('h2', null, title));
+    if (note) { const n = el('p', 'panel-note'); n.innerHTML = note; p.appendChild(n); }
+    return p;
+  };
+  const ganttPanel = mkPanel('Timeline', 'One column per <code>step()</code> call. Click a column to jump there.');
+  const gantt = el('div', 'gantt'); const ganttLegend = el('div', 'legend');
+  ganttPanel.append(gantt, ganttLegend);
+
+  const planPanel = mkPanel('Plan — water-fill', 'Each active row asks for tokens (prefill: rest of prompt, decode: 1). The budget is poured smallest-ask first.');
+  const queueBox = el('div'); const waterfill = el('div');
+  planPanel.append(queueBox, waterfill);
+
+  const fwdPanel = mkPanel('Forward — batched input', 'Rows left-aligned into one <code>(batch, num_new_max)</code> tensor; <code>·</code> is padding. Each row carries <code>(slot, start_pos, num_new)</code>.');
+  const matrixBox = el('div');
+  fwdPanel.appendChild(matrixBox);
+
+  const samplePanel = mkPanel('Sample — emit or discard', 'One greedy token per row. Rows still mid-prefill discard theirs; finished rows free their slot.');
+  const sampleBox = el('div');
+  samplePanel.appendChild(sampleBox);
+
+  const cols = el('div', 'cols');
+  cols.append(planPanel, fwdPanel, samplePanel);
+
+  const kvPanel = mkPanel('Padded KV cache pool', '');
+  const kvNote = kvPanel.querySelector('.panel-note') || kvPanel.appendChild(el('p', 'panel-note'));
+  const kvScroll = el('div', 'kv-scroll'); const kvGrid = el('div', 'kv-grid');
+  kvScroll.appendChild(kvGrid);
+  const kvLegend = el('div', 'legend');
+  kvPanel.append(kvScroll, kvLegend);
+
+  const streamPanel = mkPanel('Output streams', 'What each client has received so far. Dotted tokens are the prompt (never echoed back — shown for orientation).');
+  const streams = el('div');
+  streamPanel.appendChild(streams);
+
+  const foot = el('footer');
+  foot.innerHTML = 'Generated by <code>viz/trace_cb.py</code>: imports the real <code>ContinuousBatchingScheduler</code>, ' +
+    '<code>ToyModel</code> (seed 23) and <code>PaddedKVCache</code>, wraps <code>_plan_step</code> / <code>_build_input_ids</code> / ' +
+    '<code>greedy_sample</code> at runtime to record each step — no prototype source was modified. ' +
+    `Request A’s stop token (${REQ.A.stop_tokens[0]}) was picked from a dry run so the trace shows an <code>end_turn</code> finish; B/C/D run to <code>max_tokens</code>.`;
+
+  const transport = makeTransport({
+    max: STEPS.length - 1,
+    labelFn: (i) => `step ${i} / ${STEPS.length - 1}`,
+    onSet: setStep,
+    playMs: 1400,
+  });
+  activeTransports['batching'] = transport;
+  body.append(transport.root, stages, ganttPanel, cols, kvPanel, streamPanel, foot);
+
+  /* ---------- derived state ---------- */
+  function ganttState(rid, s) {
+    const st = STEPS[s];
+    const row = st.rows.find((r) => r.id === rid);
+    if (row) {
+      const out = st.outcomes.find((o) => o.id === rid);
+      return { state: row.phase, finish: out ? out.finish_reason : null };
+    }
+    if (st.queue_before.some((q) => q.id === rid) || st.queue_after.some((q) => q.id === rid))
+      return { state: 'queued', finish: null };
+    if (REQ[rid].arrival_step > s) return { state: 'pre', finish: null };
+    return { state: 'done', finish: null };
+  }
+
+  function buildKv(stepIdx) {
+    const slots = Array.from({ length: CFG.max_batch }, () => Array(CFG.max_seq_len).fill(null));
+    const owner = Array(CFG.max_batch).fill(null);
+    for (let s = 0; s <= stepIdx; s++) {
+      const st = STEPS[s];
+      for (const r of st.rows) {
+        owner[r.slot] = r.id;
+        for (let i = 0; i < r.num_new; i++) {
+          const pos = r.start_pos + i;
+          slots[r.slot][pos] = {
+            owner: r.id,
+            token: r.input_tokens[i],
+            step: s,
+            kind: pos < REQ[r.id].prompt_len ? 'prompt' : 'output',
+            stale: false,
+            fresh: s === stepIdx,
+          };
+        }
+      }
+      for (const f of st.freed_slots) {
+        owner[f.slot] = null;
+        for (const c of slots[f.slot]) if (c) c.stale = true;
+      }
+    }
+    return { slots, owner };
+  }
+
+  function emittedUpTo(rid, stepIdx) {
+    const toks = [];
+    let finish = null;
+    for (let s = 0; s <= stepIdx; s++) {
+      for (const o of STEPS[s].outcomes) {
+        if (o.id === rid && o.emitted) {
+          toks.push(o.sampled);
+          if (o.finish_reason) finish = o.finish_reason;
+        }
+      }
+    }
+    return { toks, finish };
+  }
+
+  /* ---------- panels ---------- */
+  function renderGantt(cur) {
+    gantt.innerHTML = '';
+    gantt.style.gridTemplateColumns = `56px repeat(${STEPS.length}, 44px)`;
+    gantt.appendChild(el('div'));
+    for (let s = 0; s < STEPS.length; s++) gantt.appendChild(el('div', 'gantt-head', String(s)));
+    for (const rid of IDS) {
+      const lab = el('div', 'gantt-label');
+      lab.appendChild(chip(rid));
+      gantt.appendChild(lab);
+      for (let s = 0; s < STEPS.length; s++) {
+        const btn = el('button', 'gantt-col' + (s === cur ? ' current' : ''));
+        btn.setAttribute('aria-label', `Jump to step ${s}`);
+        btn.addEventListener('click', () => transport.set(s));
+        const gs = ganttState(rid, s);
+        const cell = el('div', 'gantt-cell ' + gs.state);
+        if (gs.state === 'prefill') { cell.style.background = wash(rid, 30); cell.textContent = 'pre'; }
+        if (gs.state === 'decode') { cell.style.background = wash(rid, 62); cell.textContent = 'dec'; }
+        if (gs.state === 'queued') cell.textContent = 'q';
+        if (gs.finish) {
+          const m = el('span', 'fin-mark', gs.finish === 'end_turn' ? '✓' : '⏹');
+          m.style.color = gs.finish === 'end_turn' ? 'var(--good-text)' : 'var(--ink)';
+          cell.appendChild(m);
+        }
+        btn.appendChild(cell);
+        gantt.appendChild(btn);
+      }
+    }
+    ganttLegend.innerHTML = '';
+    const items = [
+      ['q', 'queued — waiting for a slot', 'gantt-cell queued'],
+      ['pre', 'prefill (chunked)', null],
+      ['dec', 'decode', null],
+      ['✓', 'end_turn (stop token)', null],
+      ['⏹', 'max_tokens', null],
+    ];
+    for (const [txt, desc, cls] of items) {
+      const wrapEl = el('span');
+      wrapEl.style.display = 'inline-flex'; wrapEl.style.alignItems = 'center'; wrapEl.style.gap = '5px';
+      const sample = el('span', cls || 'gantt-cell', txt);
+      if (txt === 'pre') sample.style.background = wash('A', 30);
+      if (txt === 'dec') sample.style.background = wash('A', 62);
+      if (txt === '✓') { sample.style.border = 'none'; sample.style.background = 'transparent'; sample.style.color = 'var(--good-text)'; }
+      if (txt === '⏹') { sample.style.border = 'none'; sample.style.background = 'transparent'; }
+      wrapEl.appendChild(sample);
+      wrapEl.appendChild(el('span', null, desc));
+      ganttLegend.appendChild(wrapEl);
+    }
+  }
+
+  function renderQueue(st) {
+    queueBox.innerHTML = '';
+    const line = el('div', 'queue-line');
+    line.appendChild(el('span', null, 'queue:'));
+    if (st.queue_after.length === 0 && st.admitted.length === 0) {
+      line.appendChild(el('span', 'queue-empty', 'empty'));
+    }
+    for (const q of st.queue_after) {
+      const c = chip(q.id);
+      c.appendChild(el('span', null, ` waiting (${q.prompt_len}-tok prompt, ${CFG.max_batch} slots busy)`));
+      line.appendChild(c);
+    }
+    for (const a of st.admitted) {
+      const c = chip(a.id);
+      c.appendChild(el('span', null, ` → admitted to slot ${a.slot}`));
+      line.appendChild(c);
+    }
+    queueBox.appendChild(line);
+  }
+
+  function renderWaterfill(st) {
+    waterfill.innerHTML = '';
+    const used = st.rows.reduce((a, r) => a + r.num_new, 0);
+    waterfill.appendChild(el('div', 'wf-budget', `budget ${st.budget} tokens/step · used ${used}`));
+    const maxReq = Math.max(1, ...st.rows.map((r) => r.requested));
+    for (const r of st.rows) {
+      const rowEl = el('div', 'wf-row');
+      const lab = el('div');
+      lab.appendChild(chip(r.id));
+      lab.appendChild(el('div', 'phase-tag', r.phase));
+      rowEl.appendChild(lab);
+      const track = el('div', 'wf-track');
+      const capPct = (r.requested / maxReq) * 100;
+      const fillPct = (r.num_new / maxReq) * 100;
+      const fill = el('div', 'wf-fill');
+      fill.style.width = fillPct + '%';
+      fill.style.background = wash(r.id, 55);
+      fill.style.borderRight = `2px solid ${COLOR[r.id]}`;
+      track.appendChild(fill);
+      if (r.requested > r.num_new) {
+        const cap = el('div', 'wf-cap');
+        cap.style.left = capPct + '%';
+        track.appendChild(cap);
+      }
+      track.appendChild(el('div', 'wf-num', `${r.num_new} / ${r.requested} asked`));
+      rowEl.appendChild(track);
+      waterfill.appendChild(rowEl);
+    }
+  }
+
+  function renderMatrix(st) {
+    matrixBox.innerHTML = '';
+    const width = st.input_matrix[0] ? st.input_matrix[0].length : 0;
+    const t = el('table', 'matrix');
+    for (let b = 0; b < st.rows.length; b++) {
+      const r = st.rows[b];
+      const tr = el('tr');
+      tr.appendChild(el('th', null, `${r.id} row ${b}`));
+      for (let j = 0; j < width; j++) {
+        const isPad = j >= r.num_new;
+        const td = el('td', isPad ? 'pad' : null, isPad ? '·' : String(st.input_matrix[b][j]));
+        if (!isPad) {
+          td.style.background = wash(r.id, r.start_pos + j < REQ[r.id].prompt_len ? 26 : 55);
+          td.style.borderColor = COLOR[r.id];
+        }
+        tr.appendChild(td);
+      }
+      t.appendChild(tr);
+    }
+    matrixBox.appendChild(t);
+    for (const r of st.rows) {
+      matrixBox.appendChild(el('div', 'meta-line', `${r.id}: slot=${r.slot}  start_pos=${r.start_pos}  num_new=${r.num_new}`));
+    }
+  }
+
+  function renderSample(st) {
+    sampleBox.innerHTML = '';
+    for (const o of st.outcomes) {
+      const row = el('div', 'sample-row');
+      row.appendChild(chip(o.id));
+      const tok = el('span', 'tok', String(o.sampled));
+      tok.style.background = wash(o.id, o.emitted ? 55 : 12);
+      tok.style.borderColor = COLOR[o.id];
+      if (!o.emitted) tok.style.opacity = '0.55';
+      row.appendChild(tok);
+      if (o.emitted) row.appendChild(el('span', 'sample-verdict', '→ emitted to client'));
+      else row.appendChild(el('span', 'sample-verdict drop', '→ discarded (row still mid-prefill)'));
+      if (o.finish_reason) {
+        row.appendChild(el('span', 'fin-chip ' + o.finish_reason, FIN_GLYPH[o.finish_reason]));
+        row.appendChild(el('span', 'sample-verdict', `slot freed`));
+      }
+      sampleBox.appendChild(row);
+    }
+    if (st.outcomes.length === 0) sampleBox.appendChild(el('div', 'queue-empty', 'no rows this step'));
+  }
+
+  function renderKvPool(stepIdx) {
+    const { slots, owner } = buildKv(stepIdx);
+    kvGrid.innerHTML = '';
+    kvGrid.style.gridTemplateColumns = `92px repeat(${CFG.max_seq_len}, 34px)`;
+    kvGrid.appendChild(el('div'));
+    for (let p = 0; p < CFG.max_seq_len; p++) kvGrid.appendChild(el('div', 'kv-ruler', p % 5 === 0 ? String(p) : ''));
+    for (let s = 0; s < CFG.max_batch; s++) {
+      const lab = el('div', 'kv-slotlabel');
+      lab.appendChild(el('span', null, `slot ${s}`));
+      if (owner[s]) lab.appendChild(chip(owner[s]));
+      else lab.appendChild(el('span', 'queue-empty', 'free'));
+      kvGrid.appendChild(lab);
+      for (let p = 0; p < CFG.max_seq_len; p++) {
+        const c = slots[s][p];
+        const cell = el('div', 'kv-cell');
+        if (c) {
+          cell.textContent = String(c.token);
+          cell.style.background = wash(c.owner, c.kind === 'prompt' ? 26 : 55);
+          cell.style.borderColor = COLOR[c.owner];
+          if (c.stale) cell.classList.add('stale');
+          if (c.fresh && !c.stale) cell.classList.add('fresh');
+          tipify(cell, `slot ${s}, pos ${p}\nreq ${c.owner} · ${c.kind === 'prompt' ? 'prompt token' : 'generated token (fed back)'}\ntoken ${c.token} · K/V written at step ${c.step}${c.stale ? '\nSTALE — slot freed, awaiting overwrite' : ''}`);
+        }
+        kvGrid.appendChild(cell);
+      }
+    }
+    kvLegend.innerHTML = '';
+    const mk = (label, styler) => {
+      const wrapEl = el('span');
+      wrapEl.style.display = 'inline-flex'; wrapEl.style.alignItems = 'center'; wrapEl.style.gap = '5px';
+      const sample = el('div', 'kv-cell');
+      styler(sample);
+      wrapEl.appendChild(sample);
+      wrapEl.appendChild(el('span', null, label));
+      kvLegend.appendChild(wrapEl);
+    };
+    mk('prompt K/V', (c) => { c.style.background = wash('A', 26); c.style.borderColor = COLOR.A; });
+    mk('generated K/V', (c) => { c.style.background = wash('A', 55); c.style.borderColor = COLOR.A; });
+    mk('written this step', (c) => { c.classList.add('fresh'); });
+    mk('stale (slot freed; overwritten on reuse)', (c) => { c.style.background = wash('A', 40); c.style.borderColor = COLOR.A; c.classList.add('stale'); });
+  }
+
+  function renderStreams(stepIdx) {
+    streams.innerHTML = '';
+    for (const rid of IDS) {
+      const line = el('div', 'stream');
+      line.appendChild(chip(rid));
+      const gs = ganttState(rid, stepIdx);
+      if (gs.state === 'pre') {
+        line.appendChild(el('span', 'stream-state', `arrives at step ${REQ[rid].arrival_step}`));
+        streams.appendChild(line);
+        continue;
+      }
+      for (const p of REQ[rid].prompt) line.appendChild(el('span', 'tok prompt-tok', String(p)));
+      line.appendChild(el('span', 'stream-sep', '▸'));
+      const { toks, finish } = emittedUpTo(rid, stepIdx);
+      for (const tkn of toks) {
+        const t = el('span', 'tok', String(tkn));
+        t.style.background = wash(rid, 55);
+        t.style.borderColor = COLOR[rid];
+        line.appendChild(t);
+      }
+      if (finish) line.appendChild(el('span', 'fin-chip ' + finish, FIN_GLYPH[finish]));
+      else if (gs.state === 'queued') line.appendChild(el('span', 'stream-state', 'queued — waiting for a slot'));
+      else if (toks.length === 0) line.appendChild(el('span', 'stream-state', 'prefilling…'));
+      streams.appendChild(line);
+    }
+  }
+
+  function setStep(s) {
+    const st = STEPS[s];
+    renderGantt(s);
+    renderQueue(st);
+    renderWaterfill(st);
+    renderMatrix(st);
+    renderSample(st);
+    renderKvPool(s);
+    renderStreams(s);
+    const active = st.rows.length;
+    const freed = st.freed_slots.length;
+    kvNote.textContent =
+      `${CFG.max_batch} slots × ${CFG.max_seq_len} positions, preallocated once. ` +
+      `Each cell is one token’s K/V. ${active} row${active === 1 ? '' : 's'} wrote this step` +
+      (freed ? `; ${freed} slot${freed === 1 ? '' : 's'} freed (contents left in place — “stale” until the next occupant overwrites them).` : '.');
+  }
+
+  transport.set(0);
+}
+
+/* =============== CB wiring plan view =============== */
+
+function initWiring() {
+  const body = $('wr-body');
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 1100 640');
+  svg.setAttribute('class', 'anat-svg flow-svg');
+  const mk = (tag, attrs, text, parent) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (text !== undefined && text !== null) n.textContent = text;
+    (parent || svg).appendChild(n);
+    return n;
+  };
+  const defs = mk('defs', {});
+  for (const [id, color] of [['wr-arr', 'var(--ink2)'], ['wr-arrm', 'var(--muted)']]) {
+    const m = mk('marker', { id, viewBox: '0 0 10 10', refX: 8.5, refY: 5, markerWidth: 6.5, markerHeight: 6.5, orient: 'auto-start-reverse' }, null, defs);
+    mk('path', { d: 'M0,0 L10,5 L0,10 z', style: `fill:${color};stroke:none` }, null, m);
+  }
+  const edges = {};
+  const edge = (key, pts, opts) => {
+    opts = opts || {};
+    const p = mk('path', { d: 'M' + pts.map(pt => pt.join(',')).join(' L'), class: 'dge' + (opts.dash ? ' dash' : ''), 'marker-end': `url(#${opts.dash ? 'wr-arrm' : 'wr-arr'})` });
+    if (key) edges[key] = p;
+    return p;
+  };
+  const note = (x, y, t, anchor) => mk('text', { x, y, class: 'dgt note', style: `text-anchor:${anchor || 'middle'}` }, t);
+
+  // regions
+  mk('rect', { x: 20, y: 58, width: 292, height: 566, rx: 14, class: 'region-loop' });
+  mk('text', { x: 32, y: 76, class: 'dgt title' }, 'stays exactly as-is');
+  mk('rect', { x: 340, y: 58, width: 420, height: 566, rx: 14, class: 'region-build' });
+  mk('text', { x: 352, y: 76, class: 'dgt title' }, 'to build — phase 2');
+  mk('rect', { x: 788, y: 58, width: 292, height: 566, rx: 14, class: 'region-worker' });
+  mk('text', { x: 800, y: 76, class: 'dgt title' }, 'prototype — proven by 14 tests');
+
+  const nodes = {};
+  const nd = (key, cx, cy, w, h, lines, cls, badge) => {
+    const g = mk('g', { class: 'dg-node' });
+    mk('rect', { x: cx - w / 2, y: cy - h / 2, width: w, height: h, rx: 8, class: 'dgb ' + (cls || '') }, null, g);
+    lines.forEach((t, i) => mk('text', { x: cx, y: cy + (i - (lines.length - 1) / 2) * 14 + 4, class: 'dgt small' + (i > 0 ? ' mono' : '') }, t, g));
+    if (badge) {
+      const bw = badge.length * 8 + 10;
+      mk('rect', { x: cx - w / 2 + 2 - bw / 2, y: cy - h / 2 - 8, width: bw, height: 20, rx: 10, style: 'fill:var(--ink)' }, null, g);
+      mk('text', { x: cx - w / 2 + 2, y: cy - h / 2 + 6, class: 'stepnum', style: 'text-anchor:middle' }, badge, g);
+    }
+    nodes[key] = g;
+    return g;
+  };
+
+  // left: unchanged
+  nd('api', 166, 122, 258, 52, ['API surface + tokenize', 'routers · adapters · executor'], 'n-loop');
+  nd('registry', 166, 210, 200, 44, ['EngineRegistry'], 'n-loop');
+  nd('iface', 166, 292, 258, 52, ['InferenceEngine Protocol', 'submit · abort · start · shutdown'], 'n-loop');
+  nd('types', 166, 374, 258, 52, ['InferenceRequest · TokenEvent', 'the token-level contracts'], 'n-obj');
+  nd('seq', 166, 560, 268, 56, ['SequentialEngine + backends', 'Standard · Speculative stay here'], 'n-loop');
+  edge(null, [[166, 148], [166, 186]]);
+  edge(null, [[166, 232], [166, 264]]);
+  edge(null, [[166, 318], [166, 346]]);
+  edge('e-seq', [[66, 210], [10, 210], [10, 560], [28, 560]]);
+  note(38, 420, 'speculative models', 'start'); note(38, 434, 'register here', 'start');
+
+  // middle: to build
+  nd('cbe', 550, 122, 388, 56, ['ContinuousBatchingEngine', 'scheduler thread → per-request async queues'], 'n-exec', '5');
+  nd('sched', 550, 218, 372, 56, ['ContinuousBatchingScheduler ✍', 'promote → water-fill → forward → sample → finalize'], 'n-exec', '5');
+  nd('fwd', 550, 314, 388, 56, ['Qwen3.forward — per-row start_pos / num_new', 'RoPE offset gather · mask (B, num_new_max, S)'], 'n-exec', '2');
+  nd('attn', 550, 410, 388, 56, ['PaddedAttentionMethod', 'today: raise NotImplementedError'], 'n-exec', '1+4');
+  nd('pool', 550, 506, 388, 56, ['multi-layer PaddedKVCache pool', 'runtime-owned · Sequence.cache → slot handle'], 'n-exec', '3');
+  edge('e-c1', [[550, 150], [550, 190]]);
+  edge('e-c2', [[550, 246], [550, 286]]);
+  edge('e-c3', [[550, 342], [550, 382]]);
+  edge('e-c4', [[550, 438], [550, 478]]);
+  note(566, 172, 'bypasses InferenceBackend — hits the AttentionMethod seam directly', 'start');
+
+  // right: prototype
+  nd('prun', 934, 122, 244, 52, ['runner.run_to_completion', '+ run_with_late_arrivals'], 'n-worker');
+  nd('psched', 934, 218, 244, 56, ['ContinuousBatchingScheduler', 'water-fill · chunked prefill'], 'n-worker');
+  nd('ptoy', 934, 314, 244, 56, ['ToyModel.forward', '(input_ids, slot_metas, kv)'], 'n-worker');
+  nd('ppool', 934, 506, 244, 56, ['PaddedKVCache', 'single-layer slot pool'], 'n-worker');
+  edge('m-run', [[812, 122], [748, 122]], { dash: true });
+  edge('m-sched', [[812, 218], [740, 218]], { dash: true });
+  edge('m-toy', [[812, 314], [748, 314]], { dash: true });
+  edge('m-pool', [[812, 506], [748, 506]], { dash: true });
+  note(780, 106, 'morphs into', 'middle');
+
+  // left → middle wiring
+  edge('e-iface', [[295, 292], [322, 292], [322, 122], [352, 122]]);
+  note(322, 200, 'same', 'middle'); note(322, 214, 'submit()', 'middle');
+  note(934, 570, 'see the Continuous batching tab', 'middle');
+
+  const scroll = el('div', 'kv-scroll');
+  scroll.appendChild(svg);
+
+  /* ---------- stages ---------- */
+  const MIDDLE = ['cbe', 'sched', 'fwd', 'attn', 'pool'];
+  const cbStat = CB ? `${Object.keys(CB.requests).length} requests · ${CB.steps.length} steps, token-for-token vs SequentialReference` : 'token-for-token vs SequentialReference';
+  const para = (html) => { const p = el('p', 'panel-note'); p.innerHTML = html; return p; };
+  const bullets = (items) => {
+    const ul = document.createElement('ul');
+    ul.style.cssText = 'margin:6px 0 0; padding-left:20px; font-size:12.5px; color:var(--ink2); display:flex; flex-direction:column; gap:5px;';
+    items.forEach(h => { const li = document.createElement('li'); li.innerHTML = h; ul.appendChild(li); });
+    return ul;
+  };
+
+  const STAGES = [
+    { name: 'Today — two working worlds', on: [], morphs: [], cur: [], card: (c) => {
+      c.appendChild(para('Left: the sequential stack serving real traffic. Right: the prototype, pinned by 14 tests (' + cbStat +
+        ' — replay it on the <a href="#/batching">Continuous batching</a> tab). The amber column is what Phase 2 builds between them. ' +
+        'Prereqs already landed: the <code>AttentionMethod</code> seam (+ <code>EinsumAttentionMethod</code> reference and the ' +
+        '<code>PaddedAttentionMethod</code> stub), the logits-processor pipeline, the <code>Sequence</code> dataclass, and the tiny-Qwen3 test fixture.'));
+      c.appendChild(bullets([
+        '<b>The mapping</b> (continuous_batching.md): <code>PaddedKVCache</code> → runtime-owned multi-layer pool · <code>ToyModel.forward</code> → per-row <code>Qwen3.forward</code> + <code>PaddedAttentionMethod</code> · prototype scheduler → <code>ContinuousBatchingEngine</code> · <code>runner</code> → async multiplexer',
+        '<b>Author note (PLAN.md):</b> the scheduler, batched forward, and padded KV are hand-written by Nadia for learning — the prereq refactors and the engine/queue multiplexing (step 5) are fair game for assistants ✍',
+      ]));
+    }},
+    { name: '1 · widen the AttentionMethod seam', on: ['attn'], morphs: [], cur: ['attn'], card: (c) => {
+      c.appendChild(para('Settle the batched signature while the padded variant still stubs. The current protocol is shaped for one sequence:'));
+      c.appendChild(bullets([
+        '<code>build_mask(start_pos, seq_len, device)</code> returns a 2D <code>(seq_len, start_pos+seq_len)</code> mask — batching needs a per-row variant producing <b>(B, num_new_max, max_history_len)</b>, accounting for ragged <code>num_new</code> and per-row history (tricky point 4)',
+        '<code>forward_prefill/forward_decode</code> take one sequence’s Q/K/V — they need per-row slot metadata, the same <code>(slot_idx, start_pos, num_new)</code> triple the prototype passes around',
+      ]));
+    }},
+    { name: '2 · per-row Qwen3.forward + RoPE', on: ['attn', 'fwd'], morphs: ['m-toy'], cur: ['fwd'], card: (c) => {
+      c.appendChild(para('<code>Qwen3.forward(tokens, start_pos: int, kv_cache)</code> has a <b>scalar</b> start_pos, consumed by RoPE ' +
+        '(<code>apply_rotary_emb(offset=start_pos)</code>), <code>_validate_cache</code>, and mask construction (tricky point 3). All become per-row.'));
+      c.appendChild(bullets([
+        'RoPE is on the hot path: either a per-row Python loop or a <b>(B, num_new_max)</b> position gather over <code>freqs_cis</code>',
+        'The toy model dodges all of this with one head and a per-row loop — the real model has GQA (16 heads / 8 KV groups), QK-norm, and 28 layers',
+      ]));
+    }},
+    { name: '3 · runtime-owned KV pool', on: ['attn', 'fwd', 'pool'], morphs: ['m-toy', 'm-pool'], cur: ['pool'], card: (c) => {
+      c.appendChild(para('The KV cache shape is <b>the</b> load-bearing decision (tricky point 1): per-request grow-by-cat <code>KVCache</code> and a shared ' +
+        'slot-indexed pool can’t unify. Decision (endorsed by fable-review): <code>ModelRuntime</code> owns the pool, <code>Sequence.cache</code> becomes a slot handle — ' +
+        'because Phase 4’s paged cache is the <i>same shape</i> (a block table is also a handle into a runtime-owned pool). Design the seam once.'));
+      c.appendChild(bullets([
+        'Config switch: sequential runtimes keep handing out per-request <code>KVCache</code>s',
+        '<b>Memory is real now</b> (tricky point 9): 0.6B at max_batch=8 × 4096 ctx ≈ 3.8 GB of KV (fable-review corrected the note’s ~6 GB) — the model’s max_seq_len=40,960 is far too big to preallocate, so a separate per-sequence cap enters the config: two “max seq lens” coexist',
+      ]));
+    }},
+    { name: '4 · fill PaddedAttentionMethod', on: ['attn', 'fwd', 'pool'], morphs: ['m-toy', 'm-pool'], cur: ['attn'], card: (c) => {
+      c.appendChild(para('Replace the <code>NotImplementedError</code> with the real batched math (tricky point 5). The prototype’s per-row Python loop is the ' +
+        'simplest correctness path but devastating for perf on a real model — the padded path wants the vectorized batched einsum that ' +
+        '<code>EinsumAttentionMethod</code> mostly already has; the genuinely new bit is <b>per-row history slicing</b> against the slot pool.'));
+      c.appendChild(bullets([
+        'Validate against <code>EinsumAttentionMethod</code> on a single-row prefill before trusting batches',
+        'Tests at two layers (tricky point 10): keep the fast toy-model scheduler tests <i>and</i> add tiny-Qwen3 batched-vs-sequential token-for-token equivalence',
+      ]));
+    }},
+    { name: '5 · engine + async multiplexer', on: MIDDLE, morphs: ['m-toy', 'm-pool', 'm-sched', 'm-run'], cur: ['cbe', 'sched'], card: (c) => {
+      c.appendChild(para('The scheduler drops in behind a new <code>ContinuousBatchingEngine</code> — same <code>InferenceEngine</code> protocol, but it ' +
+        '<b>bypasses <code>InferenceBackend</code></b> (whose <code>generate(seq)</code> is one-driver-one-request by construction, tricky point 2) and calls the model ' +
+        'directly through the widened AttentionMethod seam. One scheduler thread now feeds <b>N</b> <code>submit()</code> iterators via per-request queues keyed by <code>request_id</code>.'));
+      c.appendChild(bullets([
+        '<b>Abort is the trickiest sub-case</b> (tricky point 7): setting <code>stop_event</code> must free the slot, emit <code>finish_reason="abort"</code>, and close that queue without leaving the scheduler blocked on a put; the scheduler polls all stop_events between steps (point 8)',
+        'Sampling: real <code>SamplingParams</code>/<code>LogitsProcessor</code> pipeline per row after the batched forward — loop rows first, optimize later; greedy is just argmax (point 6)',
+        '<b>Stop-token contract</b> (fable-review): the prototype emits the stop token then finishes; <code>StandardBackend</code> returns <i>without</i> yielding it — the check must move before emission or token-for-token tests diverge on the final token. And <code>TokenEvent</code> populates exactly one field, so finish becomes its own event',
+        '<b>Admission control</b> (fable-review): reject <code>prompt_len + max_tokens &gt; cap</code> up front — one overlong request would crash the whole shared batch step',
+      ]));
+    }},
+    { name: 'After — two engines, one API', on: MIDDLE, morphs: ['m-toy', 'm-pool', 'm-sched', 'm-run'], cur: ['iface', 'registry', 'seq'], card: (c) => {
+      c.appendChild(para('The registry holds both engines side-by-side: speculative models stay on <code>SequentialEngine</code>, dense models route to ' +
+        '<code>ContinuousBatchingEngine</code>. Nothing above the engine seam noticed: same <code>submit()/abort()</code>, same <code>InferenceRequest</code> in and ' +
+        '<code>TokenEvent</code>s out, API-side tokenization untouched.'));
+      c.appendChild(bullets([
+        '<b>Deliberately later:</b> the API/engine <i>process split</i> is a separate second piece — in-process scheduler first, IPC boundary after (tricky point 11)',
+        '<b>Explicit non-goal:</b> batched speculative decoding — don’t unify the two engine paths (point 12)',
+        '<b>Phase 4 inherits the seam:</b> the paged KV cache is the same runtime-owned-pool-plus-handle shape, with 16-token blocks and a block table instead of one slot index',
+      ]));
+    }},
+  ];
+
+  const transport = makeTransport({
+    max: STAGES.length - 1,
+    labelFn: (i) => `step ${i} / ${STAGES.length - 1} — ${STAGES[i].name}`,
+    onSet: setStage,
+    playMs: 3200,
+  });
+  activeTransports['wiring'] = transport;
+
+  const diagPanel = el('section', 'panel');
+  diagPanel.appendChild(el('h2', null, 'Integration order — from continuous_batching.md'));
+  diagPanel.appendChild(scroll);
+
+  const cardPanel = el('section', 'panel');
+  const cardTitle = el('h2', null, '');
+  cardPanel.appendChild(cardTitle);
+  const cardBody = el('div');
+  cardPanel.appendChild(cardBody);
+
+  body.append(transport.root, diagPanel, cardPanel);
+
+  function setStage(i) {
+    const st = STAGES[i];
+    MIDDLE.forEach(k => nodes[k].classList.toggle('ghost', !st.on.includes(k)));
+    ['m-run', 'm-sched', 'm-toy', 'm-pool'].forEach(k => edges[k].classList.toggle('ghost', !st.morphs.includes(k)));
+    ['e-c1', 'e-c2', 'e-c3', 'e-c4', 'e-iface'].forEach(k => edges[k].classList.toggle('ghost', st.on.length === 0));
+    Object.keys(nodes).forEach(k => nodes[k].classList.toggle('cur', st.cur.includes(k)));
+    cardTitle.textContent = st.name;
+    cardBody.innerHTML = '';
+    st.card(cardBody);
+  }
+  setStage(0);
+}
+
+/* =============== boot =============== */
+route();
+</script>
+</body>
+</html>
