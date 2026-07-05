@@ -2,6 +2,7 @@ from collections.abc import Iterator
 
 import torch
 
+from cantollm.engine import sampler
 from cantollm.engine.types import SamplingParams, Sequence
 from cantollm.kv_cache import KVCache
 
@@ -19,39 +20,14 @@ class StandardBackend:
         self.device = device
 
     def get_probs(self, logits: torch.Tensor, sampling: SamplingParams) -> torch.Tensor:
-        """Run the processor pipeline and return the resulting distribution.
-
-        Args:
-            logits: Raw logits from model, shape (batch, vocab) or (vocab,)
-            sampling: Per-request sampling parameters
-
-        Returns:
-            Probability tensor after all processors have been applied.
-        """
-        for processor in sampling.processors:
-            logits = processor(logits)
-        return torch.softmax(logits, dim=-1)
+        """Delegates to the shared sampler; see `engine/sampler.py`."""
+        return sampler.get_probs(logits, sampling)
 
     def sample(
         self, logits: torch.Tensor, sampling: SamplingParams
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        """Sample a token from logits.
-
-        Args:
-            logits: Raw logits from model, shape (batch, vocab) or (vocab,)
-            sampling: Per-request sampling parameters
-
-        Returns:
-            Tensor containing the sampled token ID(s).
-            Tensor containing the probs
-        """
-        if sampling.greedy:
-            # Skip the pipeline: argmax is invariant under monotonic shifts
-            # and softmax of the raw logits is cheap.
-            probs = torch.softmax(logits, dim=-1)
-            return torch.argmax(logits, dim=-1), probs
-        probs = self.get_probs(logits, sampling)
-        return torch.multinomial(probs, num_samples=1).squeeze(-1), probs
+        """Delegates to the shared sampler; see `engine/sampler.py`."""
+        return sampler.sample(logits, sampling)
 
     @torch.inference_mode()
     def forward(
