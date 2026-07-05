@@ -18,10 +18,6 @@ class StandardBackend:
         self.model = model
         self.device = device
 
-    def reset(self):
-        """Reset generator state. No-op for standard generation."""
-        pass
-
     def get_probs(self, logits: torch.Tensor, sampling: SamplingParams) -> torch.Tensor:
         """Run the processor pipeline and return the resulting distribution.
 

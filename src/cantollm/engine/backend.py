@@ -14,12 +14,4 @@ from cantollm.engine.types import Sequence
 
 
 class InferenceBackend(Protocol):
-    def reset(self) -> None:
-        """Clear any per-request state (internal caches, stats).
-
-        Called by the engine before each `generate` to give a clean slate;
-        safe no-op for stateless backends.
-        """
-        ...
-
     def generate(self, sequence: Sequence) -> Iterator[int]: ...

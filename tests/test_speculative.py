@@ -63,15 +63,15 @@ class TestSpeculativeBackendInit:
         assert spec_gen.draft is draft
         assert spec_gen.main is main
 
-    def test_init_creates_draft_cache(self):
-        """Test that constructor creates internal draft cache."""
+    def test_init_does_not_create_shared_draft_cache(self):
+        """Draft KV state is per-generate-call, never shared on the backend."""
         draft = make_mock_generator()
         main = make_mock_generator()
 
         spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=4)
 
-        assert spec_gen.draft_cache is not None
-        assert len(spec_gen.draft_cache) == 4
+        assert not hasattr(spec_gen, "draft_cache")
+        assert spec_gen.draft_num_layers == 4
 
     def test_init_stores_speculative_tokens(self):
         """Test that speculative_tokens parameter is stored."""
@@ -101,6 +101,7 @@ class TestGenerateDraftTokens:
             num_tokens=4,
             sampling=STOCHASTIC,
             stop_token_ids={999},
+            draft_cache=KVCache(1),
         )
 
         assert len(tokens) == 4
@@ -134,6 +135,7 @@ class TestGenerateDraftTokens:
             num_tokens=4,
             sampling=STOCHASTIC,
             stop_token_ids={stop_token},
+            draft_cache=KVCache(1),
         )
 
         assert len(tokens) == 2  # stopped early
@@ -316,24 +318,6 @@ class TestSpeculativeStats:
         assert stats.iterations == 1
         assert stats.draft_tokens_proposed == 2
         assert stats.acceptance_rate >= 0
-
-    def test_stats_reset(self):
-        """Test that reset_stats() clears counters."""
-        draft = make_mock_generator()
-        main = make_mock_generator()
-        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1)
-
-        spec_gen._draft_proposed = 10
-        spec_gen._draft_accepted = 5
-        spec_gen._iterations = 2
-
-        spec_gen.reset_stats()
-
-        stats = spec_gen.get_stats()
-        assert stats.draft_tokens_proposed == 0
-        assert stats.draft_tokens_accepted == 0
-        assert stats.iterations == 0
-
 
 class TestVerifyDraftTokens:
     def test_always_accepts_when_main_prob_higher(self):
@@ -587,53 +571,116 @@ class TestCacheTruncation:
         main.forward = mock_main_forward
 
         cache = KVCache(1)
+        draft_cache = KVCache(1)
         input_ids = [1, 2, 3]
 
         # Reject all drafts
         with patch("torch.rand", return_value=torch.tensor([0.999])):
             list(spec_gen.generate(
-                make_sequence(input_ids, cache, sampling=STOCHASTIC, max_tokens=2)
+                make_sequence(input_ids, cache, sampling=STOCHASTIC, max_tokens=2),
+                draft_cache=draft_cache,
             ))
 
         # Both caches should be truncated to the same base
         # (draft may lag by 1 since it doesn't process main_tail, but truncate
         # should bring them to the same position)
-        assert spec_gen.draft_cache.position <= cache.position
+        assert draft_cache.position <= cache.position
 
 
-class TestReset:
-    def test_reset_clears_draft_cache(self):
-        """reset() should zero out draft cache position."""
+class TestDraftCacheIsolation:
+    """Concurrent generate() calls must never share draft KV state.
+
+    This pins the fix for the shared `self.draft_cache` bug: two requests
+    running through one SpeculativeBackend used to clobber each other's
+    in-flight draft cache.
+    """
+
+    def _make_accept_all_spec_gen(self, draft_token=10):
+        """Backend whose main model accepts every draft; records the draft
+        cache object each draft.forward call receives, tagged by `label`."""
+        vocab_size = 100
         draft = make_mock_generator()
         main = make_mock_generator()
-        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=2)
+        spec_gen = SpeculativeBackend(
+            draft=draft, main=main, num_layers=1, speculative_tokens=2
+        )
 
-        # Simulate some cache state
-        for layer in spec_gen.draft_cache:
-            layer["keys"] = torch.zeros(1, 10, 4, 8)
-            layer["values"] = torch.zeros(1, 10, 4, 8)
-        assert spec_gen.draft_cache.position == 10
+        seen: list[tuple[str, KVCache]] = []
+        label = ["?"]
+        base_forward = make_cache_growing_forward(vocab_size)
 
-        spec_gen.reset()
+        def recording_forward(tokens, cache, pos):
+            seen.append((label[0], cache))
+            return base_forward(tokens, cache, pos)
 
-        assert spec_gen.draft_cache.position == 0
+        draft_probs = torch.zeros(1, vocab_size)
+        draft_probs[0, draft_token] = 0.5
+        draft.forward = recording_forward
+        draft.sample = MagicMock(return_value=(torch.tensor([draft_token]), draft_probs))
 
-    def test_reset_clears_stats(self):
-        """reset() should also zero stats."""
-        draft = make_mock_generator()
-        main = make_mock_generator()
-        spec_gen = SpeculativeBackend(draft=draft, main=main, num_layers=1)
+        def mock_main_forward(tokens, cache, pos):
+            for layer in cache:
+                new_len = pos + len(tokens)
+                layer["keys"] = torch.zeros(1, new_len, 4, 8)
+                layer["values"] = torch.zeros(1, new_len, 4, 8)
+            logits = torch.full((1, len(tokens), vocab_size), -100.0)
+            logits[0, :, draft_token] = 10.0  # accept every draft
+            return logits
 
-        spec_gen._draft_proposed = 10
-        spec_gen._draft_accepted = 5
-        spec_gen._iterations = 2
+        main.forward = mock_main_forward
+        main.get_probs = MagicMock(side_effect=lambda x, sampling: torch.softmax(x, dim=-1))
+        main.sample = MagicMock(
+            return_value=(torch.tensor([5]), torch.zeros(1, vocab_size))
+        )
 
-        spec_gen.reset()
+        return spec_gen, seen, label
 
-        stats = spec_gen.get_stats()
-        assert stats.draft_tokens_proposed == 0
-        assert stats.draft_tokens_accepted == 0
-        assert stats.iterations == 0
+    def test_interleaved_generates_use_distinct_draft_caches(self):
+        """Two in-flight generate() calls each get their own draft cache."""
+        spec_gen, seen, label = self._make_accept_all_spec_gen()
+
+        gen_a = spec_gen.generate(make_sequence([1, 2, 3], KVCache(1), max_tokens=3))
+        gen_b = spec_gen.generate(make_sequence([4, 5, 6], KVCache(1), max_tokens=3))
+
+        tokens_a, tokens_b = [], []
+        done_a = done_b = False
+        while not (done_a and done_b):
+            if not done_a:
+                label[0] = "A"
+                try:
+                    tokens_a.append(next(gen_a))
+                except StopIteration:
+                    done_a = True
+            if not done_b:
+                label[0] = "B"
+                try:
+                    tokens_b.append(next(gen_b))
+                except StopIteration:
+                    done_b = True
+
+        caches_a = {c for tag, c in seen if tag == "A"}
+        caches_b = {c for tag, c in seen if tag == "B"}
+        assert len(caches_a) == 1, "one draft cache per generate() call"
+        assert len(caches_b) == 1, "one draft cache per generate() call"
+        assert caches_a.isdisjoint(caches_b), (
+            "concurrent generate() calls must not share a draft cache"
+        )
+        # Both streams completed normally despite the interleaving.
+        assert len(tokens_a) == 3
+        assert len(tokens_b) == 3
+
+    def test_injected_draft_cache_is_used(self):
+        """A caller-provided draft cache is the one the draft model sees."""
+        spec_gen, seen, label = self._make_accept_all_spec_gen()
+
+        dc = KVCache(1)
+        label[0] = "A"
+        list(spec_gen.generate(
+            make_sequence([1, 2, 3], KVCache(1), max_tokens=3), draft_cache=dc
+        ))
+
+        assert all(cache is dc for _, cache in seen)
+        assert dc.position > 0
 
 
 class TestStopTokenCacheTruncation:
@@ -745,10 +792,12 @@ class TestStopTokenCacheTruncation:
         )
 
         cache = KVCache(1)
+        draft_cache = KVCache(1)
         input_ids = [1, 2, 3]
 
         list(spec_gen.generate(
-            make_sequence(input_ids, cache, stop_token_ids={stop_token}, max_tokens=100)
+            make_sequence(input_ids, cache, stop_token_ids={stop_token}, max_tokens=100),
+            draft_cache=draft_cache,
         ))
 
         # After stop token on first draft, no tokens yielded.
@@ -756,7 +805,7 @@ class TestStopTokenCacheTruncation:
         # Truncation should remove stop_token's KV: position = 3 (just input_ids).
         assert cache.position == len(input_ids)
         # Draft cache should also be truncated to match
-        assert spec_gen.draft_cache.position == cache.position
+        assert draft_cache.position == cache.position
 
     def test_multi_turn_caches_stay_in_sync(self):
         """Caches remain in sync across two sequential generate() calls (multi-turn)."""
@@ -808,15 +857,19 @@ class TestStopTokenCacheTruncation:
         )
 
         cache = KVCache(1)
+        # Multi-turn continuation: the caller keeps the draft cache alongside
+        # the main cache and passes it back in on the next turn.
+        draft_cache = KVCache(1)
 
         # Turn 1
         input_ids_1 = [1, 2, 3]
         result_1 = list(spec_gen.generate(
-            make_sequence(input_ids_1, cache, stop_token_ids={stop_token}, max_tokens=100)
+            make_sequence(input_ids_1, cache, stop_token_ids={stop_token}, max_tokens=100),
+            draft_cache=draft_cache,
         ))
 
         pos_after_turn_1 = cache.position
-        draft_pos_after_turn_1 = spec_gen.draft_cache.position
+        draft_pos_after_turn_1 = draft_cache.position
 
         # Both caches should be in sync after turn 1
         assert draft_pos_after_turn_1 == pos_after_turn_1, (
@@ -824,14 +877,14 @@ class TestStopTokenCacheTruncation:
         )
 
         # Turn 2: new input appended to existing cache
-        spec_gen.reset_stats()
         input_ids_2 = [4, 5, 6]
         result_2 = list(spec_gen.generate(
-            make_sequence(input_ids_2, cache, stop_token_ids={stop_token}, max_tokens=100)
+            make_sequence(input_ids_2, cache, stop_token_ids={stop_token}, max_tokens=100),
+            draft_cache=draft_cache,
         ))
 
         pos_after_turn_2 = cache.position
-        draft_pos_after_turn_2 = spec_gen.draft_cache.position
+        draft_pos_after_turn_2 = draft_cache.position
 
         # Both caches should still be in sync after turn 2
         assert draft_pos_after_turn_2 == pos_after_turn_2, (

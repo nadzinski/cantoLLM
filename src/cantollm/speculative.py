@@ -11,7 +11,9 @@ from cantollm.stats import SpeculativeStats
 class SpeculativeBackend:
     """Speculative decoding using draft and main models.
 
-    Owns its own draft KV cache internally.
+    Draft KV state is per-generate-call: each `generate` builds (or is handed)
+    its own draft cache, so one backend can serve concurrent requests without
+    them clobbering each other's draft state.
     """
 
     def __init__(
@@ -24,28 +26,20 @@ class SpeculativeBackend:
     ):
         self.draft = draft
         self.main = main
-        self.draft_cache = KVCache(draft_num_layers or num_layers)
+        self.draft_num_layers = draft_num_layers or num_layers
         self.speculative_tokens = speculative_tokens
-        self.reset_stats()
-
-    def reset(self):
-        """Reset for a new conversation: clear draft cache and stats."""
-        self.draft_cache.reset()
-        self.reset_stats()
-
-    def reset_stats(self):
-        """Reset stats counters for a new generation run."""
-        self._draft_proposed = 0
-        self._draft_accepted = 0
-        self._iterations = 0
+        self.last_stats = SpeculativeStats(
+            draft_tokens_proposed=0, draft_tokens_accepted=0, iterations=0
+        )
 
     def get_stats(self) -> SpeculativeStats:
-        """Get statistics from the last generation run."""
-        return SpeculativeStats(
-            draft_tokens_proposed=self._draft_proposed,
-            draft_tokens_accepted=self._draft_accepted,
-            iterations=self._iterations,
-        )
+        """Statistics from the most recently started generation run.
+
+        Debug/observability accessor: with concurrent requests this reflects
+        whichever run started last; each run's counters are its own object,
+        so they are never cross-contaminated.
+        """
+        return self.last_stats
 
     @torch.inference_mode()
     def generate_draft_tokens(
@@ -54,6 +48,7 @@ class SpeculativeBackend:
         num_tokens: int,
         sampling: SamplingParams,
         stop_token_ids: set[int],
+        draft_cache: KVCache,
     ):
         """Generate num_tokens draft predictions starting from input_tokens.
 
@@ -65,6 +60,7 @@ class SpeculativeBackend:
             num_tokens: Number of draft tokens to generate
             sampling: Per-request sampling parameters
             stop_token_ids: Stop generation early if any of these are produced
+            draft_cache: This request's draft KV cache
 
         Returns:
             (tokens, probs) where tokens is tuple of ints, probs is tuple of tensors
@@ -74,7 +70,7 @@ class SpeculativeBackend:
         current_input = input_tokens
 
         for _ in range(num_tokens):
-            logits = self.draft.forward(current_input, self.draft_cache, self.draft_cache.position)
+            logits = self.draft.forward(current_input, draft_cache, draft_cache.position)
             token_id, token_probs = self.draft.sample(logits[:, -1], sampling)
             token_int = token_id.item()
             tokens.append(token_int)
@@ -133,7 +129,9 @@ class SpeculativeBackend:
         return accepted
 
     @torch.inference_mode()
-    def generate(self, sequence: Sequence) -> Iterator[int]:
+    def generate(
+        self, sequence: Sequence, draft_cache: KVCache | None = None
+    ) -> Iterator[int]:
         """
         Here is the speculative generation algorithm:
 
@@ -156,7 +154,18 @@ class SpeculativeBackend:
         NB: Currently single-sequence only (batch size 1). Batched speculative
         decoding would require per-sequence position tracking, padded KV caches,
         and attention masking to handle divergent acceptance rates across sequences.
+
+        `draft_cache` defaults to a fresh cache; pass one in only when
+        continuing a conversation whose main cache you also kept (its position
+        must match `sequence.cache`'s).
         """
+        if draft_cache is None:
+            draft_cache = KVCache(self.draft_num_layers)
+        stats = SpeculativeStats(
+            draft_tokens_proposed=0, draft_tokens_accepted=0, iterations=0
+        )
+        self.last_stats = stats
+
         input_ids = sequence.prompt_token_ids
         cache = sequence.cache
         sampling = sequence.sampling_params
@@ -172,10 +181,10 @@ class SpeculativeBackend:
             if stop_event.is_set():
                 return
             draft_tokens, draft_probs = self.generate_draft_tokens(
-                draft_input, self.speculative_tokens, sampling, stop_token_ids
+                draft_input, self.speculative_tokens, sampling, stop_token_ids, draft_cache
             )
-            self._draft_proposed += len(draft_tokens)
-            self._iterations += 1
+            stats.draft_tokens_proposed += len(draft_tokens)
+            stats.iterations += 1
 
             # Verify drafts against main model
             # main_prefix is input_ids on first iteration (prefill + verify),
@@ -189,7 +198,7 @@ class SpeculativeBackend:
             accepted_tokens = self._verify_draft_tokens(
                 draft_tokens, draft_probs, main_probs, sampling
             )
-            self._draft_accepted += len(accepted_tokens)
+            stats.draft_tokens_accepted += len(accepted_tokens)
 
             # Sample next token from main at first rejection point (or after all accepted)
             main_tail_token, _ = self.main.sample(verify_logits[len(accepted_tokens)], sampling)
@@ -217,7 +226,7 @@ class SpeculativeBackend:
             n_accepted_emitted = min(len(accepted_tokens), n_emitted)
             new_pos = cache.position - len(draft_tokens) + n_accepted_emitted
             cache.truncate(new_pos)
-            self.draft_cache.truncate(new_pos)
+            draft_cache.truncate(new_pos)
 
             if hit_stop or tokens_yielded >= max_tokens:
                 return

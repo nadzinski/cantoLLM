@@ -69,7 +69,6 @@ class SequentialEngine:
                     cache=self.runtime.new_cache(),
                     stop_event=stop_event,
                 )
-                self.runtime.backend.reset()
                 for tok in self.runtime.backend.generate(seq):
                     put_threadsafe(TokenEvent(token_id=tok, request_id=rid))
                     seq.tokens_emitted += 1
