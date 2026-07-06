@@ -10,7 +10,6 @@ import pytest
 import torch
 
 from cantollm.engine.batching import BatchedForwardFn, BatchingConfig
-from cantollm.kv_pool import PaddedKVPool
 from cantollm.models.attention import (
     BatchMeta,
     EinsumAttentionMethod,
@@ -103,24 +102,12 @@ class TestModelAndRuntimeStubs:
         with pytest.raises(NotImplementedError):
             model.forward_batched(torch.zeros(2, 3, dtype=torch.int64), make_meta(), None)
 
-    def test_runtime_fronts_are_stubs(self):
+    def test_runtime_forward_batched_is_a_stub(self):
         runtime = ModelRuntime(
             spec=None, device=None, model=None, tokenizer=None, backend=None
         )
         with pytest.raises(NotImplementedError):
-            runtime.new_kv_pool(
-                BatchingConfig(max_batch=2, max_seq_len=64, max_tokens_per_step=8)
-            )
-        with pytest.raises(NotImplementedError):
             runtime.forward_batched(None, make_meta(), None)
-
-    def test_kv_pool_is_a_stub(self):
-        with pytest.raises(NotImplementedError):
-            PaddedKVPool(
-                num_layers=2, max_batch=2, max_seq_len=64,
-                num_groups=4, head_dim=8,
-                dtype=torch.float32, device=torch.device("cpu"),
-            )
 
     def test_runtime_forward_batched_satisfies_the_seam_protocol(self):
         # BatchedForwardFn is runtime-checkable only structurally; pin the

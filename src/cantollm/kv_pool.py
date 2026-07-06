@@ -6,8 +6,6 @@ state (the free list) lives with the scheduler in
 scheduler owns the allocator, a sequence carries its slot index). Phase 4's
 paged cache keeps the same seam: a block table is also just a handle into a
 runtime-owned pool.
-
-Stub — implemented in step 3 of continuous-batching-plan.md.
 """
 
 from __future__ import annotations
@@ -32,9 +30,14 @@ class PaddedKVPool:
         dtype: torch.dtype,
         device: torch.device,
     ):
-        raise NotImplementedError("PaddedKVPool: TODO (step 3)")
+        shape = (num_layers, max_batch, max_seq_len, num_groups, head_dim)
+        self.k = torch.zeros(shape, dtype=dtype, device=device)
+        self.v = torch.zeros(shape, dtype=dtype, device=device)
+        self.num_layers = num_layers
+        self.max_batch = max_batch
+        self.max_seq_len = max_seq_len
 
     def layer(self, i: int) -> tuple[torch.Tensor, torch.Tensor]:
         """(k, v) views for layer i, each (max_batch, max_seq_len, num_groups,
         head_dim) — no copy; attention writes through them into the pool."""
-        raise NotImplementedError("PaddedKVPool: TODO (step 3)")
+        return self.k[i], self.v[i]

@@ -43,12 +43,20 @@ class ModelRuntime:
     def new_kv_pool(self, config: BatchingConfig) -> PaddedKVPool:
         """Preallocate the shared KV pool for a continuous-batching engine.
 
-        Layer count / groups / head_dim / dtype come from `spec.arch`;
-        capacity (`max_batch`, `max_seq_len`) comes from the engine config.
-        Memory only — the allocator lives with the scheduler (decision 1).
-        Stub until step 3.
+        Layer count / groups / head_dim come from `spec.arch` and dtype from
+        `spec.dtype`; capacity (`max_batch`, `max_seq_len`) comes from the
+        engine config. Memory only — the allocator lives with the scheduler
+        (decision 1).
         """
-        raise NotImplementedError("ModelRuntime.new_kv_pool: TODO (step 3)")
+        return PaddedKVPool(
+            num_layers=self.spec.arch["num_transformers"],
+            max_batch=config.max_batch,
+            max_seq_len=config.max_seq_len,
+            num_groups=self.spec.arch["num_groups"],
+            head_dim=self.spec.arch["head_dim"],
+            dtype=self.spec.dtype,
+            device=self.device,
+        )
 
     def forward_batched(
         self,
