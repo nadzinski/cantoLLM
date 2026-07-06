@@ -13,8 +13,10 @@ from typing import Any
 import torch
 
 from cantollm.engine.backend import InferenceBackend
+from cantollm.engine.batching import BatchingConfig
 from cantollm.kv_cache import KVCache
-from cantollm.models.attention import EinsumAttentionMethod
+from cantollm.kv_pool import PaddedKVPool
+from cantollm.models.attention import BatchMeta, EinsumAttentionMethod
 from cantollm.spec import ModelSpec
 from cantollm.speculative import SpeculativeBackend
 from cantollm.standard import StandardBackend
@@ -37,6 +39,32 @@ class ModelRuntime:
 
     def new_cache(self) -> KVCache:
         return KVCache(self.spec.arch["num_transformers"])
+
+    def new_kv_pool(self, config: BatchingConfig) -> PaddedKVPool:
+        """Preallocate the shared KV pool for a continuous-batching engine.
+
+        Layer count / groups / head_dim / dtype come from `spec.arch`;
+        capacity (`max_batch`, `max_seq_len`) comes from the engine config.
+        Memory only — the allocator lives with the scheduler (decision 1).
+        Stub until step 3.
+        """
+        raise NotImplementedError("ModelRuntime.new_kv_pool: TODO (step 3)")
+
+    def forward_batched(
+        self,
+        input_ids: torch.Tensor,
+        meta: BatchMeta,
+        pool: PaddedKVPool,
+    ) -> torch.Tensor:
+        """The batched-forward front the CB scheduler drives (decision 4).
+
+        Satisfies `engine.batching.BatchedForwardFn`: (B, num_new_max)
+        input_ids + BatchMeta + pool -> (B, vocab) logits at each row's
+        last real token. Delegates to the model's `forward_batched` under
+        `torch.inference_mode()`; the engine never imports a model class.
+        Stub until step 4.
+        """
+        raise NotImplementedError("ModelRuntime.forward_batched: TODO (step 4)")
 
     async def start(self) -> None:
         pass

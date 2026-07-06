@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import torch
 
+from cantollm.models.attention.protocol import BatchMeta
+
 
 class EinsumAttentionMethod:
     def build_mask(
@@ -46,6 +48,25 @@ class EinsumAttentionMethod:
         kv_cache: dict,
     ) -> torch.Tensor:
         return self._attend(queries, keys, values, mask, kv_cache)
+
+    def build_batched_mask(
+        self,
+        meta: BatchMeta,
+        device: torch.device,
+    ) -> torch.Tensor:
+        raise NotImplementedError("EinsumAttentionMethod is sequential-only")
+
+    def forward_batched(
+        self,
+        queries: torch.Tensor,
+        keys: torch.Tensor,
+        values: torch.Tensor,
+        mask: torch.Tensor,
+        layer_k: torch.Tensor,
+        layer_v: torch.Tensor,
+        meta: BatchMeta,
+    ) -> torch.Tensor:
+        raise NotImplementedError("EinsumAttentionMethod is sequential-only")
 
     def _attend(
         self,

@@ -279,6 +279,31 @@ class Qwen3(nn.Module):
                     f"start_pos={start_pos} but kv_cache[{i}] has {cached_len} positions"
                 )
 
+    def forward_batched(self, input_ids, meta, pool):
+        """Mixed prefill/decode step for the continuous-batching engine.
+
+        Args:
+            input_ids: (B, num_new_max) int64, left-aligned, 0-padded,
+                row order matching `meta.rows`.
+            meta: `BatchMeta` — per-row slot/position geometry, built once
+                per step and shared by every layer.
+            pool: `PaddedKVPool`; layer i reads/writes `pool.layer(i)`.
+
+        Returns:
+            (B, vocab) logits at each row's last real token.
+
+        Shape of the implementation (step 4; attention math itself is the
+        method's `forward_batched`, step 5):
+          embed -> attention_method.build_batched_mask(meta) ONCE ->
+          per layer: transformer.forward_batched(x, mask, freqs_cis,
+          *pool.layer(i), meta) -> gather column `num_new[b] - 1` per row
+          BEFORE output_RMSNorm + output_layer, so (B, S, vocab) logits are
+          never materialized (~150 MB per 512-wide row for Qwen3's 151k
+          vocab in bf16). v1 runs the lm_head for every row, including
+          mid-prefill ones; skipping those is a Phase 3 perf TODO.
+        """
+        raise NotImplementedError("Qwen3.forward_batched: TODO (step 4)")
+
     def forward(self, tokens, start_pos: int, kv_cache=None):
         # We assume we're passed only the tokens we want to process
         self._validate_cache(start_pos, kv_cache)
