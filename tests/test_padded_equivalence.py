@@ -108,14 +108,12 @@ def oracle_last_logits(model: Qwen3, chunks: list[list[int]]) -> torch.Tensor:
 
 
 class TestSingleRow:
-    @xfail_until_step5
     def test_full_prefill_matches_sequential(self):
         oracle, padded = build_models()
         logits = batched_step(padded, make_pool(), [(0, 0, PROMPT_B)])
         expected = oracle_last_logits(oracle, [PROMPT_B])
         torch.testing.assert_close(logits[0], expected, atol=1e-5, rtol=0)
 
-    @xfail_until_step5
     def test_prefill_then_decode_matches_sequential(self):
         oracle, padded = build_models()
         pool = make_pool()
@@ -126,7 +124,6 @@ class TestSingleRow:
         expected = oracle_last_logits(oracle, [PROMPT_B, [DECODE_TOKEN]])
         torch.testing.assert_close(logits[0], expected, atol=1e-5, rtol=0)
 
-    @xfail_until_step5
     def test_chunked_prefill_matches_full_prefill(self):
         oracle, padded = build_models()
         pool = make_pool()
@@ -137,7 +134,6 @@ class TestSingleRow:
 
 
 class TestMixedBatch:
-    @xfail_until_step5
     def test_mixed_batch_matches_per_row_sequential(self):
         """The real thing: one step carrying a mid-prefill chunk, a fresh
         full prefill, and a decode row — each row must match a sequential
@@ -169,7 +165,6 @@ class TestMixedBatch:
                 msg=lambda m, row=row: f"row {row}: {m}",
             )
 
-    @xfail_until_step5
     def test_row_output_invariant_to_batch_padding(self):
         """A row's logits must not depend on who else is in the batch —
         batched-vs-batched, so near-bitwise."""
@@ -184,7 +179,6 @@ class TestMixedBatch:
 
 
 class TestPoolState:
-    @xfail_until_step5
     def test_pool_writes_match_sequential_cache(self):
         """After a single-row prefill, the slot's K/V must equal the
         sequential cache's post-RoPE keys/values, layer by layer."""
@@ -208,7 +202,6 @@ class TestPoolState:
         # And the write stayed inside the slot's occupied region.
         assert torch.all(pool.k[:, slot, n:] == 0)
 
-    @xfail_until_step5
     def test_stale_slot_reuse_is_clean(self):
         """Garbage from a slot's previous occupant must not affect a new
         sequence — the mask, not zeroing, is the fence."""
@@ -225,7 +218,6 @@ class TestPoolState:
 
         torch.testing.assert_close(dirty[0], clean[0], atol=1e-6, rtol=0)
 
-    @xfail_until_step5
     def test_overlong_write_is_rejected(self):
         """start_pos + num_new past the slot capacity must fail loudly at
         the write (the bounds assert), never corrupt a neighbor slot."""
@@ -244,7 +236,6 @@ class TestOnMPS:
     """The softer promise on real hardware: logit tolerance, not token
     equality (different kernels, different reduction order)."""
 
-    @xfail_until_step5
     def test_single_row_prefill_close_to_cpu(self):
         _, padded = build_models()
         cpu_logits = batched_step(padded, make_pool(), [(0, 0, PROMPT_B)])

@@ -374,6 +374,13 @@ class Qwen3(nn.Module):
                 "a zero-width row's last-token gather would silently wrap to a "
                 "pad column"
             )
+        derived_history = int((meta.start_pos + meta.num_new).max())
+        if meta.max_history_len != derived_history:
+            raise ValueError(
+                f"meta.max_history_len={meta.max_history_len} but rows imply "
+                f"{derived_history}; the mask and KV gather would silently "
+                "truncate or over-read history"
+            )
 
     def forward(self, tokens, start_pos: int, kv_cache=None):
         # We assume we're passed only the tokens we want to process

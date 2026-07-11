@@ -86,13 +86,6 @@ class TestPaddedIsBatchedOnly:
         with pytest.raises(NotImplementedError, match="batched-only"):
             method.forward_decode(None, None, None, None, {})
 
-    def test_forward_batched_is_a_stub_for_now(self):
-        # The attention math is step 5 (hand-written); the mask landed in step 4.
-        method = PaddedAttentionMethod()
-        with pytest.raises(NotImplementedError):
-            method.forward_batched(None, None, None, None, None, None, make_meta())
-
-
 class TestModelAndRuntimeStubs:
     def test_runtime_forward_batched_satisfies_the_seam_protocol(self):
         # BatchedForwardFn is runtime-checkable only structurally; pin the
