@@ -8,7 +8,8 @@ calls; everything per-model-specific lives here instead of `main.py`.
 
 from __future__ import annotations
 
-from typing import Any
+from dataclasses import replace
+from typing import Any, Literal
 
 import torch
 
@@ -16,7 +17,11 @@ from cantollm.engine.backend import InferenceBackend
 from cantollm.engine.batching import BatchingConfig
 from cantollm.kv_cache import KVCache
 from cantollm.kv_pool import PaddedKVPool
-from cantollm.models.attention import BatchMeta, EinsumAttentionMethod
+from cantollm.models.attention import (
+    BatchMeta,
+    EinsumAttentionMethod,
+    PaddedAttentionMethod,
+)
 from cantollm.spec import ModelSpec
 from cantollm.speculative import SpeculativeBackend
 from cantollm.standard import StandardBackend
@@ -58,6 +63,7 @@ class ModelRuntime:
             device=self.device,
         )
 
+    @torch.inference_mode()
     def forward_batched(
         self,
         input_ids: torch.Tensor,
@@ -68,11 +74,21 @@ class ModelRuntime:
 
         Satisfies `engine.batching.BatchedForwardFn`: (B, num_new_max)
         input_ids + BatchMeta + pool -> (B, vocab) logits at each row's
-        last real token. Delegates to the model's `forward_batched` under
-        `torch.inference_mode()`; the engine never imports a model class.
-        Stub until step 4.
+        last real token. The engine never imports a model class.
+
+        The scheduler builds tensors on CPU; this is the boundary where
+        they move to the model's device.
         """
-        raise NotImplementedError("ModelRuntime.forward_batched: TODO (step 4)")
+        input_ids = input_ids.to(self.device)
+        if meta.positions.device != self.device:
+            meta = replace(
+                meta,
+                slots=meta.slots.to(self.device),
+                start_pos=meta.start_pos.to(self.device),
+                num_new=meta.num_new.to(self.device),
+                positions=meta.positions.to(self.device),
+            )
+        return self.model.forward_batched(input_ids, meta, pool)
 
     async def start(self) -> None:
         pass
@@ -81,14 +97,21 @@ class ModelRuntime:
         pass
 
 
-def _load_model(spec: ModelSpec, device: torch.device) -> tuple[torch.nn.Module, str]:
+def _load_model(
+    spec: ModelSpec,
+    device: torch.device,
+    attention: Literal["einsum", "padded"] = "einsum",
+) -> tuple[torch.nn.Module, str]:
     print(f"Downloading {spec.size} model weights...")
     local_dir, weights_dict = spec.weights_loader()
 
     print("Creating model...")
+    attention_method = (
+        PaddedAttentionMethod() if attention == "padded" else EinsumAttentionMethod()
+    )
     model = spec.model_cls(
         qwen3_config=spec.arch,
-        attention_method=EinsumAttentionMethod(),
+        attention_method=attention_method,
     )
 
     print("Loading pretrained weights...")
@@ -105,7 +128,12 @@ def build_runtime(
     device: torch.device,
     *,
     speculative: ModelSpec | None = None,
+    attention: Literal["einsum", "padded"] = "einsum",
 ) -> ModelRuntime:
+    if speculative is not None and attention != "einsum":
+        # Speculative decoding stays on the sequential engine (PLAN.md:
+        # batched speculation is explicitly out of scope).
+        raise ValueError("speculative runtimes are sequential-only (attention='einsum')")
     if speculative is not None:
         draft_model, draft_dir = _load_model(speculative, device)
         main_model, _ = _load_model(spec, device)
@@ -123,7 +151,7 @@ def build_runtime(
             tokenizer=tokenizer, backend=backend,
         )
 
-    model, local_dir = _load_model(spec, device)
+    model, local_dir = _load_model(spec, device, attention)
     tokenizer = spec.tokenizer_factory(local_dir)
     backend = StandardBackend(model=model, device=device)
     return ModelRuntime(

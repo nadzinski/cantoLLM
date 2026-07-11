@@ -50,3 +50,34 @@ def apply_rotary_emb(x: torch.Tensor, freqs_cis: torch.Tensor, offset: int = 0):
     result = torch.cat([rotated.real, rotated.imag], dim=-1)
 
     return result.to(dtype)
+
+
+def apply_rotary_emb_batched(
+    x: torch.Tensor, freqs_cis: torch.Tensor, positions: torch.Tensor
+):
+    """RoPE with per-row positions: the batched-path variant.
+
+    Same rotation and half-layout convention as `apply_rotary_emb`, but the
+    scalar `offset` becomes `positions` of shape (batch, seq_len):
+    `positions[b, s]` is the absolute position of x[b, s], so rows at
+    different points in their sequences share one forward pass. Pad columns
+    may hold any in-range index — their rotated values are never read.
+
+    x is (batch, seq_len, ..., head_dim); the gather broadcasts over any
+    middle dims (groups for K/V, groups+heads for Q).
+    """
+    dtype = x.dtype
+    halved = x.unflatten(-1, (2, -1)).float()
+    complexed = torch.complex(halved[..., 0, :], halved[..., 1, :])
+
+    # (batch, seq_len, dim/2) gather replaces the scalar-offset slice.
+    freqs = freqs_cis[positions]
+    n_middle_dims = x.ndim - 3
+    broadcast_shape = positions.shape + (1,) * n_middle_dims + (freqs.shape[-1],)
+    freqs = freqs.reshape(broadcast_shape)
+
+    rotated = complexed * freqs
+
+    result = torch.cat([rotated.real, rotated.imag], dim=-1)
+
+    return result.to(dtype)

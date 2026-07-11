@@ -15,9 +15,7 @@ from cantollm.models.attention import (
     EinsumAttentionMethod,
     PaddedAttentionMethod,
 )
-from cantollm.models.qwen3.model import Qwen3
 from cantollm.runtime import ModelRuntime
-from tests.tiny_model import TINY_ARCH
 
 
 def make_meta() -> BatchMeta:
@@ -88,27 +86,14 @@ class TestPaddedIsBatchedOnly:
         with pytest.raises(NotImplementedError, match="batched-only"):
             method.forward_decode(None, None, None, None, {})
 
-    def test_batched_methods_are_stubs_for_now(self):
+    def test_forward_batched_is_a_stub_for_now(self):
+        # The attention math is step 5 (hand-written); the mask landed in step 4.
         method = PaddedAttentionMethod()
-        with pytest.raises(NotImplementedError):
-            method.build_batched_mask(make_meta(), torch.device("cpu"))
         with pytest.raises(NotImplementedError):
             method.forward_batched(None, None, None, None, None, None, make_meta())
 
 
 class TestModelAndRuntimeStubs:
-    def test_qwen3_forward_batched_stub(self):
-        model = Qwen3(qwen3_config=TINY_ARCH, attention_method=EinsumAttentionMethod())
-        with pytest.raises(NotImplementedError):
-            model.forward_batched(torch.zeros(2, 3, dtype=torch.int64), make_meta(), None)
-
-    def test_runtime_forward_batched_is_a_stub(self):
-        runtime = ModelRuntime(
-            spec=None, device=None, model=None, tokenizer=None, backend=None
-        )
-        with pytest.raises(NotImplementedError):
-            runtime.forward_batched(None, make_meta(), None)
-
     def test_runtime_forward_batched_satisfies_the_seam_protocol(self):
         # BatchedForwardFn is runtime-checkable only structurally; pin the
         # signature by reference so a drift breaks loudly here.

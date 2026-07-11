@@ -2,7 +2,11 @@ import torch
 from torch import nn
 
 from cantollm.models.attention import AttentionMethod
-from cantollm.models.rope import apply_rotary_emb, precompute_freqs_cis
+from cantollm.models.rope import (
+    apply_rotary_emb,
+    apply_rotary_emb_batched,
+    precompute_freqs_cis,
+)
 
 
 class RootMeanSquareNorm(nn.Module):
@@ -183,6 +187,31 @@ class GroupedQueryAttention(nn.Module):
 
         return output
 
+    def forward_batched(self, x, mask, freqs_cis, layer_k, layer_v, meta):
+        """Mixed prefill/decode batch: same projections and q/k-norm as
+        `forward`, per-row RoPE positions instead of a scalar offset, and no
+        cache-emptiness dispatch — a preallocated pool is never "empty", so
+        there is exactly one batched path."""
+        batches, seq_len, _ = x.shape
+
+        queries = self.W_q(x).view(
+            batches, seq_len, self.num_groups, self.heads_per_group, self.head_dim
+        )
+        keys = self.W_k(x).view(batches, seq_len, self.num_groups, self.head_dim)
+        values = self.W_v(x).view(batches, seq_len, self.num_groups, self.head_dim)
+
+        queries = self.q_norm(queries)
+        keys = self.k_norm(keys)
+
+        queries = apply_rotary_emb_batched(queries, freqs_cis, meta.positions)
+        keys = apply_rotary_emb_batched(keys, freqs_cis, meta.positions)
+
+        z_context = self.attention_method.forward_batched(
+            queries, keys, values, mask, layer_k, layer_v, meta
+        )
+
+        return self.out_proj(z_context.reshape(batches, seq_len, self.q_out_dim))
+
 
 class Transformer(nn.Module):
     def __init__(
@@ -209,6 +238,19 @@ class Transformer(nn.Module):
         gqa_bypass = x
         x = self.RMSNorm_1(x)
         x = self.GQA(x, start_pos, mask, freqs_cis, kv_cache)
+        x = x + gqa_bypass
+
+        ff_bypass = x
+        x = self.RMSNorm_2(x)
+        x = self.FF(x)
+        x = x + ff_bypass
+
+        return x
+
+    def forward_batched(self, x, mask, freqs_cis, layer_k, layer_v, meta):
+        gqa_bypass = x
+        x = self.RMSNorm_1(x)
+        x = self.GQA.forward_batched(x, mask, freqs_cis, layer_k, layer_v, meta)
         x = x + gqa_bypass
 
         ff_bypass = x
@@ -292,17 +334,46 @@ class Qwen3(nn.Module):
         Returns:
             (B, vocab) logits at each row's last real token.
 
-        Shape of the implementation (step 4; attention math itself is the
-        method's `forward_batched`, step 5):
-          embed -> attention_method.build_batched_mask(meta) ONCE ->
-          per layer: transformer.forward_batched(x, mask, freqs_cis,
-          *pool.layer(i), meta) -> gather column `num_new[b] - 1` per row
-          BEFORE output_RMSNorm + output_layer, so (B, S, vocab) logits are
-          never materialized (~150 MB per 512-wide row for Qwen3's 151k
-          vocab in bf16). v1 runs the lm_head for every row, including
-          mid-prefill ones; skipping those is a Phase 3 perf TODO.
+        The last-token gather happens BEFORE output_RMSNorm + output_layer,
+        so (B, S, vocab) logits are never materialized (~150 MB per 512-wide
+        row for Qwen3's 151k vocab in bf16). v1 runs the lm_head for every
+        row, including mid-prefill ones; skipping those is a Phase 3 perf
+        TODO. The attention math itself lives on the method's
+        `forward_batched` (step 5).
         """
-        raise NotImplementedError("Qwen3.forward_batched: TODO (step 4)")
+        self._validate_batched(meta, pool)
+
+        x = self.initial_embedding_layer(input_ids)
+
+        # One mask per step — per-row history lengths are the same at every
+        # layer, so all blocks share it.
+        mask = self.attention_method.build_batched_mask(meta, input_ids.device)
+
+        for i, transformer in enumerate(self.transformer_blocks):
+            layer_k, layer_v = pool.layer(i)
+            x = transformer.forward_batched(
+                x, mask, self.freqs_cis, layer_k, layer_v, meta
+            )
+
+        # Per-row gather of the last REAL token's hidden state (pad columns
+        # carry garbage; num_new >= 1 is validated above, so -1 can't wrap).
+        row_idx = torch.arange(x.shape[0], device=x.device)
+        last_hidden = x[row_idx, meta.num_new.to(x.device) - 1]
+
+        return self.output_layer(self.output_RMSNorm(last_hidden))
+
+    def _validate_batched(self, meta, pool):
+        num_blocks = len(self.transformer_blocks)
+        if pool.num_layers != num_blocks:
+            raise ValueError(
+                f"pool has {pool.num_layers} layers but model has {num_blocks} blocks"
+            )
+        if (meta.num_new < 1).any():
+            raise ValueError(
+                "every row must carry at least one real token (num_new >= 1); "
+                "a zero-width row's last-token gather would silently wrap to a "
+                "pad column"
+            )
 
     def forward(self, tokens, start_pos: int, kv_cache=None):
         # We assume we're passed only the tokens we want to process

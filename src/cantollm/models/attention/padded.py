@@ -54,7 +54,13 @@ class PaddedAttentionMethod:
         meta: BatchMeta,
         device: torch.device,
     ) -> torch.Tensor:
-        raise NotImplementedError("PaddedAttentionMethod: TODO (step 4)")
+        # mask[b, i, j] = j > start_pos[b] + i  (True = masked out).
+        # Pure per-row causality; see the protocol docstring for why this
+        # alone also fences stale slot data and keeps pad rows finite.
+        i = torch.arange(meta.num_new_max, device=device)
+        j = torch.arange(meta.max_history_len, device=device)
+        causal_bound = meta.start_pos.to(device)[:, None] + i[None, :]
+        return j[None, None, :] > causal_bound[:, :, None]
 
     def forward_batched(
         self,
