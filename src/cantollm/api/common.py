@@ -12,6 +12,29 @@ from concurrent.futures import ThreadPoolExecutor
 from cantollm.engine.types import InferenceRequest, SamplingParams
 
 
+class AdmissionError(ValueError):
+    """Request rejected at the door, before any engine sees it."""
+
+
+def check_admission(req: InferenceRequest, max_request_tokens: int | None) -> None:
+    """Reject requests that could never fit their engine's per-request cap.
+
+    For a continuous-batching engine the cap is the per-slot KV capacity:
+    admitting an over-cap request would hand it a slot it must eventually
+    overflow — and a shared-batch failure takes every other request down
+    with it. Rejecting here turns that into one client's clear 400.
+    """
+    if max_request_tokens is None:
+        return
+    prompt_tokens = len(req.prompt_token_ids)
+    total = prompt_tokens + req.max_tokens
+    if total > max_request_tokens:
+        raise AdmissionError(
+            f"prompt ({prompt_tokens} tokens) + max_tokens ({req.max_tokens}) "
+            f"= {total} exceeds this model's limit of {max_request_tokens} tokens"
+        )
+
+
 def _build_sync(
     messages: list[dict],
     system: str | None,

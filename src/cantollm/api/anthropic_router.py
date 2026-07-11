@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 
 from cantollm.api.anthropic_adapter import render_message, render_sse
 from cantollm.api.anthropic_types import MessagesRequest
-from cantollm.api.common import tokenize_and_build_request
+from cantollm.api.common import check_admission, tokenize_and_build_request
 from cantollm.engine.types import SamplingParams
 from cantollm.registry import EngineRegistry
 
@@ -40,6 +40,7 @@ def build_anthropic_router(
                 tokenizer=tokenizer,
                 executor=tokenizer_executor,
             )
+            check_admission(req, entry.max_request_tokens)
         except (ValueError, TypeError, KeyError) as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 

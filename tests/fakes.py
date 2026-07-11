@@ -82,11 +82,21 @@ class FakeRuntime:
 
 
 class FakeRegistry:
-    """Minimal EngineRegistry stand-in for contract tests."""
+    """Minimal EngineRegistry stand-in for contract tests.
 
-    def __init__(self, entries: dict[str, tuple["FakeEngine", FakeRuntime]]):
+    `max_request_tokens` optionally maps model name -> admission cap,
+    mirroring RegistryEntry.max_request_tokens (None = no cap).
+    """
+
+    def __init__(
+        self,
+        entries: dict[str, tuple["FakeEngine", FakeRuntime]],
+        max_request_tokens: dict[str, int] | None = None,
+    ):
+        caps = max_request_tokens or {}
         self._entries = {
-            name: _FakeEntry(engine=eng, runtime=rt) for name, (eng, rt) in entries.items()
+            name: _FakeEntry(engine=eng, runtime=rt, max_request_tokens=caps.get(name))
+            for name, (eng, rt) in entries.items()
         }
 
     def get(self, name: str):
@@ -114,6 +124,7 @@ class _FakeEntry:
     engine: "FakeEngine"
     runtime: FakeRuntime
     registered_at: float = 0.0
+    max_request_tokens: int | None = None
 
 
 @dataclass

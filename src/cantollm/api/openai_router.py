@@ -14,7 +14,7 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
-from cantollm.api.common import tokenize_and_build_request
+from cantollm.api.common import check_admission, tokenize_and_build_request
 from cantollm.api.openai_adapter import (
     render_chat_completion,
     render_chat_completion_sse,
@@ -136,6 +136,7 @@ def build_openai_router(
                 tokenizer=tokenizer,
                 executor=tokenizer_executor,
             )
+            check_admission(req, entry.max_request_tokens)
         except (ValueError, TypeError, KeyError) as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 

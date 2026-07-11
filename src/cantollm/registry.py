@@ -20,16 +20,30 @@ class RegistryEntry:
     engine: InferenceEngine
     runtime: ModelRuntime
     registered_at: float = field(default_factory=time.time)
+    max_request_tokens: int | None = None
+    """Admission cap: reject requests with prompt + max_tokens above this.
+    None (sequential engines) means no cap. For a CB engine this is the
+    per-slot KV capacity (`BatchingConfig.max_seq_len`) — an over-cap
+    request would otherwise take a slot it can never fit in."""
 
 
 class EngineRegistry:
     def __init__(self) -> None:
         self._entries: dict[str, RegistryEntry] = {}
 
-    def register(self, name: str, engine: InferenceEngine, runtime: ModelRuntime) -> None:
+    def register(
+        self,
+        name: str,
+        engine: InferenceEngine,
+        runtime: ModelRuntime,
+        *,
+        max_request_tokens: int | None = None,
+    ) -> None:
         if name in self._entries:
             raise ValueError(f"Model '{name}' is already registered")
-        self._entries[name] = RegistryEntry(engine=engine, runtime=runtime)
+        self._entries[name] = RegistryEntry(
+            engine=engine, runtime=runtime, max_request_tokens=max_request_tokens
+        )
 
     def get(self, name: str) -> RegistryEntry:
         return self._entries[name]
