@@ -94,12 +94,30 @@ async def render_message(
     input_tokens: int,
     stop_sequences: list[str] | None = None,
 ) -> MessageResponse:
-    """Drain the event stream into a single MessageResponse."""
+    """Drain the event stream into a single MessageResponse.
+
+    Content is grouped into blocks by contiguous run of the same kind
+    (thinking vs text), in emission order — so a text→thinking→text stream
+    yields three blocks in that order, not a merged [thinking, text]. Each
+    TextChunk's kind comes from `in_thinking`, which the markers flip; empty
+    runs (e.g. a thinking block with no deltas) produce no block.
+    """
     state = DecodeState()
     content_blocks: list[ContentBlock] = []
-    current_text: list[str] = []
-    current_thinking: list[str] = []
+    open_kind: str | None = None
+    buf: list[str] = []
     in_thinking = False
+
+    def flush_segment() -> None:
+        nonlocal open_kind, buf
+        text = "".join(buf)
+        if text:
+            content_blocks.append(
+                ThinkingBlock(thinking=text) if open_kind == "thinking"
+                else TextBlock(text=text)
+            )
+        buf = []
+        open_kind = None
 
     async for dec_evt in _decoded_events(
         events, tokenizer, state, _watcher_for(stop_sequences)
@@ -108,20 +126,17 @@ async def render_message(
             case ThinkingStartEvent():
                 in_thinking = True
             case ThinkingEndEvent():
-                thinking_text = "".join(current_thinking)
-                if thinking_text:
-                    content_blocks.append(ThinkingBlock(thinking=thinking_text))
-                current_thinking = []
                 in_thinking = False
             case TextChunk(text=t):
-                (current_thinking if in_thinking else current_text).append(t)
+                kind = "thinking" if in_thinking else "text"
+                if open_kind != kind:
+                    flush_segment()
+                    open_kind = kind
+                buf.append(t)
+    flush_segment()
 
     if state.error is not None:
         raise HTTPException(status_code=500, detail=state.error)
-
-    text = "".join(current_text)
-    if text:
-        content_blocks.append(TextBlock(text=text))
 
     # Anthropic requires at least one content block; fall back to empty text
     # if the model produced nothing (e.g. first token was a stop token).
@@ -165,9 +180,30 @@ async def render_sse(
                 ),
             )))
 
-            block_index = 0
+            # Block framing by contiguous run: a block is opened lazily on the
+            # first delta of its kind and closed when the kind changes or the
+            # stream ends. This keeps indices correct for any phase order
+            # (mid-text <think>, a stray </think>, or think/text/think/text),
+            # unlike a fixed [thinking][text] assumption.
+            open_kind: str | None = None
+            block_index = -1
             in_thinking = False
-            started_text_block = False
+
+            async def ensure_block(kind: str) -> None:
+                nonlocal open_kind, block_index
+                if open_kind == kind:
+                    return
+                if open_kind is not None:
+                    await out.put(sse(ContentBlockStopEvent(index=block_index)))
+                block_index += 1
+                open_kind = kind
+                block = (
+                    ThinkingBlock(thinking="") if kind == "thinking"
+                    else TextBlock(text="")
+                )
+                await out.put(sse(ContentBlockStartEvent(
+                    index=block_index, content_block=block,
+                )))
 
             async for dec_evt in _decoded_events(
                 events, tokenizer, state, _watcher_for(stop_sequences)
@@ -175,34 +211,32 @@ async def render_sse(
                 match dec_evt:
                     case ThinkingStartEvent():
                         in_thinking = True
-                        await out.put(sse(ContentBlockStartEvent(
-                            index=block_index,
-                            content_block=ThinkingBlock(thinking=""),
-                        )))
                     case ThinkingEndEvent():
                         in_thinking = False
-                        await out.put(sse(ContentBlockStopEvent(index=block_index)))
-                        block_index += 1
                     case TextChunk(text=t):
                         if in_thinking:
+                            await ensure_block("thinking")
                             await out.put(sse(ContentBlockDeltaEvent(
                                 index=block_index,
                                 delta=ThinkingDelta(thinking=t),
                             )))
                         else:
-                            if not started_text_block:
-                                await out.put(sse(ContentBlockStartEvent(
-                                    index=block_index,
-                                    content_block=TextBlock(text=""),
-                                )))
-                                started_text_block = True
+                            await ensure_block("text")
                             await out.put(sse(ContentBlockDeltaEvent(
                                 index=block_index,
                                 delta=TextDelta(text=t),
                             )))
 
-            if started_text_block:
+            if open_kind is not None:
                 await out.put(sse(ContentBlockStopEvent(index=block_index)))
+            elif state.error is None:
+                # Zero output (e.g. first token was a stop token): emit one
+                # empty text block so the stream carries >=1 content block,
+                # matching the non-streaming path and Anthropic's contract.
+                await out.put(sse(ContentBlockStartEvent(
+                    index=0, content_block=TextBlock(text=""),
+                )))
+                await out.put(sse(ContentBlockStopEvent(index=0)))
 
             if state.error is not None:
                 # Emit the error and stop — no message_delta/message_stop on

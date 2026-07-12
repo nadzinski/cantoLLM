@@ -334,6 +334,124 @@ def test_sse_thinking_only_still_closes_block():
     assert block_start["content_block"]["type"] == "thinking"
 
 
+# ── 5b. Interleaved / degenerate block framing ───────────────────────
+
+
+def _stream_messages(engine, tokenizer, body_overrides=None):
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            async with client.stream(
+                "POST", "/v1/messages",
+                json={
+                    "model": "test-model", "max_tokens": 100, "stream": True,
+                    "messages": [{"role": "user", "content": "go"}],
+                    **(body_overrides or {}),
+                },
+            ) as r:
+                body = ""
+                async for chunk in r.aiter_text():
+                    body += chunk
+                return body
+
+    return [e for e in parse_sse(_run(run())) if e.event != "ping"]
+
+
+def test_sse_interleaved_text_thinking_text_gets_three_ordered_blocks():
+    """A text→thinking→text stream (model emits <think> mid-answer) must
+    produce three correctly-indexed blocks, not overlap indices."""
+    tokenizer = _tokenizer_for("abcdef")
+    script = [
+        *_script_from_text("ab"),
+        ScriptStep(token_id=THINKING_START_ID),
+        *_script_from_text("cd"),
+        ScriptStep(token_id=THINKING_END_ID),
+        *_script_from_text("ef"),
+    ]
+    events = _stream_messages(FakeEngine(script=script), tokenizer)
+
+    starts = [e.data for e in events if e.event == "content_block_start"]
+    assert [(s["index"], s["content_block"]["type"]) for s in starts] == [
+        (0, "text"), (1, "thinking"), (2, "text"),
+    ]
+    stops = [e.data["index"] for e in events if e.event == "content_block_stop"]
+    assert stops == [0, 1, 2]
+    # Each delta lands on its own block index.
+    by_index = {0: "", 1: "", 2: ""}
+    for e in events:
+        if e.event == "content_block_delta":
+            d = e.data["delta"]
+            by_index[e.data["index"]] += d.get("text", d.get("thinking", ""))
+    assert by_index == {0: "ab", 1: "cd", 2: "ef"}
+
+
+def test_non_streaming_interleaved_preserves_block_order():
+    tokenizer = _tokenizer_for("abcdef")
+    script = [
+        *_script_from_text("ab"),
+        ScriptStep(token_id=THINKING_START_ID),
+        *_script_from_text("cd"),
+        ScriptStep(token_id=THINKING_END_ID),
+        *_script_from_text("ef"),
+    ]
+
+    async def run():
+        async with _client(FakeEngine(script=script), tokenizer) as client:
+            r = await client.post("/v1/messages", json=_messages_body(100, False))
+            return r.json()
+
+    body = _run(run())
+    blocks = [(b["type"], b.get("text", b.get("thinking")))
+              for b in body["content"]]
+    assert blocks == [("text", "ab"), ("thinking", "cd"), ("text", "ef")]
+
+
+def test_sse_zero_output_emits_one_empty_text_block():
+    """A stream that generates nothing (first token was a stop token) must
+    still carry >=1 content block, matching the non-streaming path."""
+    tokenizer = _tokenizer_for("hi")
+    events = _stream_messages(FakeEngine(script=[]), tokenizer)
+
+    starts = [e for e in events if e.event == "content_block_start"]
+    stops = [e for e in events if e.event == "content_block_stop"]
+    assert len(starts) == 1
+    assert starts[0].data["index"] == 0
+    assert starts[0].data["content_block"]["type"] == "text"
+    assert len(stops) == 1 and stops[0].data["index"] == 0
+    # No deltas — the block is empty.
+    assert not [e for e in events if e.event == "content_block_delta"]
+
+
+def test_non_streaming_zero_output_emits_one_empty_text_block():
+    tokenizer = _tokenizer_for("hi")
+
+    async def run():
+        async with _client(FakeEngine(script=[]), tokenizer) as client:
+            r = await client.post("/v1/messages", json=_messages_body(100, False))
+            return r.json()
+
+    body = _run(run())
+    assert body["content"] == [{"type": "text", "text": ""}]
+
+
+def test_sse_stray_thinking_end_does_not_orphan_blocks():
+    """A </think> with no open thinking block (decoder yields ThinkingEnd
+    unconditionally) must not emit a stop for a block that was never opened."""
+    tokenizer = _tokenizer_for("hi")
+    script = [
+        *_script_from_text("hi"),
+        ScriptStep(token_id=THINKING_END_ID),
+        *_script_from_text("ok"),
+    ]
+    events = _stream_messages(FakeEngine(script=script), tokenizer)
+
+    starts = [e.data for e in events if e.event == "content_block_start"]
+    stops = [e.data for e in events if e.event == "content_block_stop"]
+    # Every stop matches a start index; none dangle.
+    assert sorted(s["index"] for s in stops) == sorted(s["index"] for s in starts)
+    # All indices are contiguous from 0.
+    assert [s["index"] for s in starts] == list(range(len(starts)))
+
+
 # ── 6. Ping cadence ──────────────────────────────────────────────────
 
 
