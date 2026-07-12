@@ -6,6 +6,7 @@ the only layer that knows about Anthropic's format or thinking/text phases.
 """
 
 import asyncio
+import logging
 import uuid
 from collections.abc import AsyncIterator
 
@@ -37,6 +38,8 @@ from cantollm.api.phase import DecodeState, phase_tagged_events
 from cantollm.decoder import StopStringWatcher
 from cantollm.engine.types import TokenEvent
 from cantollm.stream_events import TextChunk, ThinkingEndEvent, ThinkingStartEvent
+
+logger = logging.getLogger(__name__)
 
 PING_INTERVAL_SECONDS = 15.0
 
@@ -238,7 +241,11 @@ async def render_sse(
         if not producer.done():
             producer.cancel()
         # Let the producer finalize (e.g. abort the engine via its finally block).
+        # CancelledError is expected (we just cancelled it); anything else is a
+        # real fault in generation that would otherwise vanish — log it.
         try:
             await producer
-        except BaseException:
+        except asyncio.CancelledError:
             pass
+        except Exception:
+            logger.exception("Anthropic SSE producer failed during finalization")

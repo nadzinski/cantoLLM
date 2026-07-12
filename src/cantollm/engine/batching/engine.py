@@ -39,6 +39,7 @@ marks itself failed, and later submits fail immediately.
 from __future__ import annotations
 
 import asyncio
+import logging
 import queue
 import threading
 from collections.abc import AsyncIterator
@@ -58,6 +59,8 @@ from cantollm.engine.types import InferenceRequest, TokenEvent
 
 if TYPE_CHECKING:
     from cantollm.runtime import ModelRuntime
+
+logger = logging.getLogger(__name__)
 
 _JOIN_TIMEOUT_S = 5.0
 
@@ -166,6 +169,10 @@ class ContinuousBatchingEngine:
             try:
                 events = self.scheduler.step()
             except Exception as exc:  # batch-wide by construction
+                # Log with the traceback here, on the scheduler thread where
+                # it happened — _fail only carries the message to clients, so
+                # without this the stack of a batch-wide failure is lost.
+                logger.exception("scheduler step failed; failing the engine")
                 self._loop.call_soon_threadsafe(self._fail, str(exc))
                 return
 

@@ -8,6 +8,7 @@ anything about models, pools, or the real scheduler.
 """
 
 import asyncio
+import logging
 import threading
 
 from cantollm.engine.batching import ContinuousBatchingEngine
@@ -281,3 +282,21 @@ class TestStepFailure:
             assert len(stream) == 1
             assert "forward exploded" in stream[0].error
         assert len(late) == 1 and "forward exploded" in late[0].error
+
+    def test_step_exception_logs_traceback(self, caplog):
+        """The batch-wide failure must log with its stack on the scheduler
+        thread — _fail only carries the message to clients."""
+        async def main():
+            engine = await start_engine(FailingScheduler({"r1": [tok("r1", 0)]}))
+            await collect(engine, make_request("r1"))
+            await engine.shutdown()
+
+        with caplog.at_level(logging.ERROR):
+            asyncio.run(main())
+
+        records = [r for r in caplog.records if r.levelno >= logging.ERROR]
+        assert any(r.exc_info is not None for r in records), "no traceback logged"
+        assert any("forward exploded" in (r.exc_text or "") for r in records
+                   if r.exc_text) or any(
+            r.exc_info and "forward exploded" in str(r.exc_info[1]) for r in records
+        )

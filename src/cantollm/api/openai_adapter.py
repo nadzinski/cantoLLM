@@ -10,6 +10,7 @@ don't simply ignore the unknown field.
 
 import asyncio
 import json
+import logging
 import uuid
 from collections.abc import AsyncIterator
 
@@ -31,6 +32,8 @@ from cantollm.api.phase import DecodeState, phase_tagged_events
 from cantollm.decoder import StopStringWatcher
 from cantollm.engine.types import TokenEvent
 from cantollm.stream_events import TextChunk
+
+logger = logging.getLogger(__name__)
 
 
 def _to_finish_reason(finish_reason: str | None) -> FinishReason | None:
@@ -312,7 +315,11 @@ async def render_chat_completion_sse(
         if not producer.done():
             producer.cancel()
         # Let the producer finalize (e.g. abort the engine via its finally block).
+        # CancelledError is expected (we just cancelled it); anything else is a
+        # real fault in generation that would otherwise vanish — log it.
         try:
             await producer
-        except BaseException:
+        except asyncio.CancelledError:
             pass
+        except Exception:
+            logger.exception("OpenAI SSE producer failed during finalization")
