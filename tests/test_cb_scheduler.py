@@ -1,18 +1,12 @@
-"""Step-8 scheduler suite: the port's definition of done.
+"""ContinuousBatchingScheduler vs the toy oracle.
 
-`water_fill`, `build_batch_meta`, and constructor validation are provided
-code — those tests are green from day one. Everything under an
-`@xfail_until_step8` marker is the hand-written part: work through with
-
-    pytest tests/test_cb_scheduler.py -x
-
-and DELETE each marker as its test goes green (strict=True polices
-leftovers). The oracle is `tests/toy_stepper.toy_oracle` — the same toy
-forward run one request at a time under the real emission contract
-(stop suppression, >=, max_tokens<=0), mirroring StandardBackend.generate.
-
-Checklist numbers referenced in test docstrings match the stub docstrings
-in engine/batching/scheduler.py.
+`toy_oracle` (tests/toy_stepper.py) runs each request alone under the real
+emission contract (stop suppression, `>=` on max_tokens, `max_tokens<=0`
+emits nothing), mirroring StandardBackend.generate — the batched scheduler
+must match it stream for stream, whatever the batch around a request looks
+like. The `drain` helper additionally enforces the shell contracts on every
+event: exactly one populated TokenEvent field, and `step()` never called
+while idle.
 """
 
 import itertools
@@ -30,11 +24,6 @@ from cantollm.engine.batching.scheduler import (
 from cantollm.engine.batching.types import CBSequence
 from cantollm.engine.types import InferenceRequest, SamplingParams, TokenEvent
 from tests.toy_stepper import ToyStepper, make_toy_pool, toy_oracle
-
-xfail_until_step8 = pytest.mark.xfail(
-    raises=NotImplementedError, strict=True,
-    reason="scheduler port not implemented yet (step 8)",
-)
 
 GREEDY = SamplingParams.from_temperature_top_p(temperature=0.0, top_p=1.0)
 
@@ -133,7 +122,7 @@ def drain(
                 r["errors"].append(evt.error)
 
 
-# ── Provided code: green from day one ────────────────────────────────
+# ── Plumbing: water_fill, meta building, construction ───────────────
 
 
 class TestWaterFill:
@@ -212,11 +201,10 @@ class TestToyOracle:
         assert toy_oracle(make_request("x", [2, 3], max_tokens=0)) == ([], "max_tokens")
 
 
-# ── The hand-written part: delete markers as these go green ─────────
+# ── Scheduler behavior vs the oracle ─────────────────────────────────
 
 
 class TestSingleRequest:
-    @xfail_until_step8
     def test_matches_oracle(self):
         scheduler, _ = make_scheduler()
         req = make_request("r1", [2, 3, 4, 5], max_tokens=6)
@@ -227,22 +215,23 @@ class TestSingleRequest:
         assert results["r1"]["tokens"] == tokens
         assert results["r1"]["finish"] == finish == "max_tokens"
 
-    @xfail_until_step8
     def test_stop_token_suppressed_and_finishes_end_turn(self):
         """Checklist 1: the stop token is never emitted; the stream just
         ends with its own end_turn finish event."""
         scheduler, _ = make_scheduler()
         free_run, _ = toy_oracle(make_request("probe", [2, 3, 4], max_tokens=6))
-        stop = free_run[3]  # make the 4th generated token a stop token
+        stop = free_run[3]  # a token the model will definitely produce
         req = make_request("r1", [2, 3, 4], max_tokens=6, stop_token_ids={stop})
 
         results = drain(scheduler, {0: [req]})
 
-        assert results["r1"]["tokens"] == free_run[:3]
+        # The oracle applies the same stop set — truncation happens at the
+        # FIRST occurrence of the stop token, wherever that is.
+        expected_tokens, expected_finish = toy_oracle(req)
+        assert results["r1"]["tokens"] == expected_tokens
         assert stop not in results["r1"]["tokens"]
-        assert results["r1"]["finish"] == "end_turn"
+        assert results["r1"]["finish"] == expected_finish == "end_turn"
 
-    @xfail_until_step8
     def test_finish_is_its_own_event(self):
         """Checklist 2: N token events + exactly one finish event, each
         populating exactly one field (drain asserts the field contract)."""
@@ -255,7 +244,6 @@ class TestSingleRequest:
         assert len(events) == len(results["r1"]["tokens"]) + 1
         assert events[-1].finish_reason is not None
 
-    @xfail_until_step8
     def test_max_tokens_zero_finishes_immediately(self):
         """Checklist 4: no slot taken, no forward run, immediate finish."""
         scheduler, forward = make_scheduler()
@@ -268,7 +256,6 @@ class TestSingleRequest:
         assert forward.step_token_counts == []
         assert scheduler.allocator.num_free() == scheduler.config.max_batch
 
-    @xfail_until_step8
     def test_chunked_prefill_matches_oracle(self):
         """A 20-token prompt through a budget of 4 — prefill spans multiple
         steps and must land on the same tokens as a one-shot run."""
@@ -286,7 +273,6 @@ class TestSingleRequest:
 
 
 class TestConcurrency:
-    @xfail_until_step8
     def test_three_concurrent_match_oracles(self):
         scheduler, _ = make_scheduler(max_batch=3)
         reqs = [
@@ -302,7 +288,6 @@ class TestConcurrency:
             assert results[req.request_id]["tokens"] == tokens, req.request_id
             assert results[req.request_id]["finish"] == finish, req.request_id
 
-    @xfail_until_step8
     def test_more_requests_than_slots(self):
         """5 requests, 2 slots: FCFS admission as slots free up; everyone
         still matches their solo oracle run."""
@@ -319,7 +304,6 @@ class TestConcurrency:
             assert results[req.request_id]["tokens"] == tokens, req.request_id
             assert results[req.request_id]["finish"] == finish, req.request_id
 
-    @xfail_until_step8
     def test_late_arrival_is_served(self):
         """The idle-gap trap (fable-review #5): a request arriving after the
         scheduler went idle must still be admitted and served."""
@@ -333,7 +317,6 @@ class TestConcurrency:
         assert results["late"]["tokens"] == tokens
         assert results["late"]["finish"] == finish
 
-    @xfail_until_step8
     def test_token_budget_respected_every_step(self):
         scheduler, forward = make_scheduler(
             max_batch=3, max_seq_len=64, max_tokens_per_step=6
@@ -351,7 +334,6 @@ class TestConcurrency:
             forward.step_token_counts
         )
 
-    @xfail_until_step8
     def test_per_row_sampling_params(self):
         """Two identical prompts, one with a ranking-inverting processor:
         each row must be sampled with its own params (via engine/sampler)."""
@@ -368,7 +350,6 @@ class TestConcurrency:
 
 
 class TestAbort:
-    @xfail_until_step8
     def test_abort_active_frees_slot_for_queued(self):
         """Checklist 5, active half: abort emits its event, frees the slot,
         and the queued request takes it and completes correctly."""
@@ -396,7 +377,6 @@ class TestAbort:
                      if e.request_id == "r2" and e.token_id is not None]
         assert r2_tokens == toy_oracle(r2)[0]
 
-    @xfail_until_step8
     def test_abort_queued_request(self):
         """Checklist 5, queued half: no slot to free, but the abort event
         still comes and the queue entry is gone."""
@@ -419,13 +399,11 @@ class TestAbort:
                      if e.request_id == "r1" and e.token_id is not None]
         assert r1_tokens == toy_oracle(r1)[0]
 
-    @xfail_until_step8
     def test_abort_unknown_is_silent_noop(self):
         scheduler, _ = make_scheduler()
         scheduler.abort("ghost")
         assert scheduler.is_idle()
 
-    @xfail_until_step8
     def test_is_idle_false_while_events_pend(self):
         """The shell contract: after aborting the LAST active sequence the
         scheduler holds an un-flushed abort event — is_idle() must say False
@@ -442,7 +420,6 @@ class TestAbort:
 
 
 class TestAdmissionDefense:
-    @xfail_until_step8
     def test_over_cap_request_rejected_with_error_event(self):
         """Checklist 6: defense behind the API's admission check — an
         over-cap add_request never queues and surfaces an error event."""

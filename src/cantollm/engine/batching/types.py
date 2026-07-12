@@ -70,6 +70,11 @@ class CBSequence:
     def is_prefilling(self) -> bool:
         return self.position < len(self.prompt_token_ids)
 
+    @property
+    def remaining_prompt(self) -> int:
+        """Prompt tokens the model hasn't consumed yet."""
+        return max(0, len(self.prompt_token_ids) - self.position)
+
     def input_tokens_at(self, start: int, n: int) -> list[int]:
         """The next `n` input tokens from position `start`: prompt tokens
         while prefilling; after that, the single last generated token."""
