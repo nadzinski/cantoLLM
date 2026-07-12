@@ -36,42 +36,55 @@ class IncrementalDecoder:
 
     A single Unicode character (like an emoji) can span multiple BPE tokens.
     Decoding one token at a time produces U+FFFD replacement characters for
-    incomplete multi-byte sequences.  This class accumulates tokens and only
-    emits text once it is confident the bytes are stable.
+    incomplete multi-byte sequences, so text is held until the bytes complete.
+
+    Only the tokens of the *current incomplete character run* are buffered:
+    the moment a decode comes back fully stable (no trailing U+FFFD), the run
+    is at a character boundary and the window resets. Byte-level BPE decodes a
+    char-aligned suffix to exactly that suffix's bytes, so this yields the same
+    output as re-decoding the whole sequence \u2014 but each decode is bounded by
+    the length of one incomplete run (usually one token) rather than the whole
+    generation, making streaming O(n) instead of O(n^2).
     """
 
     def __init__(self, tokenizer: "Qwen3Tokenizer"):
         self._tokenizer = tokenizer
-        self._tokens: list[int] = []
-        self._emitted: str = ""
+        self._window: list[int] = []
+        self._emitted: str = ""  # text already emitted from the current window
 
     def add(self, token_id: int) -> str:
         """Append a token and return any newly-stable text."""
-        self._tokens.append(token_id)
-        decoded = self._tokenizer.decode(self._tokens)
+        self._window.append(token_id)
+        decoded = self._tokenizer.decode(self._window)
 
         # Find the stable prefix by scanning backward past any replacement chars.
         stable_end = len(decoded)
         while stable_end > 0 and decoded[stable_end - 1] == "\ufffd":
             stable_end -= 1
 
-        stable = decoded[:stable_end]
-        new_text = stable[len(self._emitted):]
-        self._emitted = stable
+        new_text = decoded[len(self._emitted):stable_end]
+        if stable_end == len(decoded):
+            # Fully stable: the window ends on a character boundary, so nothing
+            # in it can change. Commit and start a fresh window.
+            self._window = []
+            self._emitted = ""
+        else:
+            self._emitted = decoded[:stable_end]
         return new_text
 
     def flush(self) -> str:
         """Return any remaining text that hasn't been emitted yet."""
-        if not self._tokens:
+        if not self._window:
             return ""
-        decoded = self._tokenizer.decode(self._tokens)
+        decoded = self._tokenizer.decode(self._window)
         remaining = decoded[len(self._emitted):]
-        self._emitted = decoded
+        self._window = []
+        self._emitted = ""
         return remaining
 
     def reset(self):
         """Clear internal state."""
-        self._tokens = []
+        self._window = []
         self._emitted = ""
 
 
