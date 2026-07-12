@@ -70,7 +70,11 @@ class SequentialEngine:
                     stop_event=stop_event,
                 )
                 for tok in self.runtime.backend.generate(seq):
-                    put_threadsafe(TokenEvent(token_id=tok, request_id=rid))
+                    put_threadsafe(TokenEvent(
+                        token_id=tok,
+                        logprob=seq.logprobs[-1] if seq.logprobs else None,
+                        request_id=rid,
+                    ))
                     seq.tokens_emitted += 1
                     if stop_event.is_set():
                         break

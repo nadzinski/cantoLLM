@@ -65,6 +65,9 @@ class Sequence:
     cache: KVCache
     stop_event: threading.Event
     tokens_emitted: int = 0
+    logprobs: list[float] = field(default_factory=list)
+    """One entry per yielded token, appended by the backend just before the
+    yield — the engine reads `logprobs[-1]` when building each TokenEvent."""
 
     def finish_reason_after_normal_exit(self) -> FinishReason:
         """Map post-generate state to a FinishReason.
@@ -89,9 +92,14 @@ class TokenEvent:
     those three is populated. `request_id` is always set on engine-produced
     events and becomes load-bearing once a batching scheduler multiplexes
     per-request queues into a shared stream.
+
+    `logprob` is an optional annotation riding with `token_id`: the natural
+    log of the sampled token's post-pipeline probability. It is not a fourth
+    event kind.
     """
 
     token_id: int | None = None
     finish_reason: FinishReason | None = None
     error: str | None = None
     request_id: str | None = None
+    logprob: float | None = None

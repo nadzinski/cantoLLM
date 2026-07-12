@@ -201,7 +201,9 @@ class SpeculativeBackend:
             stats.draft_tokens_accepted += len(accepted_tokens)
 
             # Sample next token from main at first rejection point (or after all accepted)
-            main_tail_token, _ = self.main.sample(verify_logits[len(accepted_tokens)], sampling)
+            main_tail_token, tail_probs = self.main.sample(
+                verify_logits[len(accepted_tokens)], sampling
+            )
             main_tail_token = main_tail_token.item()
 
             # Yield tokens, respecting max_tokens budget
@@ -211,10 +213,17 @@ class SpeculativeBackend:
 
             hit_stop = False
             n_emitted = 0
-            for tok in emit_tokens:
+            for i, tok in enumerate(emit_tokens):
                 if tok in stop_token_ids:
                     hit_stop = True
                     break
+                # Every emitted token's probability comes from main's
+                # distribution: accepted drafts from the verify rows, the
+                # tail token from its own sample.
+                if i < len(accepted_tokens):
+                    sequence.logprobs.append(main_probs[i].reshape(-1)[tok].log().item())
+                else:
+                    sequence.logprobs.append(tail_probs.reshape(-1)[tok].log().item())
                 yield tok
                 n_emitted += 1
             tokens_yielded += n_emitted

@@ -231,13 +231,14 @@ class ContinuousBatchingScheduler:
         logits = self.forward_fn(input_ids, meta, self.pool)
         sampled = []
         for r, row in enumerate(rows):
-            token_tensor, _probs = sampler.sample(
+            token_tensor, probs = sampler.sample(
                 logits[r], row.sequence.sampling_params
             )
-            sampled.append(int(token_tensor.item()))
+            token = int(token_tensor.item())
+            sampled.append((token, probs[token].log().item()))
 
         still_active = []
-        for row, token in zip(rows, sampled):
+        for row, (token, logprob) in zip(rows, sampled):
             seq = row.sequence
             seq.position += row.num_new
             if seq.is_prefilling():
@@ -255,7 +256,9 @@ class ContinuousBatchingScheduler:
                 continue
 
             seq.output_token_ids.append(token)
-            events.append(TokenEvent(token_id=token, request_id=seq.request_id))
+            events.append(TokenEvent(
+                token_id=token, logprob=logprob, request_id=seq.request_id
+            ))
 
             if len(seq.output_token_ids) >= seq.max_tokens:
                 # finish is its own event, after the last token

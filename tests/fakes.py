@@ -66,6 +66,7 @@ class ScriptStep:
     token_id: int | None = None
     sleep: float = 0.0
     raise_error: BaseException | None = None
+    logprob: float | None = None
 
 
 @dataclass
@@ -166,7 +167,11 @@ class FakeEngine:
                     self.completed = True
                     return
                 if step.token_id is not None:
-                    yield TokenEvent(token_id=step.token_id, request_id=req.request_id)
+                    yield TokenEvent(
+                        token_id=step.token_id,
+                        logprob=step.logprob,
+                        request_id=req.request_id,
+                    )
                     tokens_emitted += 1
             if tokens_emitted >= req.max_tokens:
                 reason = "max_tokens"

@@ -12,7 +12,7 @@ focused on wire format.
 """
 
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 from cantollm.decoder import StreamingDecoder
@@ -29,6 +29,12 @@ class DecodeState:
     total: int = 0
     finish_reason: str | None = None
     error: str | None = None
+    content_logprobs: list[tuple[str, float | None]] = field(default_factory=list)
+    """(token_text, logprob) per text-phase token, in emission order. The
+    token text is the piece the incremental decoder released for that token
+    — "" for tokens whose bytes are still held back (multi-byte UTF-8), with
+    the completing token carrying the combined text. Counts stay 1:1 with
+    tokens; texts are approximate at byte boundaries."""
 
 
 def _classify(token_id: int, tokenizer, phase_is_thinking: bool) -> tuple[bool, Phase]:
@@ -74,7 +80,13 @@ async def phase_tagged_events(
         phase_is_thinking, bucket = _classify(evt.token_id, tokenizer, phase_is_thinking)
         setattr(state, bucket, getattr(state, bucket) + 1)
         state.total += 1
-        for dec_evt in decoder.process(evt.token_id):
+        dec_events = list(decoder.process(evt.token_id))
+        if bucket == "text":
+            piece = "".join(
+                d.text for d in dec_events if isinstance(d, TextChunk)
+            )
+            state.content_logprobs.append((piece, evt.logprob))
+        for dec_evt in dec_events:
             match dec_evt:
                 case ThinkingStartEvent():
                     yield "thinking", dec_evt

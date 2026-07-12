@@ -69,11 +69,12 @@ class StandardBackend:
 
         # Process input and get first token
         logits = self.forward(sequence.prompt_token_ids, cache, cache.position)
-        token_id, _ = self.sample(logits[:, -1], sampling)
+        token_id, probs = self.sample(logits[:, -1], sampling)
         token_id = token_id.item()
 
         if token_id in stop_token_ids:
             return
+        sequence.logprobs.append(probs[0, token_id].log().item())
         yield token_id
 
         # Generate remaining tokens
@@ -81,9 +82,10 @@ class StandardBackend:
             if stop_event.is_set():
                 return
             logits = self.forward([token_id], cache, cache.position)
-            token_id, _ = self.sample(logits[:, -1], sampling)
+            token_id, probs = self.sample(logits[:, -1], sampling)
             token_id = token_id.item()
 
             if token_id in stop_token_ids:
                 return
+            sequence.logprobs.append(probs[0, token_id].log().item())
             yield token_id

@@ -71,9 +71,13 @@ class ChatCompletionRequest(BaseModel):
     max_completion_tokens: int | None = Field(default=None, gt=0)
     # Accepted but currently ignored — stop-string support lands in Phase 2.
     stop: str | list[str] | None = None
+    # Chosen-token logprob per content token. `top_logprobs` (the k
+    # alternatives) stays rejected via extra="forbid" — we track only the
+    # sampled token's probability.
+    logprobs: bool = False
     # `user` is a free-form id OpenAI uses for abuse tracking; harmless pass-through.
     user: str | None = None
-    # Everything else (tools, tool_choice, n, logprobs, response_format,
+    # Everything else (tools, tool_choice, n, top_logprobs, response_format,
     # modalities, audio, seed, parallel_tool_calls, presence_penalty,
     # frequency_penalty, etc.) is rejected by extra="forbid".
     model_config = {"extra": "forbid"}
@@ -113,11 +117,24 @@ class ChatCompletionMessage(BaseModel):
     reasoning_content: str | None = None
 
 
+class TokenLogprob(BaseModel):
+    token: str
+    logprob: float
+    bytes: list[int] | None = None
+    # We track only the chosen token; `top_logprobs` alternatives would need
+    # a k-extraction in the sampler. Always empty here.
+    top_logprobs: list = []
+
+
+class ChoiceLogprobs(BaseModel):
+    content: list[TokenLogprob] | None = None
+
+
 class ChatCompletionChoice(BaseModel):
     index: int = 0
     message: ChatCompletionMessage
     finish_reason: FinishReason | None
-    logprobs: None = None
+    logprobs: ChoiceLogprobs | None = None
 
 
 class ChatCompletion(BaseModel):

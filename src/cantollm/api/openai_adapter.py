@@ -19,11 +19,13 @@ from cantollm.api.openai_types import (
     ChatCompletion,
     ChatCompletionChoice,
     ChatCompletionMessage,
+    ChoiceLogprobs,
     CompletionTokensDetails,
     CompletionUsage,
     FinishReason,
     OpenAIError,
     OpenAIErrorEnvelope,
+    TokenLogprob,
 )
 from cantollm.api.phase import DecodeState, phase_tagged_events
 from cantollm.engine.types import TokenEvent
@@ -47,6 +49,15 @@ def _new_completion_id() -> str:
     return f"chatcmpl-{uuid.uuid4().hex[:24]}"
 
 
+def _token_logprob_entry(token_text: str, logprob: float) -> dict:
+    return {
+        "token": token_text,
+        "logprob": logprob,
+        "bytes": list(token_text.encode("utf-8")) or None,
+        "top_logprobs": [],
+    }
+
+
 def _chunk_line(
     *,
     completion_id: str,
@@ -55,6 +66,7 @@ def _chunk_line(
     delta: dict,
     finish_reason: FinishReason | None = None,
     usage: dict | None = None,
+    logprobs: dict | None = None,
 ) -> str:
     """Format one OpenAI chunk as a single SSE `data:` line.
 
@@ -76,7 +88,7 @@ def _chunk_line(
             "index": 0,
             "delta": delta,
             "finish_reason": finish_reason,
-            "logprobs": None,
+            "logprobs": logprobs,
         }],
     }
     if usage is not None:
@@ -127,6 +139,7 @@ async def render_chat_completion(
     input_tokens: int,
     completion_id: str,
     created: int,
+    logprobs_requested: bool = False,
 ) -> ChatCompletion:
     """Drain the event stream into a single ChatCompletion."""
     state = DecodeState()
@@ -155,6 +168,16 @@ async def render_chat_completion(
         ) if state.thinking else None,
     )
 
+    choice_logprobs = None
+    if logprobs_requested:
+        # Entries whose engine event carried no logprob are dropped —
+        # OpenAI's schema requires a float per entry.
+        choice_logprobs = ChoiceLogprobs(content=[
+            TokenLogprob(**_token_logprob_entry(text, lp))
+            for text, lp in state.content_logprobs
+            if lp is not None
+        ])
+
     return ChatCompletion(
         id=completion_id,
         created=created,
@@ -166,6 +189,7 @@ async def render_chat_completion(
                 reasoning_content=reasoning_content,
             ),
             finish_reason=_to_finish_reason(state.finish_reason),
+            logprobs=choice_logprobs,
         )],
         usage=usage,
     )
@@ -179,6 +203,7 @@ async def render_chat_completion_sse(
     completion_id: str,
     created: int,
     include_usage: bool,
+    logprobs_requested: bool = False,
 ) -> AsyncIterator[str]:
     """Stream the event stream as OpenAI SSE chunks.
 
@@ -199,10 +224,14 @@ async def render_chat_completion_sse(
     state = DecodeState()
     out: asyncio.Queue[str | None] = asyncio.Queue()
 
-    def emit(delta: dict, finish_reason: FinishReason | None = None) -> str:
+    def emit(
+        delta: dict,
+        finish_reason: FinishReason | None = None,
+        logprobs: dict | None = None,
+    ) -> str:
         return _chunk_line(
             completion_id=completion_id, created=created, model_name=model_name,
-            delta=delta, finish_reason=finish_reason,
+            delta=delta, finish_reason=finish_reason, logprobs=logprobs,
         )
 
     async def produce():
@@ -214,7 +243,16 @@ async def render_chat_completion_sse(
                 if not isinstance(dec_evt, TextChunk):
                     continue
                 key = "reasoning_content" if phase == "thinking" else "content"
-                await out.put(emit({key: dec_evt.text}))
+                chunk_logprobs = None
+                if logprobs_requested and phase == "text" and state.content_logprobs:
+                    # Lockstep with phase_tagged_events: the entry for the
+                    # token that produced this chunk was just appended.
+                    text, lp = state.content_logprobs[-1]
+                    if lp is not None:
+                        chunk_logprobs = {
+                            "content": [_token_logprob_entry(text, lp)]
+                        }
+                await out.put(emit({key: dec_evt.text}, logprobs=chunk_logprobs))
 
             if state.error is not None:
                 # Minimum-viable mid-stream error: one error envelope as a

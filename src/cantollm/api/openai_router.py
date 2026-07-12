@@ -151,11 +151,13 @@ def build_openai_router(
                 render_chat_completion_sse(
                     events, tokenizer, body.model, input_tokens,
                     completion_id, created, include_usage,
+                    logprobs_requested=body.logprobs,
                 ),
                 media_type="text/event-stream",
             )
         return await render_chat_completion(
             events, tokenizer, body.model, input_tokens, completion_id, created,
+            logprobs_requested=body.logprobs,
         )
 
     return router
