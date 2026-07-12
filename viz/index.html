@@ -832,7 +832,7 @@ function initRoadmap() {
         'Thinking tokens emitted DeepSeek-R1-style as <code>reasoning_content</code>',
         'Deferred to 3.5: the production-hygiene bundle (metrics are uninteresting until there’s a scheduler to measure)',
       ] },
-    { id: '2', title: 'continuous batching + split', hw: '5090 · 1 H100 day', status: 'active',
+    { id: '2', title: 'continuous batching + split', hw: '5090 · 1 H100 day', status: 'loose',
       statusLine: 'Status (2026-07-11): item (1) done — the in-process CB engine serves via --engine batched (steps 0–9 of continuous-batching-plan.md; author hand-wrote ✍ the attention math + scheduler). 240 tests; token-for-token oracle equivalence; first numbers: 75.9 vs 31.4 tok/s aggregate (2.4×), completion p50 10.8s vs 36.7s, TTFT trade visible. Open: (2) the API/engine process split; logprobs + stop strings moved to the plan’s tail steps.',
       goal: 'The headline feature: many concurrent requests share each forward pass. Padded KV, no paging yet. Correctness-first attention path — perf work deliberately deferred to Phase 3.',
       items: [
@@ -844,7 +844,7 @@ function initRoadmap() {
         'Bench (rough, spec still deferred): 2.4× aggregate on 4 slots on the Mac; per-request TTFT worsened under load exactly as predicted — the tradeoff, made visible',
         '→ See the <a href="#/batching">Continuous batching</a> and <a href="#/wiring">CB wiring</a> tabs',
       ] },
-    { id: '3', title: 'CUDA beachhead', hw: '5090 · 1 H100 day', status: 'future',
+    { id: '3', title: 'CUDA beachhead', hw: '5090 · 1 H100 day', status: 'active',
       goal: 'First real perf-tuning pass, against a target whose shape is finally stable.',
       items: [
         '<code>SDPABackend</code> (F.scaled_dot_product_attention) becomes the CUDA default; einsum stays the correctness reference and Mac fallback',
