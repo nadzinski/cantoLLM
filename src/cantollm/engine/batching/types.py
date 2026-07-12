@@ -18,12 +18,12 @@ implements.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 import torch
 
-from cantollm.engine.types import InferenceRequest, TokenEvent
+from cantollm.engine.types import InferenceRequest, SamplingParams, TokenEvent
 from cantollm.kv_pool import PaddedKVPool
 from cantollm.models.attention.protocol import BatchMeta
 
@@ -44,6 +44,39 @@ class Shutdown:
 
 
 Command = AddRequest | Abort | Shutdown
+
+
+@dataclass
+class CBSequence:
+    """Per-request state owned by the CB scheduler (decision 2: deliberately
+    NOT unified with `engine/types.Sequence`, whose `cache: KVCache` and
+    `stop_event` are sequential-path artifacts).
+
+    Ported from the prototype's `cb_types.Sequence`, plus `sampling_params`
+    (the prototype was greedy-only). `position` counts how many tokens of
+    this sequence the model has consumed — prompt first, then generated
+    tokens; the KV write offset and the RoPE base both derive from it.
+    """
+
+    request_id: str
+    prompt_token_ids: list[int]
+    sampling_params: SamplingParams
+    max_tokens: int
+    stop_token_ids: set[int]
+    slot_idx: int | None = None
+    position: int = 0
+    output_token_ids: list[int] = field(default_factory=list)
+
+    def is_prefilling(self) -> bool:
+        return self.position < len(self.prompt_token_ids)
+
+    def input_tokens_at(self, start: int, n: int) -> list[int]:
+        """The next `n` input tokens from position `start`: prompt tokens
+        while prefilling; after that, the single last generated token."""
+        if start < len(self.prompt_token_ids):
+            return self.prompt_token_ids[start : start + n]
+        assert n == 1, "decode rows consume exactly one token"
+        return self.output_token_ids[-1:]
 
 
 class SchedulerLike(Protocol):
