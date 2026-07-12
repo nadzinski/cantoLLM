@@ -461,7 +461,8 @@
       The round trip of one real request: how data gets packaged into objects on the way down
       (messages → ids → <code>InferenceRequest</code> → <code>Sequence</code> → tensors) and unpacked on the way back
       (token_id → <code>TokenEvent</code> → queue → <code>StreamEvent</code> → SSE) — plus the threads, the queue, and the
-      yield loop that carry it. Click any node, or scrub / play.
+      yield loop that carry it. This is the <b>sequential engine’s</b> pipe; the batched engine keeps the same two ends
+      but runs the middle in its own process (see the Overview’s CB box). Click any node, or scrub / play.
     </p>
     <div id="pl-body"></div>
   </section>
@@ -1183,8 +1184,9 @@ function initPlumbing() {
       c.appendChild(pre('ids = [' + req.prompt.ids.slice(0, 12).join(', ') + ', … ×' + req.prompt.ids.length + ']'));
     }},
     { name: 'Packed: InferenceRequest', thread: ['loop', 'event loop'], code: 'engine/types.py:41 — “the sole contract between the HTTP layer and the engine”', card: (c) => {
-      c.appendChild(para('Token-level and framework-agnostic — no Anthropic/OpenAI concepts survive past this point, ' +
-        'which is what lets a batching engine drop in later without touching the API surface.'));
+      c.appendChild(para('Token-level and framework-agnostic — no Anthropic/OpenAI concepts survive past this point. ' +
+        'That contract is what let the batching engine drop in without touching the API surface — and since the process ' +
+        'split it is literally the wire format: <code>--engine batched</code> pickles this exact dataclass over to the engine process.'));
       c.appendChild(pre(
         'InferenceRequest(\n' +
         `  request_id      = "${shortId}"          # uuid4\n` +
@@ -1235,7 +1237,8 @@ function initPlumbing() {
     { name: 'Packed: TokenEvent', thread: ['worker', `worker thread ${eng.worker_thread}`], code: 'engine/types.py:84', card: (c) => {
       c.appendChild(para('Each yielded int is wrapped in the engine’s only cross-thread object. The contract: <b>exactly one</b> of ' +
         '<code>token_id</code> / <code>finish_reason</code> / <code>error</code> is set; <code>request_id</code> always — ' +
-        'load-bearing once a batching scheduler multiplexes many requests into shared streams.'));
+        'load-bearing now that the batching scheduler multiplexes many requests into shared streams (and, post-split, ' +
+        'TokenEvents cross the process boundary in one pickled batch per step).'));
       c.appendChild(pre(
         `TokenEvent(token_id=${firstEvt.token_id}, request_id="${shortId}")   # t=+${firstEvt.t_ms}ms (first)\n` +
         `        …×${nTok}…\n` +
