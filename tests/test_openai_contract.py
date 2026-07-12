@@ -367,6 +367,31 @@ def test_unknown_top_level_field_rejected():
     assert r.status_code == 422  # Pydantic extra="forbid" rejects at validation
 
 
+def test_out_of_range_sampling_params_rejected():
+    """OpenAI ranges: temperature 0..2, top_p 0..1. Out-of-range values must
+    die at validation — an unbounded temperature reaching the engine can
+    overflow logits (see SamplingParams.from_temperature_top_p)."""
+    tokenizer = _tokenizer_for("a")
+    engine = FakeEngine(script=_script_from_text("a"))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            return [
+                (await client.post(
+                    "/v1/chat/completions",
+                    json={**_chat_body(stream=False, max_tokens=1), **o},
+                )).status_code
+                for o in (
+                    {"temperature": 2.5},
+                    {"temperature": -0.1},
+                    {"top_p": 1.5},
+                    {"top_p": -0.1},
+                )
+            ]
+
+    assert _run(run()) == [422, 422, 422, 422]
+
+
 def test_unknown_content_part_type_rejected():
     tokenizer = _tokenizer_for("a")
     engine = FakeEngine(script=_script_from_text("a"))

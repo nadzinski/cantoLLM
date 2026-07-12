@@ -27,8 +27,11 @@ class MessagesRequest(BaseModel):
     max_tokens: int = Field(gt=0)
     messages: list[Message] = Field(min_length=1)
     system: str | None = None
-    temperature: float = 0.7
-    top_p: float = 0.9
+    # Anthropic's documented ranges. Values inside them are safe: near-zero
+    # temperature maps to greedy at the engine seam (see
+    # SamplingParams.from_temperature_top_p) instead of dividing logits.
+    temperature: float = Field(default=0.7, ge=0.0, le=1.0)
+    top_p: float = Field(default=0.9, ge=0.0, le=1.0)
     stream: bool = False
     # Custom text sequences that end generation; matched text-level in the
     # adapter (they can span token boundaries), never emitted to the client.

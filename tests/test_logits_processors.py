@@ -78,6 +78,21 @@ class TestFromTemperatureTopP:
         assert len(params.processors) == 1
         assert isinstance(params.processors[0], TemperatureProcessor)
 
+    def test_near_zero_temperature_is_greedy(self):
+        """Denormal-range temperature would overflow logits to inf (NaN probs,
+        multinomial raises — batch-wide on the CB engine); the epsilon floor
+        maps it to greedy instead."""
+        params = SamplingParams.from_temperature_top_p(1e-38, 1.0)
+        assert params.greedy is True
+        assert params.processors == []
+
+    def test_negative_temperature_is_greedy(self):
+        # Unreachable via the API (ge=0) but not via direct engine callers;
+        # deterministic beats a silently inverted distribution.
+        params = SamplingParams.from_temperature_top_p(-1.0, 1.0)
+        assert params.greedy is True
+        assert params.processors == []
+
     def test_default_zero_arg_has_no_processors_and_is_not_greedy(self):
         params = SamplingParams()
         assert params.greedy is False

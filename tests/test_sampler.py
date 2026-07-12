@@ -104,6 +104,20 @@ class TestMultinomialUnchanged:
         assert torch.equal(probs, ref_probs)
 
 
+class TestPathologicalTemperature:
+    def test_tiny_temperature_samples_cleanly(self):
+        """temperature=1e-38 passes the APIs' ge=0 bound; without the greedy
+        floor it overflows logits to inf and multinomial raises — on the CB
+        engine that is a batch-wide failure that latches the engine dead."""
+        logits = torch.randn(50) * 10
+        sampling = SamplingParams.from_temperature_top_p(temperature=1e-38, top_p=0.9)
+
+        token, probs = sampler.sample(logits, sampling)
+
+        assert torch.isfinite(probs).all()
+        assert token.item() == logits.argmax().item()  # deterministic, i.e. greedy
+
+
 class TestStandardBackendDelegates:
     def test_backend_sample_matches_shared_sampler(self):
         """StandardBackend.sample/get_probs are thin delegates (model unused)."""

@@ -62,8 +62,11 @@ class StreamOptions(BaseModel):
 class ChatCompletionRequest(BaseModel):
     model: str
     messages: list[OpenAIMessage] = Field(min_length=1)
-    temperature: float = 1.0
-    top_p: float = 1.0
+    # OpenAI's documented ranges. Values inside them are safe: near-zero
+    # temperature maps to greedy at the engine seam (see
+    # SamplingParams.from_temperature_top_p) instead of dividing logits.
+    temperature: float = Field(default=1.0, ge=0.0, le=2.0)
+    top_p: float = Field(default=1.0, ge=0.0, le=1.0)
     stream: bool = False
     stream_options: StreamOptions | None = None
     # OpenAI accepts both; max_completion_tokens is preferred post-o1.

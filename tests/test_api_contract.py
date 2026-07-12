@@ -498,6 +498,35 @@ def test_validation_rejects_bad_requests():
     assert (s1, s2, s3) == (422, 422, 422)
 
 
+def test_validation_rejects_out_of_range_sampling_params():
+    """Anthropic ranges: temperature 0..1, top_p 0..1. Out-of-range values
+    must die at validation — an unbounded temperature reaching the engine
+    can overflow logits (see SamplingParams.from_temperature_top_p)."""
+    tokenizer = _tokenizer_for("hi")
+    engine = FakeEngine(script=_script_from_text("hi"))
+
+    def body(**overrides):
+        return {
+            "model": "test-model", "max_tokens": 10,
+            "messages": [{"role": "user", "content": "hi"}],
+            **overrides,
+        }
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            return [
+                (await client.post("/v1/messages", json=body(**o))).status_code
+                for o in (
+                    {"temperature": 1.5},
+                    {"temperature": -0.1},
+                    {"top_p": 1.5},
+                    {"top_p": -0.1},
+                )
+            ]
+
+    assert _run(run()) == [422, 422, 422, 422]
+
+
 # ── Tokenization runs on a thread pool (doesn't serialize the event loop) ──
 
 

@@ -19,6 +19,14 @@ from cantollm.kv_cache import KVCache
 
 FinishReason = Literal["end_turn", "max_tokens", "abort"]
 
+# Below this, temperature means "deterministic" rather than "divide by it":
+# dividing logits by a denormal-range temperature overflows them to inf,
+# softmax turns that into NaN, and torch.multinomial raises — which on the
+# batched engine is a batch-wide failure. The API layers bound temperature
+# to their specs' ranges, but ge=0 still admits values like 1e-38; this
+# floor is the engine-side defense (mirrors vLLM's _SAMPLING_EPS).
+_GREEDY_TEMPERATURE_EPS = 1e-5
+
 
 @dataclass
 class SamplingParams:
@@ -29,7 +37,10 @@ class SamplingParams:
     def from_temperature_top_p(
         cls, temperature: float, top_p: float,
     ) -> "SamplingParams":
-        if temperature == 0:
+        if temperature < _GREEDY_TEMPERATURE_EPS:
+            # Covers 0 (the documented greedy switch), near-zero (would
+            # overflow logits), and negative (would invert the distribution;
+            # unreachable via the API's ge=0 but not via direct callers).
             return cls(greedy=True)
         processors: list[LogitsProcessor] = [TemperatureProcessor(temperature)]
         if top_p < 1.0:
