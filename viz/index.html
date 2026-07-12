@@ -518,8 +518,8 @@
   <!-- ================= CONTINUOUS BATCHING ================= -->
   <section id="view-batching" data-view hidden>
     <p class="view-sub">
-      The <code>prototypes/continuous_batching/</code> scheduler, step by step — not yet wired into the engine
-      (<a href="#/wiring">how it will be → CB wiring</a>).
+      The <code>prototypes/continuous_batching/</code> scheduler, step by step — since ported into the real engine
+      (<a href="#/wiring">how it landed → CB wiring</a>; serve it with <code>--engine batched</code>).
       Four toy requests (A–D) share <span id="cb-cfgline">a small</span> KV slot pool under a per-step token budget.
     </p>
     <div id="cb-body"></div>
@@ -528,9 +528,10 @@
   <!-- ================= CB WIRING PLAN ================= -->
   <section id="view-wiring" data-view hidden>
     <p class="view-sub">
-      How the proven prototype lands inside <code>src/cantollm/</code> — from <code>continuous-batching-plan.md</code>
+      How the proven prototype landed inside <code>src/cantollm/</code> — from <code>continuous-batching-plan.md</code>
       (the integration plan, source of truth; supersedes the <code>old_research_continuous_batching.md</code> design note).
-      Step through the plan order: green pieces exist and are pinned by tests, amber pieces get built, blue pieces don't change at all.
+      All steps completed 2026-07-11; step through the build order: green pieces predate the plan, amber pieces were built
+      step by step, blue pieces never changed.
     </p>
     <div id="wr-body"></div>
   </section>
@@ -763,15 +764,17 @@ function initOverview() {
   side.appendChild(el('div', 'cb-arrow', 'feeds the API layer (encode) and the decode path (stream)'));
 
   side.appendChild(ovBox({
-    title: 'Continuous batching', path: 'prototypes/continuous_batching/',
-    badge: 'in progress',
-    desc: '<code>ContinuousBatchingScheduler</code>: water-fill token budget, chunked prefill, one batched forward per step; ' +
-      '<code>PaddedKVCache</code> slot pool. Lands as a <code>ContinuousBatchingEngine</code> beside <code>SequentialEngine</code> (Phase 2)',
-    stat: CB ? `traced: ${Object.keys(CB.requests).length} requests · ${CB.steps.length} steps · budget ${CB.config.budget} tok/step · ${CB.config.max_batch} slots` : null,
+    title: 'ContinuousBatchingEngine', path: 'engine/batching/ · kv_pool.py',
+    badge: 'landed',
+    desc: '<code>ContinuousBatchingScheduler</code> (hand-written): water-fill token budget, chunked prefill, one mixed batched forward per step; ' +
+      '<code>PaddedKVPool</code> slot pool + <code>PaddedAttentionMethod</code> (hand-written) behind the <code>AttentionMethod</code> seam. ' +
+      'Serve it with <code>--engine batched</code>; 2.4× aggregate tok/s over unbatched at concurrency 10 on 4 slots (Mac). ' +
+      'The prototype it grew from is traced below',
+    stat: CB ? `prototype trace: ${Object.keys(CB.requests).length} requests · ${CB.steps.length} steps · budget ${CB.config.budget} tok/step · ${CB.config.max_batch} slots` : null,
     nodata: CB ? null : 'no trace yet — run viz/trace_cb.py',
     zoom: '#/batching',
   }));
-  side.appendChild(el('div', 'cb-arrow', 'will drop in beside SequentialEngine — same InferenceEngine protocol, but the scheduler calls the model directly through the AttentionMethod seam'));
+  side.appendChild(el('div', 'cb-arrow', 'sits beside SequentialEngine — same InferenceEngine protocol, but one scheduler thread drives the model directly through runtime.forward_batched'));
 
   side.appendChild(ovBox({
     title: 'SpeculativeBackend', path: 'speculative.py',
@@ -830,13 +833,15 @@ function initRoadmap() {
         'Deferred to 3.5: the production-hygiene bundle (metrics are uninteresting until there’s a scheduler to measure)',
       ] },
     { id: '2', title: 'continuous batching + split', hw: '5090 · 1 H100 day', status: 'active',
-      statusLine: 'Status (2026-04-25): all four prereq refactors landed (AttentionMethod seam, logits-processor pipeline, Sequence dataclass, tiny test model). Open: (1) in-process scheduler + batched forward + padded KV — author hand-writing ✍ — then (2) the API/engine process split.',
+      statusLine: 'Status (2026-07-11): item (1) done — the in-process CB engine serves via --engine batched (steps 0–9 of continuous-batching-plan.md; author hand-wrote ✍ the attention math + scheduler). 240 tests; token-for-token oracle equivalence; first numbers: 75.9 vs 31.4 tok/s aggregate (2.4×), completion p50 10.8s vs 36.7s, TTFT trade visible. Open: (2) the API/engine process split; logprobs + stop strings moved to the plan’s tail steps.',
       goal: 'The headline feature: many concurrent requests share each forward pass. Padded KV, no paging yet. Correctness-first attention path — perf work deliberately deferred to Phase 3.',
       items: [
-        'Scheduler: FCFS queue, running set, per-step token budget, decode priority; <b>chunked prefill</b>, logprobs, and stop strings fall out alongside',
-        'Process split second: engine becomes a sync busy loop in its own process; ZMQ or mp queues, events batched per step (per-token IPC would eat every win); uvloop on the API side',
+        'Scheduler landed ✍: FCFS queue, running set, water-fill token budget; <b>chunked prefill</b> fell out as predicted; logprobs + stop strings moved to tail steps',
+        'Engine shell: one command queue, one scheduler thread, per-request async queues, disconnect→abort, batch-wide failure policy — deliberately IPC-shaped for the split',
+        'Three-layer admission: API 400 (both dialects) · scheduler re-validation · pool write bounds',
+        'Process split next: engine becomes a sync busy loop in its own process; ZMQ or mp queues, events batched per step (per-token IPC would eat every win); uvloop on the API side',
         'Batched speculation explicitly disabled — ragged accept counts stay a Phase-10 research detour',
-        'Bench: aggregate tok/s steps up dramatically; per-request TTFT may worsen under load — make the tradeoff visible. These numbers become Phase 3’s “before” baseline',
+        'Bench (rough, spec still deferred): 2.4× aggregate on 4 slots on the Mac; per-request TTFT worsened under load exactly as predicted — the tradeoff, made visible',
         '→ See the <a href="#/batching">Continuous batching</a> and <a href="#/wiring">CB wiring</a> tabs',
       ] },
     { id: '3', title: 'CUDA beachhead', hw: '5090 · 1 H100 day', status: 'future',
@@ -2778,21 +2783,24 @@ function initWiring() {
   const STAGES = [
     { name: 'Today — two working worlds', on: [], morphs: [], cur: [], card: (c) => {
       c.appendChild(para('Left: the sequential stack serving real traffic. Right: the prototype, pinned by 29 tests (' + cbStat +
-        ' — replay it on the <a href="#/batching">Continuous batching</a> tab). The amber column is what gets built between them, per ' +
+        ' — replay it on the <a href="#/batching">Continuous batching</a> tab). The amber column is what got built between them, per ' +
         '<code>continuous-batching-plan.md</code> (source of truth; supersedes the design note, kept as <code>old_research_continuous_batching.md</code>): ' +
-        'steps 0–9 plus close-out, each one focused session, independently landable, suite green at the end.'));
+        'steps 0–9 plus close-out, each one focused session, independently landable, suite green at the end. ' +
+        '<b>All of it landed 2026-07-11</b> — step through to see how; the plan’s postscript records where execution deviated.'));
       c.appendChild(bullets([
         '<b>The mapping:</b> <code>PaddedKVCache</code> → runtime-owned multi-layer pool · <code>ToyModel.forward</code> → batched-forward protocol fronted by <code>ModelRuntime</code> · <code>greedy_sample</code> → shared sampler · prototype scheduler → <code>ContinuousBatchingScheduler</code> · <code>runner</code> → engine shell + async multiplexer',
         '<b>Division of labor (settled):</b> Nadia hand-writes the <code>PaddedAttentionMethod</code> math (step 5) and the scheduler port (step 8) ✍ — pure red→green against pre-landed xfail suites; Claude writes everything else (pre-work, sampler, stubs, pool, plumbing, shell, admission, tests)',
         '<b>Scope (settled):</b> bench spec consciously skipped (rough <code>bench.py</code> numbers only) · logprobs + stop strings as optional tail steps · process split and batched speculation out of scope',
       ]));
     }},
-    { name: '0 · SequentialEngine lock fix', on: [], morphs: [], cur: ['seq'], card: (c) => {
-      c.appendChild(para('Fable-review #1 first: <code>submit()</code> spawns a worker thread per request with <b>no lock</b>, and <code>SpeculativeBackend</code> ' +
-        'keeps shared draft-cache state — two engines behind one API make the hole <i>more</i> reachable, not less. A lock serializes the ' +
-        '<code>reset()+generate()</code> region, with a stop_event check after acquiring so an aborted waiter exits without generating.'));
+    { name: '0 · speculative concurrency fix (the lock that wasn’t)', on: [], morphs: [], cur: ['seq'], card: (c) => {
+      c.appendChild(para('Fable-review #1 first — but execution <b>pivoted from the plan</b>: instead of serializing <code>SequentialEngine</code> with a lock, ' +
+        'the shared state itself was fixed. <code>SpeculativeBackend</code> now builds a <b>per-generate-call draft cache</b> (optionally injected for ' +
+        'observability), and <code>reset()</code> left the <code>InferenceBackend</code> Protocol entirely — <code>StandardBackend</code> was already safe by the ' +
+        'Protocol’s own statelessness contract.'));
       c.appendChild(bullets([
-        'New <code>tests/test_sequential_engine.py</code>: a fake backend proves no overlap; abort-while-waiting → <code>finish_reason="abort"</code> with zero tokens',
+        '“Sequential” means <i>no batching</i>, not one-client-at-a-time — concurrent requests interleave forwards, which later made the close-out baseline honest: it measures <b>unbatched concurrent</b> execution',
+        '<code>TestDraftCacheIsolation</code> pins it: two interleaved <code>generate()</code> calls must see distinct draft caches (verified failing on the old code)',
         '<b>Housekeeping:</b> the design note lives on as <code>old_research_continuous_batching.md</code>; <code>continuous-batching-plan.md</code> is the source of truth from here',
       ]));
     }},
@@ -2890,7 +2898,8 @@ function initWiring() {
         '<code>ContinuousBatchingEngine</code>. Nothing above the engine seam noticed: same <code>submit()/abort()</code>, same <code>InferenceRequest</code> in and ' +
         '<code>TokenEvent</code>s out, API-side tokenization untouched.'));
       c.appendChild(bullets([
-        '<b>Close-out (steps 10–11):</b> rough sequential-vs-batched <code>bench.py</code> numbers (formal spec consciously deferred), PLAN.md Phase 2 Status line updated, postscript in <code>old_research_continuous_batching.md</code>, and a viz/ refresh (traces, diagram, Roadmap tab)',
+        '<b>Measured (0.6B on MPS, 4 slots, concurrency 10):</b> 75.9 tok/s aggregate vs 31.4 unbatched (2.4×) · completion p50 10.8s vs 36.7s · TTFT p50 6.4s vs 1.4s — the predicted throughput-for-TTFT trade, made visible. Unbatched aggregate ≈ solo speed = the memory-bound decode story, measured',
+        '<b>Close-out done:</b> PLAN.md Phase 2 Status updated; postscript in <code>continuous-batching-plan.md</code> records the deviations (step-0 pivot, per-layer-view signature, the is_idle pending-events clause, step-5 hardening); formal bench spec still consciously deferred',
         '<b>Optional tail (steps 12–13):</b> logprobs (<code>TokenEvent</code> widening; the shared sampler already returns probs) then stop strings (decoder backtracking) — each its own small session',
         '<b>Deliberately later:</b> the API/engine process split (the command queue is already IPC-shaped) · batched speculation stays a non-goal · Phase 4’s paged cache inherits the runtime-owned-pool-plus-handle seam',
       ]));

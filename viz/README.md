@@ -12,8 +12,9 @@ detail lives behind the zoom targets):
 
 - **Overview** — the request path through `src/cantollm/` (clients → FastAPI →
   registry → SequentialEngine → StandardBackend → Qwen3), plus the
-  continuous-batching prototype on the side. Boxes are annotated with numbers
-  from the real traces; three boxes zoom into the detail views.
+  continuous-batching engine (`--engine batched`) on the side. Boxes are
+  annotated with numbers from the real traces; three boxes zoom into the
+  detail views.
 - **Roadmap** — PLAN.md as a metro line: 13 stops (phases 0–10) with real
   Status lines, a "you are here" marker, hardware tags (Mac → 5090 → cloud),
   per-phase detail cards, and the cross-cutting commitments. Static content
@@ -47,13 +48,14 @@ detail lives behind the zoom targets):
   facts per checkpoint, and the KV-cache-vs-weights memory crossover.
 - **Continuous batching** — the `prototypes/continuous_batching/` scheduler
   step-debugger: Gantt timeline, water-fill plan, padded batch tensor,
-  sample/emit outcomes, KV slot pool, per-request output streams.
+  sample/emit outcomes, KV slot pool, per-request output streams. The
+  design it demonstrates now serves for real via `--engine batched`.
 - **CB wiring** — the integration plan from `continuous-batching-plan.md`
   (the source of truth; supersedes the `old_research_continuous_batching.md`
-  design note) as a steppable diagram: what stays untouched, what gets built
-  (steps 0–9, lock fix through wire-up, with owners), and which prototype
-  piece morphs into which real module — with the decisions, tricky points,
-  and review findings attached to the step they bite. Static design content,
+  design note) as a steppable diagram: what stayed untouched, what got built
+  (steps 0–9, all landed 2026-07-11, with owners), and which prototype
+  piece morphed into which real module — with the decisions, tricky points,
+  and review findings attached to the step they bit. Static design content,
   no trace needed; update it if the integration plan changes.
 
 ## Regenerating the traces

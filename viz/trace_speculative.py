@@ -71,10 +71,10 @@ def main():
 
     orig_gen_draft = backend.generate_draft_tokens
 
-    def gen_draft_wrapper(input_tokens, num_tokens, sampling, stop_token_ids):
+    def gen_draft_wrapper(input_tokens, num_tokens, sampling, stop_token_ids, draft_cache):
         sync(device)
         t = time.perf_counter()
-        tokens, probs = orig_gen_draft(input_tokens, num_tokens, sampling, stop_token_ids)
+        tokens, probs = orig_gen_draft(input_tokens, num_tokens, sampling, stop_token_ids, draft_cache)
         sync(device)
         events.append({
             "type": "draft",
@@ -114,10 +114,20 @@ def main():
 
     backend.main.forward = main_fwd_wrapper
 
+    # The draft cache is per-generate-call now; inject one through the
+    # `draft_cache` parameter so the truncate wrapper can identify it.
+    traced_draft_cache = KVCache(backend.draft_num_layers)
+    orig_generate = backend.generate
+
+    def generate_wrapper(sequence, draft_cache=None):
+        return orig_generate(sequence, draft_cache=traced_draft_cache)
+
+    backend.generate = generate_wrapper
+
     orig_truncate = KVCache.truncate
 
     def truncate_wrapper(self, pos):
-        which = "draft" if self is backend.draft_cache else "main"
+        which = "draft" if self is traced_draft_cache else "main"
         events.append({"type": "truncate", "cache": which, "from": self.position, "to": pos})
         return orig_truncate(self, pos)
 
