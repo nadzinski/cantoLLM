@@ -228,6 +228,26 @@ class TestPoolState:
         with pytest.raises((AssertionError, ValueError)):
             batched_step(padded, pool, overlong)
 
+    def test_overlong_row_in_mixed_batch_leaves_pool_untouched(self):
+        """The validate-then-write promise: with [valid row, overlong row]
+        the step must fail loudly AND write nothing. The valid row comes
+        FIRST, so a bounds check moved inside the write loop would write its
+        K/V before hitting the bad row — half a step left behind. (The
+        single-row test above can't tell the two apart.)"""
+        _, padded = build_models()
+        pool = make_pool()
+        rows = [
+            (0, 0, PROMPT_C),                 # valid: 4 tokens into slot 0
+            (1, MAX_SEQ - 2, [1, 2, 3, 4]),   # overlong: 30 + 4 > 32
+        ]
+
+        with pytest.raises(ValueError):
+            batched_step(padded, pool, rows)
+
+        assert torch.all(pool.k == 0) and torch.all(pool.v == 0), (
+            "a failed step wrote into the pool — validate-before-write broken"
+        )
+
 
 @pytest.mark.skipif(
     not torch.backends.mps.is_available(), reason="MPS not available"

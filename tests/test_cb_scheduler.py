@@ -10,6 +10,7 @@ while idle.
 """
 
 import itertools
+import math
 
 import pytest
 import torch
@@ -23,7 +24,7 @@ from cantollm.engine.batching.scheduler import (
 )
 from cantollm.engine.batching.types import CBSequence
 from cantollm.engine.types import InferenceRequest, SamplingParams, TokenEvent
-from tests.toy_stepper import ToyStepper, make_toy_pool, toy_oracle
+from tests.toy_stepper import VOCAB_SIZE, ToyStepper, make_toy_pool, toy_oracle
 
 GREEDY = SamplingParams.from_temperature_top_p(temperature=0.0, top_p=1.0)
 
@@ -348,6 +349,73 @@ class TestConcurrency:
         assert results["weird"]["tokens"] == toy_oracle(weird)[0]
         assert results["plain"]["tokens"] != results["weird"]["tokens"]
 
+    def test_budget_saturation_forces_one_token_chunks(self):
+        """max_tokens_per_step == max_batch (the tightest legal config): with
+        every slot full, water-fill hands each row exactly 1 token per step —
+        prefills advance in 1-token chunks under decode contention every
+        step. This is the geometry where a water-fill or is_prefilling
+        off-by-one surfaces; everyone must still match their solo oracle."""
+        scheduler, forward = make_scheduler(
+            max_batch=3, max_seq_len=64, max_tokens_per_step=3
+        )
+        reqs = [
+            make_request("r1", [(i % 29) + 2 for i in range(12)], max_tokens=4),
+            make_request("r2", [3, 4], max_tokens=6),  # decodes while others prefill
+            make_request("r3", [(i % 23) + 5 for i in range(9)], max_tokens=5),
+        ]
+
+        results = drain(scheduler, {0: list(reqs)})
+
+        for req in reqs:
+            tokens, finish = toy_oracle(req)
+            assert results[req.request_id]["tokens"] == tokens, req.request_id
+            assert results[req.request_id]["finish"] == finish, req.request_id
+        assert all(n <= 3 for n in forward.step_token_counts)
+        # Saturation genuinely happened: while all three rows were active every
+        # step carried the full budget, i.e. one token per row.
+        assert forward.step_token_counts[0] == 3
+        assert max(forward.step_token_counts) == 3
+
+
+class TestNonGreedySampling:
+    def test_multinomial_streams_valid_and_seed_deterministic(self):
+        """Multinomial sampling through the batched path (everything else in
+        this file is greedy): emitted tokens are valid vocab ids, every token
+        event carries a finite non-positive logprob, streams terminate, and a
+        fixed torch seed reproduces the run exactly.
+
+        Token-for-token equality with the sequential path is deliberately NOT
+        asserted: step() also samples-and-discards mid-prefill rows, so the
+        batched path consumes RNG draws the sequential path doesn't — the
+        streams are distribution-equivalent, not draw-equivalent."""
+        sampling = SamplingParams.from_temperature_top_p(temperature=0.8, top_p=0.9)
+
+        def run() -> dict[str, dict]:
+            torch.manual_seed(1234)
+            scheduler, _ = make_scheduler(max_batch=2, max_tokens_per_step=4)
+            reqs = [
+                make_request("a", [(i % 29) + 2 for i in range(9)],
+                             max_tokens=5, sampling=sampling),
+                make_request("b", [12, 13], max_tokens=4, sampling=sampling),
+            ]
+            return drain(scheduler, {0: reqs})
+
+        first = run()
+        for rid in ("a", "b"):
+            assert first[rid]["finish"] == "max_tokens"
+            assert all(0 <= t < VOCAB_SIZE for t in first[rid]["tokens"])
+            logprobs = [e.logprob for e in first[rid]["events"]
+                        if e.token_id is not None]
+            assert len(logprobs) == len(first[rid]["tokens"])
+            assert all(lp is not None and math.isfinite(lp) and lp <= 0.0
+                       for lp in logprobs)
+
+        second = run()
+        assert {r: v["tokens"] for r, v in first.items()} == \
+               {r: v["tokens"] for r, v in second.items()}, (
+            "same seed must reproduce the same batched sample stream"
+        )
+
 
 class TestAbort:
     def test_abort_active_frees_slot_for_queued(self):
@@ -403,6 +471,53 @@ class TestAbort:
         scheduler, _ = make_scheduler()
         scheduler.abort("ghost")
         assert scheduler.is_idle()
+
+    def test_abort_mid_chunked_prefill_frees_slot_for_queued(self):
+        """Abort a long prompt PARTWAY THROUGH chunked prefill (the existing
+        abort tests all abort decoding sequences): the abort event comes with
+        no tokens ever emitted, the slot — holding partial stale KV — frees,
+        and the queued request that inherits it still matches its solo oracle."""
+        scheduler, _ = make_scheduler(
+            max_batch=1, max_seq_len=64, max_tokens_per_step=4
+        )
+        long_prompt = [(i % 29) + 2 for i in range(20)]
+        r1 = make_request("r1", long_prompt, max_tokens=5)
+        r2 = make_request("r2", [9, 8, 7], max_tokens=4)
+        scheduler.add_request(r1)
+        scheduler.add_request(r2)  # queued: no free slot
+
+        scheduler.step()  # r1 prefilled 4 of 20
+        scheduler.step()  # 8 of 20
+        seq = scheduler.active[0]
+        assert seq.request_id == "r1" and seq.is_prefilling(), (
+            "test premise broken: abort must land mid-prefill"
+        )
+
+        scheduler.abort("r1")
+        assert scheduler.allocator.num_free() == 1, "slot not freed by abort"
+
+        events = []
+        for _ in range(200):
+            if scheduler.is_idle():
+                break
+            events.extend(scheduler.step())
+        else:
+            pytest.fail("did not converge after mid-prefill abort")
+
+        r1_events = [e for e in events if e.request_id == "r1"]
+        assert [e.finish_reason for e in r1_events] == ["abort"]
+        assert all(e.token_id is None for e in r1_events), (
+            "a mid-prefill request must never have emitted tokens"
+        )
+        r2_tokens = [e.token_id for e in events
+                     if e.request_id == "r2" and e.token_id is not None]
+        r2_finish = [e.finish_reason for e in events
+                     if e.request_id == "r2" and e.finish_reason]
+        expected_tokens, expected_finish = toy_oracle(r2)
+        assert r2_tokens == expected_tokens, (
+            "r2 inherited a slot with r1's partial prefill KV and diverged"
+        )
+        assert r2_finish == [expected_finish]
 
     def test_is_idle_false_while_events_pend(self):
         """The shell contract: after aborting the LAST active sequence the

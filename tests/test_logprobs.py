@@ -15,7 +15,11 @@ import httpx
 import torch
 
 from cantollm.api import create_app
-from cantollm.engine.types import SamplingParams, Sequence
+from cantollm.engine.batching import BatchingConfig, SlotAllocator
+from cantollm.engine.batching.scheduler import ContinuousBatchingScheduler
+from cantollm.engine.types import InferenceRequest, SamplingParams, Sequence
+from cantollm.kv_cache import KVCache
+from cantollm.standard import StandardBackend
 from cantollm.runtime import build_runtime
 from tests.fakes import (
     FakeEngine,
@@ -27,6 +31,7 @@ from tests.fakes import (
 )
 from tests.cb_helpers import PROMPTS, build_engines, make_request
 from tests.tiny_model import tiny_qwen3_spec
+from tests.toy_stepper import make_toy_pool
 
 GREEDY = SamplingParams.from_temperature_top_p(temperature=0.0, top_p=1.0)
 
@@ -40,6 +45,108 @@ async def collect_with_logprobs(engine, req):
         if evt.finish_reason is not None:
             finish = evt.finish_reason
     return tokens, logprobs, finish
+
+
+class _FixedLogitsForward:
+    """BatchedForwardFn returning the same logits row for every batch row —
+    the model is out of the picture, so expected logprobs are closed-form."""
+
+    def __init__(self, logits: torch.Tensor):
+        self.logits = logits
+
+    def __call__(self, input_ids, meta, pool):
+        return self.logits.repeat(input_ids.shape[0], 1)
+
+
+class _FixedLogitsModel:
+    """Model stub for StandardBackend: (B, S, vocab) of one fixed logits row."""
+
+    def __init__(self, logits: torch.Tensor):
+        self.logits = logits
+
+    def __call__(self, tokens, start_pos, kv_cache=None):
+        b, sq = tokens.shape
+        return self.logits.repeat(b, sq, 1)
+
+
+# softmax of these logits is exactly [0.1, 0.2, 0.3, 0.4]: expected greedy
+# token is 3 and its logprob is ln(0.4) — a closed-form constant, computed
+# with no code shared with the samplers under test.
+_FIXED_LOGITS = torch.log(torch.tensor([0.1, 0.2, 0.3, 0.4]))
+_EXPECTED_GREEDY_TOKEN = 3
+_EXPECTED_GREEDY_LOGPROB = math.log(0.4)
+
+
+class TestLogprobGroundTruth:
+    """Every other logprob test asserts 'finite and <= 0' or CB==sequential —
+    both paths share the sampler code, so a systematic error (wrong base,
+    pre-processor distribution, wrong index) would pass all of them. These
+    pin the emitted values to hand-computed constants."""
+
+    def test_cb_scheduler_emits_log_softmax_of_logits(self):
+        config = BatchingConfig(max_batch=1, max_seq_len=8, max_tokens_per_step=1)
+        scheduler = ContinuousBatchingScheduler(
+            forward_fn=_FixedLogitsForward(_FIXED_LOGITS),
+            pool=make_toy_pool(config),
+            allocator=SlotAllocator(1),
+            config=config,
+        )
+        scheduler.add_request(InferenceRequest(
+            request_id="r", prompt_token_ids=[1],
+            sampling_params=GREEDY, max_tokens=2, stop_token_ids=set(),
+        ))
+        events = []
+        while not scheduler.is_idle():
+            events.extend(scheduler.step())
+
+        token_events = [e for e in events if e.token_id is not None]
+        assert [e.token_id for e in token_events] == [_EXPECTED_GREEDY_TOKEN] * 2
+        for e in token_events:
+            assert abs(e.logprob - _EXPECTED_GREEDY_LOGPROB) < 1e-6, (
+                f"{e.logprob} != ln(0.4) = {_EXPECTED_GREEDY_LOGPROB}"
+            )
+
+    def test_standard_backend_appends_log_softmax_of_logits(self):
+        backend = StandardBackend(
+            model=_FixedLogitsModel(_FIXED_LOGITS), device=torch.device("cpu")
+        )
+        seq = Sequence(
+            request_id="r", prompt_token_ids=[1, 2],
+            sampling_params=GREEDY, stop_token_ids=set(),
+            max_tokens=2, cache=KVCache(1), stop_event=threading.Event(),
+        )
+        tokens = list(backend.generate(seq))
+        assert tokens == [_EXPECTED_GREEDY_TOKEN] * 2
+        for lp in seq.logprobs:
+            assert abs(lp - _EXPECTED_GREEDY_LOGPROB) < 1e-6
+
+    def test_logprob_reflects_post_processor_distribution(self):
+        """With temperature, the reported logprob must come from the
+        post-pipeline distribution log_softmax(logits / T) — recomputed here
+        independently with torch primitives, including replaying the
+        multinomial draw under the same seed to know which token to expect."""
+        temperature = 0.5
+        sampling = SamplingParams.from_temperature_top_p(temperature, 1.0)
+        backend = StandardBackend(
+            model=_FixedLogitsModel(_FIXED_LOGITS), device=torch.device("cpu")
+        )
+        seq = Sequence(
+            request_id="r", prompt_token_ids=[1, 2],
+            sampling_params=sampling, stop_token_ids=set(),
+            max_tokens=1, cache=KVCache(1), stop_event=threading.Event(),
+        )
+        torch.manual_seed(77)
+        tokens = list(backend.generate(seq))
+
+        scaled = _FIXED_LOGITS / temperature
+        torch.manual_seed(77)
+        expected_token = int(torch.multinomial(
+            torch.softmax(scaled, dim=-1).unsqueeze(0), num_samples=1
+        ).item())
+        expected_lp = float(torch.log_softmax(scaled, dim=-1)[expected_token])
+
+        assert tokens == [expected_token]
+        assert abs(seq.logprobs[0] - expected_lp) < 1e-6
 
 
 class TestEngineLogprobs:

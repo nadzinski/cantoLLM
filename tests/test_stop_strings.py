@@ -72,6 +72,49 @@ class TestStopStringWatcher:
         assert out == ""
         assert w.matched == "aba"
 
+    def test_stop_split_across_four_feeds(self):
+        """A stop longer than 2 chars arriving one char per feed — the
+        holdback has to carry a growing partial match across 3+ boundaries
+        (char_by_char above only exercises a 2-char stop)."""
+        w = StopStringWatcher(["STOP"])
+        released = "".join(w.feed(c) for c in "xySTOPz")
+        assert released == "xy"
+        assert w.matched == "STOP"
+
+    def test_prefix_family_shorter_completes_first(self):
+        """["ab", "abc"]: both match at the same index; the earliest-match
+        scan is strict-<, so ties go to list order — "ab" wins."""
+        w = StopStringWatcher(["ab", "abc"])
+        assert w.feed("xxabc") == "xx"
+        assert w.matched == "ab"
+
+    def test_prefix_family_longer_listed_first_still_matches_shorter(self):
+        w = StopStringWatcher(["abc", "ab"])
+        assert w.feed("xxab!") == "xx"
+        assert w.matched == "ab"
+
+    def test_prefix_family_holdback_releases_on_fallthrough(self):
+        """With ["ab", "abc"] a lone "a" is held (prefix of both); when the
+        next char kills the match, the held text must come back out."""
+        w = StopStringWatcher(["ab", "abc"])
+        assert w.feed("za") == "z"
+        assert w.matched is None
+        assert w.feed("q") == "aq"
+        assert w.matched is None
+
+    def test_unicode_emoji_stop_across_feeds(self):
+        w = StopStringWatcher(["🎉🎉"])
+        assert w.feed("party 🎉") == "party "  # one 🎉 held: prefix of the stop
+        assert w.matched is None
+        assert w.feed("🎉 over") == ""
+        assert w.matched == "🎉🎉"
+
+    def test_unicode_cjk_stop_across_feeds(self):
+        w = StopStringWatcher(["日本"])
+        released = w.feed("こんにちは日") + w.feed("本語")
+        assert released == "こんにちは"
+        assert w.matched == "日本"
+
 
 def _client(script_text: str):
     """FakeEngine emitting one token per character of `script_text`."""
