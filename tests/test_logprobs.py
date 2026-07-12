@@ -23,9 +23,9 @@ from tests.fakes import (
     FakeRuntime,
     FakeTokenizer,
     ScriptStep,
+    parse_openai_sse,
 )
-from tests.test_cb_end_to_end import PROMPTS, build_engines, make_request
-from tests.test_openai_contract import _parse_openai_sse
+from tests.cb_helpers import PROMPTS, build_engines, make_request
 from tests.tiny_model import tiny_qwen3_spec
 
 GREEDY = SamplingParams.from_temperature_top_p(temperature=0.0, top_p=1.0)
@@ -151,7 +151,7 @@ class TestOpenAILogprobs:
                 )
 
         resp = asyncio.run(main())
-        chunks, saw_done = _parse_openai_sse(resp.text)
+        chunks, saw_done = parse_openai_sse(resp.text)
         assert saw_done
         content_chunks = [
             c for c in chunks
@@ -230,7 +230,7 @@ class TestOpenAILogprobs:
                     "messages": [{"role": "user", "content": "hi"}],
                 })
 
-        chunks, _ = _parse_openai_sse(asyncio.run(main()).text)
+        chunks, _ = parse_openai_sse(asyncio.run(main()).text)
         all_lps = []
         for c in chunks:
             choices = c.get("choices") or []

@@ -224,3 +224,27 @@ def parse_sse(body: str) -> list[SSEEvent]:
             data = raw
         out.append(SSEEvent(event=ev_match.group(1), data=data))
     return out
+
+
+def parse_openai_sse(body: str) -> tuple[list[dict], bool]:
+    """Parse an OpenAI-style SSE stream into (chunks, saw_done).
+
+    OpenAI framing: every event is a single `data:` line, followed by a
+    blank line. The stream terminates with the literal `data: [DONE]`
+    sentinel.
+    """
+    chunks: list[dict] = []
+    saw_done = False
+    for block in body.split("\n\n"):
+        block = block.strip("\n")
+        if not block:
+            continue
+        m = _DATA_LINE.search(block)
+        if not m:
+            continue
+        payload = m.group(1).strip()
+        if payload == "[DONE]":
+            saw_done = True
+            continue
+        chunks.append(json.loads(payload))
+    return chunks, saw_done

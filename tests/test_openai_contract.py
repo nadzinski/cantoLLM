@@ -9,8 +9,6 @@ reasoning_content for thinking tokens, DeepSeek-style usage details).
 from __future__ import annotations
 
 import asyncio
-import json
-import re
 
 import httpx
 
@@ -23,6 +21,7 @@ from tests.fakes import (
     FakeRuntime,
     FakeTokenizer,
     ScriptStep,
+    parse_openai_sse,
 )
 
 
@@ -70,32 +69,6 @@ def _chat_body(*, stream: bool, max_tokens: int | None = None,
 def _run(coro):
     return asyncio.run(coro)
 
-
-_DATA_LINE = re.compile(r"^data:\s*(.*)$", re.MULTILINE)
-
-
-def _parse_openai_sse(body: str) -> tuple[list[dict], bool]:
-    """Parse an OpenAI-style SSE stream into (chunks, saw_done).
-
-    OpenAI framing: every event is a single `data:` line, followed by a
-    blank line. The stream terminates with the literal `data: [DONE]`
-    sentinel.
-    """
-    chunks: list[dict] = []
-    saw_done = False
-    for block in body.split("\n\n"):
-        block = block.strip("\n")
-        if not block:
-            continue
-        m = _DATA_LINE.search(block)
-        if not m:
-            continue
-        payload = m.group(1).strip()
-        if payload == "[DONE]":
-            saw_done = True
-            continue
-        chunks.append(json.loads(payload))
-    return chunks, saw_done
 
 
 # ── 1. Non-streaming happy path ──────────────────────────────────────
@@ -194,7 +167,7 @@ def test_streaming_chunk_sequence():
                 return body
 
     body = _run(run())
-    chunks, saw_done = _parse_openai_sse(body)
+    chunks, saw_done = parse_openai_sse(body)
     assert saw_done
 
     # Opening chunk carries role only, no content/reasoning.
@@ -235,7 +208,7 @@ def test_streaming_thinking_routed_to_reasoning_content():
                 return "".join([c async for c in r.aiter_text()])
 
     body = _run(run())
-    chunks, saw_done = _parse_openai_sse(body)
+    chunks, saw_done = parse_openai_sse(body)
     assert saw_done
 
     reasoning = [c["choices"][0]["delta"].get("reasoning_content")
@@ -259,7 +232,7 @@ def test_streaming_usage_chunk_only_when_requested():
         async with _client(engine, tokenizer) as client:
             async with client.stream("POST", "/v1/chat/completions", json=body) as r:
                 text = "".join([c async for c in r.aiter_text()])
-        chunks, saw_done = _parse_openai_sse(text)
+        chunks, saw_done = parse_openai_sse(text)
         assert saw_done
         return chunks
 
@@ -319,7 +292,7 @@ def test_streaming_error_produces_error_chunk_then_done():
                 return "".join([c async for c in r.aiter_text()])
 
     body = _run(run())
-    chunks, saw_done = _parse_openai_sse(body)
+    chunks, saw_done = parse_openai_sse(body)
     assert saw_done
 
     error_chunks = [c for c in chunks if "error" in c]

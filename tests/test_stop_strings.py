@@ -19,9 +19,9 @@ from tests.fakes import (
     FakeRuntime,
     FakeTokenizer,
     ScriptStep,
+    parse_openai_sse,
     parse_sse,
 )
-from tests.test_openai_contract import _parse_openai_sse
 
 
 class TestStopStringWatcher:
@@ -186,7 +186,7 @@ class TestOpenAIStop:
             return resp, engine
 
         resp, engine = asyncio.run(main())
-        chunks, saw_done = _parse_openai_sse(resp.text)
+        chunks, saw_done = parse_openai_sse(resp.text)
         assert saw_done
         text = "".join(
             c["choices"][0]["delta"].get("content") or ""
