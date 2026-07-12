@@ -18,8 +18,10 @@ sys.stdout.reconfigure(encoding="utf-8")
 # Allow MPS to use more memory (be careful - may cause system instability)
 os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
 
-# Disable SSL verification for HuggingFace (needed for some network configs)
-os.environ["HF_HUB_DISABLE_SSL_VERIFICATION"] = "1"
+# SSL verification for HuggingFace downloads stays on by default. Some
+# corporate/proxy networks need it off; that's what the standard
+# HF_HUB_DISABLE_SSL_VERIFICATION env var is for — set it in the environment
+# rather than have CantoLLM weaken TLS for everyone unconditionally.
 
 
 def select_device() -> torch.device:
