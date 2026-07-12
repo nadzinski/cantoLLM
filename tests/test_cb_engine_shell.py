@@ -79,6 +79,21 @@ class FailingScheduler(ScriptedScheduler):
         raise RuntimeError("forward exploded")
 
 
+class NeverFinishingScheduler(ScriptedScheduler):
+    """Emits a token for every active request each step and never finishes on
+    its own — so a stream's only terminator is an abort. Lets abort tests
+    assert the terminal event deterministically instead of racing a scripted
+    natural finish that the fast scheduler thread might dispatch first."""
+
+    def step(self) -> list[TokenEvent]:
+        self.step_calls += 1
+        events = self.pending
+        self.pending = []
+        for rid in list(self.active):
+            events.append(tok(rid, self.step_calls))
+        return events
+
+
 async def start_engine(scheduler) -> ContinuousBatchingEngine:
     engine = ContinuousBatchingEngine(scheduler)
     await engine.start()
@@ -158,10 +173,11 @@ class TestAbort:
         assert sched.aborted == ["r1"]
 
     def test_explicit_abort_closes_stream_with_abort_reason(self):
+        # NeverFinishingScheduler never emits a natural finish, so the abort is
+        # the only possible terminator — no race with a scripted fin the
+        # scheduler thread might dispatch before the abort command drains.
         async def main():
-            sched = ScriptedScheduler(
-                {"r1": [tok("r1", i) for i in range(50)] + [fin("r1")]}
-            )
+            sched = NeverFinishingScheduler({})
             engine = await start_engine(sched)
             events = []
             async for evt in engine.submit(make_request("r1")):
