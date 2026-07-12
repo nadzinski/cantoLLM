@@ -43,32 +43,60 @@ def cmd_serve(args):
     import uvicorn
 
     from cantollm.api import create_app
-    from cantollm.engine import SequentialEngine
+    from cantollm.engine import ContinuousBatchingEngine, SequentialEngine
+    from cantollm.engine.batching import BatchingConfig
     from cantollm.registry import EngineRegistry
     from cantollm.runtime import build_runtime
 
     device = select_device()
-
-    if args.speculative:
-        main_spec = qwen3_spec(args.main_model or args.model)
-        draft_spec = qwen3_spec(args.draft_model or "0.6B")
-        runtime = build_runtime(main_spec, device, speculative=draft_spec)
-        model_name = f"qwen3-{main_spec.size}+{draft_spec.size}-speculative"
-    else:
-        spec = qwen3_spec(args.model)
-        runtime = build_runtime(spec, device)
-        model_name = spec.name
-
-    engine = SequentialEngine(runtime)
     registry = EngineRegistry()
-    registry.register(model_name, engine, runtime)
+
+    if args.engine == "batched":
+        if args.speculative:
+            sys.exit(
+                "error: --engine batched is incompatible with --speculative "
+                "(speculative decoding stays on the sequential engine; "
+                "batched speculation is out of scope)"
+            )
+        spec = qwen3_spec(args.model)
+        runtime = build_runtime(spec, device, attention="padded")
+        config = BatchingConfig(
+            max_batch=args.max_batch,
+            max_seq_len=args.batch_max_seq_len,
+            max_tokens_per_step=args.max_tokens_per_step,
+        )
+        engine = ContinuousBatchingEngine.from_runtime(runtime, config)
+        model_name = spec.name
+        # The per-slot capacity doubles as the admission cap.
+        registry.register(
+            model_name, engine, runtime, max_request_tokens=config.max_seq_len
+        )
+        engine_desc = (
+            f"continuous batching (max_batch={config.max_batch}, "
+            f"slot={config.max_seq_len} tok, "
+            f"budget={config.max_tokens_per_step} tok/step)"
+        )
+    else:
+        if args.speculative:
+            main_spec = qwen3_spec(args.main_model or args.model)
+            draft_spec = qwen3_spec(args.draft_model or "0.6B")
+            runtime = build_runtime(main_spec, device, speculative=draft_spec)
+            model_name = f"qwen3-{main_spec.size}+{draft_spec.size}-speculative"
+        else:
+            spec = qwen3_spec(args.model)
+            runtime = build_runtime(spec, device)
+            model_name = spec.name
+        engine = SequentialEngine(runtime)
+        registry.register(model_name, engine, runtime)
+        engine_desc = "sequential"
+
     app = create_app(registry)
 
     print(f"\nCantoLLM server starting on http://{args.host}:{args.port}")
     print("  POST /v1/messages  — Anthropic-compatible Messages API")
     print("  GET  /health       — Health check")
     print("  GET  /docs         — OpenAPI docs")
-    print(f"\nModel: {model_name}\n")
+    print(f"\nModel: {model_name}  ·  Engine: {engine_desc}\n")
 
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
@@ -150,6 +178,18 @@ def parse_args():
     serve_parser.add_argument("--host", default="0.0.0.0", help="Bind address (default: 0.0.0.0)")
     serve_parser.add_argument("--port", "-p", type=int, default=8000,
                               help="Port (default: 8000)")
+    serve_parser.add_argument("--engine", choices=("sequential", "batched"),
+                              default="sequential",
+                              help="Inference engine (default: sequential; "
+                                   "batched = continuous batching)")
+    serve_parser.add_argument("--max-batch", type=int, default=8,
+                              help="Batched engine: concurrent KV slots (default: 8)")
+    serve_parser.add_argument("--batch-max-seq-len", type=int, default=4096,
+                              help="Batched engine: per-slot token capacity, also the "
+                                   "per-request prompt+max_tokens cap (default: 4096)")
+    serve_parser.add_argument("--max-tokens-per-step", type=int, default=256,
+                              help="Batched engine: total new tokens per forward pass; "
+                                   "bounds the prefill chunk width (default: 256)")
 
     # chat
     chat_parser = subparsers.add_parser("chat", help="Chat client (connects to a running server)")

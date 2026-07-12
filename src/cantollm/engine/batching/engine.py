@@ -43,6 +43,10 @@ import queue
 import threading
 from collections.abc import AsyncIterator
 
+from typing import TYPE_CHECKING
+
+from cantollm.engine.batching.allocator import SlotAllocator
+from cantollm.engine.batching.config import BatchingConfig
 from cantollm.engine.batching.types import (
     Abort,
     AddRequest,
@@ -51,6 +55,9 @@ from cantollm.engine.batching.types import (
     Shutdown,
 )
 from cantollm.engine.types import InferenceRequest, TokenEvent
+
+if TYPE_CHECKING:
+    from cantollm.runtime import ModelRuntime
 
 _JOIN_TIMEOUT_S = 5.0
 
@@ -63,6 +70,23 @@ class ContinuousBatchingEngine:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
         self._failed: str | None = None
+
+    @classmethod
+    def from_runtime(
+        cls, runtime: "ModelRuntime", config: BatchingConfig
+    ) -> "ContinuousBatchingEngine":
+        """The production composition: the runtime's batched-forward front,
+        a freshly preallocated KV pool, and a fresh allocator behind the
+        real scheduler. Tests inject a SchedulerLike directly instead."""
+        from cantollm.engine.batching.scheduler import ContinuousBatchingScheduler
+
+        scheduler = ContinuousBatchingScheduler(
+            forward_fn=runtime.forward_batched,
+            pool=runtime.new_kv_pool(config),
+            allocator=SlotAllocator(config.max_batch),
+            config=config,
+        )
+        return cls(scheduler)
 
     async def start(self) -> None:
         self._loop = asyncio.get_running_loop()
