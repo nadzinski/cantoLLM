@@ -53,6 +53,21 @@ class ModelRuntime:
         engine config. Memory only — the allocator lives with the scheduler
         (decision 1).
         """
+        # A step mixes a decode row near its slot end (position up to
+        # max_seq_len - 1) with a prefill row up to max_tokens_per_step wide;
+        # the batched RoPE gather indexes freqs_cis at the decode row's padded
+        # columns, reaching (max_seq_len - 1) + (max_tokens_per_step - 1). The
+        # freqs_cis table has `arch["max_seq_len"]` rows, so guard here rather
+        # than let a rare step IndexError mid-flight.
+        rope_len = self.spec.arch["max_seq_len"]
+        max_rope_index = config.max_seq_len + config.max_tokens_per_step - 2
+        if max_rope_index >= rope_len:
+            raise ValueError(
+                f"max_seq_len ({config.max_seq_len}) + max_tokens_per_step "
+                f"({config.max_tokens_per_step}) exceeds the RoPE table length "
+                f"({rope_len}); a padded decode row could index freqs_cis out "
+                f"of range. Lower either, or raise the model's max_seq_len."
+            )
         return PaddedKVPool(
             num_layers=self.spec.arch["num_transformers"],
             max_batch=config.max_batch,

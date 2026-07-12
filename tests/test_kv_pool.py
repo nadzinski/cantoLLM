@@ -103,3 +103,28 @@ class TestRuntimeNewKVPool:
         )
         assert pool.k.dtype == spec.dtype
         assert pool.k.device.type == "cpu"
+
+    def test_rejects_capacity_beyond_rope_table(self):
+        # TINY_ARCH's RoPE table is max_seq_len=128. A padded decode row can
+        # index freqs_cis at (max_seq_len - 1) + (max_tokens_per_step - 1), so
+        # a config reaching that far must be rejected up front, not IndexError
+        # mid-step.
+        spec = tiny_qwen3_spec()
+        runtime = ModelRuntime(
+            spec=spec, device=torch.device("cpu"),
+            model=None, tokenizer=None, backend=None,
+        )
+        # 124 + 8 - 2 = 130 >= 128
+        config = BatchingConfig(max_batch=2, max_seq_len=124, max_tokens_per_step=8)
+        with pytest.raises(ValueError, match="RoPE table"):
+            runtime.new_kv_pool(config)
+
+    def test_accepts_capacity_at_rope_table_boundary(self):
+        spec = tiny_qwen3_spec()
+        runtime = ModelRuntime(
+            spec=spec, device=torch.device("cpu"),
+            model=None, tokenizer=None, backend=None,
+        )
+        # 121 + 8 - 2 = 127 < 128 — the largest that fits.
+        config = BatchingConfig(max_batch=2, max_seq_len=121, max_tokens_per_step=8)
+        assert runtime.new_kv_pool(config).max_seq_len == 121
