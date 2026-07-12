@@ -235,3 +235,61 @@ probs, so it lands on both engines. Stop strings: decoder-level backtracking in
 - End-to-end: step 9's manual smoke with concurrent chat clients against
   `serve --engine batched`, and the API contract tests running over the real CB engine
   on the tiny runtime.
+
+## Postscript (2026-07-11): how execution actually went
+
+Steps 0–9 are done and the batched engine serves (`--engine batched`;
+240 tests green). Division of labor held as written: Nadia hand-wrote
+`PaddedAttentionMethod.forward_batched` and the scheduler core; Claude did
+the rest plus tests, with each hand-written session run red→green against a
+pre-landed suite. Where execution deviated from or extended the plan above:
+
+- **Step 0 pivoted away from the engine lock.** Instead of serializing
+  `SequentialEngine`, the shared state itself was fixed: `SpeculativeBackend`
+  now builds a per-generate-call draft cache (optionally injected), and
+  `reset()` was removed from the `InferenceBackend` Protocol entirely.
+  StandardBackend was already safe by the Protocol's statelessness contract;
+  "sequential" means no batching, not one-client-at-a-time — which the
+  close-out bench exploited: the "before" baseline is really *unbatched
+  concurrent* execution.
+- **`AttentionMethod.forward_batched` takes per-layer pool views**
+  (`layer_k, layer_v`), not the pool object — the method stays pool-layout-
+  agnostic, which is the seam Phase 4's paging swaps behind.
+- **The `SchedulerLike` contract gained a hard clause during step 6:**
+  `is_idle()` must be False whenever `step()` would produce events,
+  including pending abort acks with no forward to run — otherwise the shell
+  (which blocks on its command queue while idle) never flushes them. Dually,
+  `step()` with only pending events skips the forward pass.
+- **Step 5 hardening beyond the plan:** validate-then-write two-pass on the
+  ragged KV writes (no half-written step on a bad row), and
+  `Qwen3._validate_batched` cross-checks `meta.max_history_len` against the
+  rows so a scheduler bug can't silently truncate the gather/mask.
+- **Admission ended as three layers**, as sketched: API 400 (both dialects),
+  scheduler `add_request` re-validation (error event), pool write bounds
+  (ValueError naming the row).
+- **One test-design lesson:** the stop-suppression test originally hardcoded
+  "emits the first k tokens", assuming the chosen stop token wouldn't appear
+  earlier in the stream. It did; truncation happens at the *first*
+  occurrence. Equivalence tests should always compare against the oracle
+  under the same parameters, never against a derived expectation.
+
+First numbers (existing `bench.py`, 0.6B bf16 on MPS, `max_batch=4`,
+`max_tokens_per_step=64`, concurrency 10, 9 prompts, 128 max_tokens):
+
+| | unbatched concurrent | batched (4 slots) |
+|---|---|---|
+| aggregate tok/s | 31.4 | **75.9 (2.4×)** |
+| completion p50 | 36.7 s | **10.8 s** |
+| TTFT p50 | **1.4 s** | 6.4 s |
+| per-stream tok/s under contention | 3.6 | 21 |
+
+The unbatched aggregate (~31) matching solo speed (~33) is the memory-bound
+decode story measured: interleaved single-row forwards each stream all the
+weights for one token, so threads add nothing; batching amortizes the weight
+reads. The TTFT regression is the predicted admission-gating trade. These
+are rough numbers from the un-spec'd bench harness — the Phase-0 spec
+remains consciously deferred.
+
+Remaining from this plan: step 11 (viz refresh), optional steps 12–13
+(logprobs, stop strings). Phase 2 item (2), the process split, picks up the
+deliberately IPC-shaped command queue and per-step event dispatch.

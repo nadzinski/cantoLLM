@@ -226,35 +226,28 @@ wants to own its own process. Perf optimizations (SDPA, `torch.compile`, CUDA gr
 deliberately deferred to Phase 3: this phase is about getting the scheduler and batching
 right on a correctness-first attention path, then optimizing the mature target.
 
-**Status (2026-04-25):** All four prereq refactors landed. The
-pluggable attention-compute boundary is in (named `AttentionMethod` in code,
-not `AttentionBackend`): `GroupedQueryAttention` delegates score +
-value-aggregate + KV update + mask construction to a method, with
-`EinsumAttentionMethod` as the correctness reference and
-`PaddedAttentionMethod` stubbed (NotImplementedError) marking the
-continuous-batching slot. Logits-processor pipeline landed: `SamplingParams`
-carries `list[LogitsProcessor]` + greedy flag (built via
-`from_temperature_top_p`); both `StandardBackend` and `SpeculativeBackend`
-read from it, so future sampling knobs (repetition penalty, logit bias,
-guided decoding) extend the pipeline instead of patching the hot path.
-Per-sequence state object landed: `Sequence` dataclass in `engine/types.py`
-bundles request_id, prompt_token_ids, sampling_params, stop_token_ids,
-max_tokens, cache, stop_event, and tokens_emitted; `InferenceBackend.generate`
-collapsed from a 6-arg call to `generate(sequence)`; `SequentialEngine.run()`
-constructs the sequence, ticks `tokens_emitted` in the consumer loop, and
-reads finish reason via `seq.finish_reason_after_normal_exit()`. Tiny
-test-model fixture landed in `tests/tiny_model.py`: a `tiny_qwen3_spec()`
-builder (2-layer, 64-dim, vocab 2048, random-init weights, `FakeTokenizer`)
-plugs straight into `build_runtime` so scheduler/batching tests can exercise
-the full `SequentialEngine → StandardBackend → Qwen3 → KVCache` path in
-under a second; `tests/test_tiny_model.py` smoke-tests the seam.
-Deliberately deferred: explicit `position` decoupled from `cache.position`
-(only needed once batching has divergent positions), per-sequence draft
-cache (speculative is batch=1 today). Open: feature work, ordered —
-(1) in-process scheduler + batched forward + padded KV (author writing by
-hand for learning; chunked prefill, logprobs, and stop strings fall out
-alongside); then (2) API/engine process split, bolted on once the
-in-process loop is correctness-clean.
+**Status (2026-07-11):** Feature work item (1) is done — the in-process
+continuous-batching engine serves via `--engine batched`, built step-by-step
+per `continuous-batching-plan.md` (steps 0–9; postscript there records where
+execution deviated from the written plan). Landed: shared sampler with the
+greedy-pipeline fix; `PaddedKVPool` + `SlotAllocator` (runtime owns memory,
+scheduler owns allocation); batched model entrypoints (per-row RoPE gather,
+3D per-row causal mask, `forward_batched` with last-token gather before the
+lm_head); the author-hand-written `PaddedAttentionMethod` math and
+`ContinuousBatchingScheduler` (water-fill budget, chunked prefill falls out,
+oracle-equivalent token-for-token on greedy/fp32/CPU); the engine shell
+(single command queue, one scheduler thread, per-request async multiplexing,
+disconnect→abort, batch-wide failure policy); and three-layer admission
+control (API 400 on both dialects, scheduler re-validation, pool write
+bounds). 240 tests green. First numbers (bench.py, 0.6B on MPS, 4 slots,
+concurrency 10): 75.9 tok/s aggregate vs 31.4 unbatched (2.4×), completion
+p50 10.8s vs 36.7s, TTFT p50 6.4s vs 1.4s — the predicted TTFT-for-throughput
+trade, now visible. Moved out of item (1): logprobs and stop strings, to the
+integration plan's tail steps (small, orthogonal, land on both engines).
+Still deferred: the Phase-0 bench-harness spec (these are rough numbers, not
+the spec'd baseline). Open: feature work item (2), the API/engine process
+split — the command-queue and one-dispatch-per-step shapes were built
+IPC-ready for it.
 
 **Author note:** the in-process scheduler, batched forward, and padded KV
 are being written by hand by the project author for learning. Assistants

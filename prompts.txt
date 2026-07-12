@@ -2,3 +2,8 @@ Hi there, how are you?
 What is 534 + 993?
 What's the capital of Bolivia?
 Can you describe what a B-Tree is in databases?
+How many stars are there in the Milky Way?
+What is ln(e)?
+What's the capital of Bolivia?
+What is 534 + 993?
+Can you describe what a B-Tree is in databases?
