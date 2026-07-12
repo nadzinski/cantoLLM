@@ -15,8 +15,10 @@ from cantollm.spec import MODEL_CONFIGS, qwen3_spec
 # Reconfigure stdout to use UTF-8 encoding for emoji support
 sys.stdout.reconfigure(encoding="utf-8")
 
-# Allow MPS to use more memory (be careful - may cause system instability)
-os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
+# Allow MPS to use more memory (be careful - may cause system instability).
+# Mac-only knob; leave the environment alone on CUDA/CPU boxes.
+if sys.platform == "darwin":
+    os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
 
 # SSL verification for HuggingFace downloads stays on by default. Some
 # corporate/proxy networks need it off; that's what the standard
@@ -24,17 +26,33 @@ os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
 # rather than have CantoLLM weaken TLS for everyone unconditionally.
 
 
-def select_device() -> torch.device:
-    """Select the best available device."""
-    if torch.backends.mps.is_available():
+def select_device(requested: str = "auto") -> torch.device:
+    """Select the compute device, honoring an explicit request.
+
+    "auto" prefers MPS (Mac) then CUDA then CPU. An explicit torch device
+    string ("cuda", "cuda:1", "mps", "cpu") is validated and used as-is —
+    the debugging escape hatch for bring-up on new hardware.
+    """
+    if requested != "auto":
+        device = torch.device(requested)
+        if device.type == "cuda" and not torch.cuda.is_available():
+            sys.exit(f"error: --device {requested} requested but CUDA is not available")
+        if device.type == "mps" and not torch.backends.mps.is_available():
+            sys.exit(f"error: --device {requested} requested but MPS is not available")
+    elif torch.backends.mps.is_available():
         device = torch.device("mps")
-        print(f"Using device: {device} (Mac Silicon GPU)")
     elif torch.cuda.is_available():
         device = torch.device("cuda")
-        print(f"Using device: {device} (NVIDIA GPU)")
     else:
         device = torch.device("cpu")
-        print(f"Using device: {device} (CPU fallback)")
+
+    if device.type == "cuda":
+        name = torch.cuda.get_device_name(device.index or 0)
+        print(f"Using device: {device} ({name})")
+    elif device.type == "mps":
+        print(f"Using device: {device} (Mac Silicon GPU)")
+    else:
+        print(f"Using device: {device} (CPU)")
     return device
 
 
@@ -54,7 +72,7 @@ def cmd_serve(args):
     from cantollm.registry import EngineRegistry
     from cantollm.runtime import build_runtime, build_tokenizer_runtime
 
-    device = select_device()
+    device = select_device(args.device)
     registry = EngineRegistry()
 
     if args.engine == "batched":
@@ -226,6 +244,10 @@ def parse_args():
                               help="Batched engine: run the scheduler inside the API "
                                    "process (debugging aid; default is a dedicated "
                                    "engine process)")
+    serve_parser.add_argument("--device", default="auto",
+                              help="Compute device: auto (default; MPS > CUDA > CPU) "
+                                   "or an explicit torch device string like cuda, "
+                                   "cuda:1, mps, cpu")
 
     # chat
     chat_parser = subparsers.add_parser("chat", help="Chat client (connects to a running server)")

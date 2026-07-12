@@ -12,7 +12,10 @@ description = ""
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "torch>=2.1.0",
+    # >=2.8: the default PyPI Linux wheels bundle CUDA 12.8+, which is what
+    # Blackwell (5090, sm_120) needs — older wheels fail with "no kernel
+    # image is available" at the first forward pass.
+    "torch>=2.8.0",
     "numpy==1.26.4",
     "tokenizers>=0.20.0",
     "huggingface_hub>=0.20.0",
@@ -39,11 +42,15 @@ select = ["E", "F", "I"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 
-# CUDA configuration (commented out for Mac Silicon)
+# CUDA on the 5090 (Blackwell, sm_120): no index override needed — default
+# PyPI Linux wheels for torch >= 2.8 bundle CUDA 12.8+, which includes
+# sm_120. The box needs an NVIDIA driver >= 570 (the CUDA 12.8 floor).
+# If a specific CUDA variant ever becomes necessary, pin it Linux-only so
+# Mac dev stays on the default wheels:
 # [[tool.uv.index]]
-# name = "pytorch-cu118"
-# url = "https://download.pytorch.org/whl/cu118"
+# name = "pytorch-cu128"
+# url = "https://download.pytorch.org/whl/cu128"
 # explicit = true
 #
 # [tool.uv.sources]
-# torch = { index = "pytorch-cu118" }
+# torch = [{ index = "pytorch-cu128", marker = "sys_platform == 'linux'" }]
