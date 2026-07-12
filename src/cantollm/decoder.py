@@ -76,16 +76,32 @@ class StreamingDecoder:
 
     def process(self, token_id: int) -> Iterable[StreamEvent]:
         if token_id == self._thinking_start_id:
+            yield from self._release_held()
             self._in_thinking = True
             yield ThinkingStartEvent()
             return
         if token_id == self._thinking_end_id:
+            yield from self._release_held()
             self._in_thinking = False
             yield ThinkingEndEvent()
             return
         text = self._incremental.add(token_id)
         if text:
             yield TextChunk(text)
+
+    def _release_held(self) -> Iterable[StreamEvent]:
+        """Flush and reset the incremental decoder at a phase boundary.
+
+        A marker token separates two phases in the real token stream, so any
+        UTF-8 bytes the incremental decoder is still holding belong to the
+        *outgoing* phase — emit them now (as a TextChunk the caller tags with
+        the phase it was in) instead of letting the next phase's first token
+        release them, which would leak thinking bytes into visible text.
+        """
+        remaining = self._incremental.flush()
+        self._incremental.reset()
+        if remaining:
+            yield TextChunk(remaining)
 
     def flush(self) -> Iterable[StreamEvent]:
         if self._in_thinking:

@@ -32,6 +32,11 @@ class _FakeIncrementalDecoder:
     def flush(self) -> str:
         return ""
 
+    def reset(self) -> None:
+        # Stateless map: nothing to clear. Present so StreamingDecoder can
+        # flush+reset at phase boundaries (see decoder._release_held).
+        pass
+
 
 class FakeTokenizer:
     """Minimal tokenizer double.

@@ -97,6 +97,11 @@ async def phase_tagged_events(
             break
         if evt.token_id is None:
             continue
+        # Phase *before* this token classifies it. A marker token's only
+        # TextChunk is the outgoing phase's held bytes flushed at the boundary
+        # (see StreamingDecoder._release_held), so those chunks belong to
+        # `was_thinking`; for content tokens `was_thinking == phase_is_thinking`.
+        was_thinking = phase_is_thinking
         phase_is_thinking, bucket = _classify(evt.token_id, tokenizer, phase_is_thinking)
         setattr(state, bucket, getattr(state, bucket) + 1)
         state.total += 1
@@ -112,7 +117,7 @@ async def phase_tagged_events(
                     yield "thinking", dec_evt
                 case ThinkingEndEvent():
                     yield "thinking", dec_evt
-                case TextChunk() if phase_is_thinking:
+                case TextChunk() if was_thinking:
                     yield "thinking", dec_evt
                 case TextChunk():
                     scanned = scan_text(dec_evt)
