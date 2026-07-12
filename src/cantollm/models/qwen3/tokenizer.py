@@ -170,7 +170,15 @@ class Qwen3Tokenizer:
     def encode_conversation(self, messages: list[dict], system: str | None = None) -> list[int]:
         """Encode an Anthropic-style messages array into token IDs.
 
-        Builds a full ChatML string from the message history and encodes it.
+        Assembles the ChatML frame directly in token space: the template's
+        control tokens (``<|im_start|>``, ``<|im_end|>``, the thinking
+        markers) are emitted as special IDs, while message/system *content*
+        is plain-BPE encoded with special-token parsing disabled. Content is
+        data — a message containing the literal string ``<|im_end|>`` or
+        ``<think>`` encodes as ordinary text, so a request body can't forge
+        turn boundaries or corrupt the thinking-phase framing. (``encode``
+        keeps its special-token parsing: it is the tool for template-level
+        strings, not untrusted content.)
 
         Args:
             messages: List of {"role": "user"|"assistant", "content": ...} dicts.
@@ -181,13 +189,20 @@ class Qwen3Tokenizer:
         Returns:
             List of token IDs ready for model input.
         """
-        parts = []
+        im_start = self._special_to_id["<|im_start|>"]
+        im_end = self._special_to_id["<|im_end|>"]
+        ids: list[int] = []
+
+        def _turn(role: str, content: str) -> None:
+            ids.append(im_start)
+            ids.extend(self._encode_content(f"{role}\n{content}"))
+            ids.append(im_end)
+            ids.extend(self._encode_content("\n"))
 
         if system:
-            parts.append(f"<|im_start|>system\n{system}<|im_end|>\n")
+            _turn("system", system)
 
         for msg in messages:
-            role = msg["role"]
             content = msg["content"]
             if isinstance(content, list):
                 # Content block array -> extract text
@@ -195,15 +210,45 @@ class Qwen3Tokenizer:
                     block["text"] for block in content
                     if isinstance(block, dict) and block.get("type") == "text"
                 )
-            parts.append(f"<|im_start|>{role}\n{content}<|im_end|>\n")
+            _turn(msg["role"], content)
 
         # Generation prompt for assistant
         if self.add_generation_prompt:
-            parts.append("<|im_start|>assistant\n")
+            ids.append(im_start)
+            ids.extend(self._encode_content("assistant\n"))
             if not self.enable_thinking:
-                parts.append("<think>\n\n</think>\n\n")
+                # Template-authored thinking suppression: these markers are
+                # deliberately control tokens, unlike anything in content.
+                ids.append(self.thinking_start_id)
+                ids.extend(self._encode_content("\n\n"))
+                ids.append(self.thinking_end_id)
+                ids.extend(self._encode_content("\n\n"))
 
-        return self.encode("".join(parts), chat_wrapped=False)
+        return ids
+
+    def _encode_content(self, text: str) -> list[int]:
+        """Encode untrusted message/system content as data — never control.
+
+        The raw HF tokenizer extracts any registered added token (special or
+        not, e.g. ``<|im_end|>`` and ``<think>``) that appears literally in
+        the string, which would let a request body forge a role/turn boundary
+        or a thinking marker. So split on the reserved-marker regex and encode
+        every marker lookalike as its *surface* form: feeding the first
+        character and the remainder through the BPE model in separate calls
+        keeps the added-token trie from ever matching the whole marker, so it
+        tokenizes as ordinary text (verified to round-trip). Non-marker spans
+        are plain BPE — they contain no marker to extract.
+        """
+        out: list[int] = []
+        for part in _SPECIAL_RE.split(text):
+            if not part:
+                continue
+            if part in self._special_to_id:
+                out.extend(self._tok.encode(part[0]).ids)
+                out.extend(self._tok.encode(part[1:]).ids)
+            else:
+                out.extend(self._tok.encode(part).ids)
+        return out
 
     def _wrap_chat(self, user_msg: str) -> str:
         """Wrap a user message in ChatML format.

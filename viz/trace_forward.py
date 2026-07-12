@@ -227,17 +227,19 @@ def instrument(runtime, cap):
 
     backend.sample = sample_wrapper
 
-    # Tokenizer: capture the exact ChatML string encode_conversation builds
-    # (it calls self.encode(text, chat_wrapped=False), so the instance wrap
-    # sees it).
-    orig_encode = tokenizer.encode
+    # Tokenizer: capture the ChatML frame encode_conversation builds. It
+    # assembles token ids directly (content is plain-BPE encoded so request
+    # bodies can't forge control tokens), so wrap the method itself and
+    # reconstruct the template text by decoding — decode() renders special
+    # tokens, so the ChatML string round-trips faithfully.
+    orig_encode_conversation = tokenizer.encode_conversation
 
-    def encode_wrapper(text, chat_wrapped=None):
-        ids = orig_encode(text, chat_wrapped=chat_wrapped)
-        cap["encodes"].append({"text": text, "ids": list(ids)})
+    def encode_conversation_wrapper(messages, system=None):
+        ids = orig_encode_conversation(messages, system=system)
+        cap["encodes"].append({"text": tokenizer.decode(ids), "ids": list(ids)})
         return ids
 
-    tokenizer.encode = encode_wrapper
+    tokenizer.encode_conversation = encode_conversation_wrapper
 
     # Incremental decoder: which tokens produced stable text vs were buffered
     # (multi-byte sequences). Class-level patch; new decoders are created per
