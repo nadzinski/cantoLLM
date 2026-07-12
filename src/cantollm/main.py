@@ -89,7 +89,14 @@ def cmd_serve(args):
             runtime = build_runtime(spec, device)
             model_name = spec.name
         engine = SequentialEngine(runtime)
-        registry.register(model_name, engine, runtime)
+        # Cap admission at the RoPE table length: the sequential forward
+        # indexes freqs_cis by absolute position, so prompt + max_tokens past
+        # arch max_seq_len would IndexError mid-generation. A clean 400 beats
+        # that.
+        registry.register(
+            model_name, engine, runtime,
+            max_request_tokens=runtime.spec.arch["max_seq_len"],
+        )
         engine_desc = "sequential"
 
     app = create_app(registry)
