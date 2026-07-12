@@ -1564,7 +1564,8 @@ function initSplit() {
       c.appendChild(para('Both processes stamp the same wall clock, so the hop is directly measurable: child’s <code>events.put()</code> to the batch landing ' +
         `on the parent’s event loop. Median <b>${tot.hop_ms_p50} ms</b> against a median step of <b>${medStep} ms</b> — ` +
         `the boundary costs ~${(tot.hop_ms_p50 / medStep * 100).toFixed(2)}% of a step. This is why the split doesn’t show up in throughput, and why ` +
-        'per-step batching (previous stage) is all the cleverness the transport needs.'));
+        'per-step batching (previous stage) is all the cleverness the transport needs. The full anatomy of one hop — pickle, pipe, wakeups — is broken down ' +
+        'at the bottom of this page.'));
       c.appendChild(chips(
         [tot.hop_ms_p50 + ' ms', 'hop p50 (emit → loop)'],
         [tot.hop_ms_max + ' ms', 'hop max'],
@@ -1642,7 +1643,60 @@ function initSplit() {
   scroll.appendChild(svg);
   diagPanel.appendChild(scroll);
 
-  body.append(transport.root, diagPanel, cardPanel);
+  /* ---------- explainer: anatomy of one hop ---------- */
+  const hopPanel = el('section', 'panel');
+  hopPanel.appendChild(el('h2', null, `Anatomy of one hop — where the ${tot.hop_ms_p50} ms goes`));
+  hopPanel.appendChild(para('Two processes share <b>nothing</b>: separate heaps, separate interpreters, separate GILs (which is half the point — the ' +
+    'scheduler’s busy loop can never contend with the API’s event loop for a GIL). A Python object is a pointer into one process’s heap, meaningless in the ' +
+    'other, so the only thing that can cross is <b>bytes</b> through a kernel channel. Every IPC design answers two questions: how objects become bytes ' +
+    '(<i>serialization</i> — here, pickle) and which channel carries them (<i>transport</i> — here, an OS pipe inside <code>mp.Queue</code>). ' +
+    '“Per step” means per <code>scheduler.step()</code>: one batched forward pass → one message carrying every event that pass produced ' +
+    `(${tot.steps} steps → ${tot.batches} messages → ${tot.events} TokenEvents in this run). Nothing new exists between steps, so one message per step ` +
+    'delivers tokens exactly as fast as they’re born, with the minimum possible message count. The journey of one batch:'));
+  const anat = el('div', 'anat');
+  const hopRow = (op, sub, html) => {
+    const r = el('div', 'anat-row');
+    const left = el('div', 'anat-op');
+    left.innerHTML = op + (sub ? ` <small>${sub}</small>` : '');
+    const right = el('div', 'panel-note');
+    right.style.margin = '0';
+    right.innerHTML = html;
+    r.append(left, right);
+    anat.appendChild(r);
+  };
+  hopRow('1 · events.put(batch)', 'engine process',
+    'Appends the batch to an in-memory deque and returns in microseconds. Nothing is sent yet.');
+  hopRow('2 · feeder thread pickles', 'QueueFeederThread',
+    'A hidden thread every <code>mp.Queue</code> owns in the producer wakes, pops the batch, and <b>pickles</b> it: walks the object graph and emits ' +
+    `rebuild-instruction bytes (~${medBytes} B per batch here). Classes cross <i>by name</i> (<code>cantollm.engine.types.TokenEvent</code>), values by copy — ` +
+    'which is also why the scheduler factory must be a module-level function: pickle can find it by name in the child, but a closure has no name to find.');
+  hopRow('3 · write() → OS pipe', 'kernel buffer',
+    'A 4-byte length header plus the payload go into a small kernel-owned buffer (tens of KB). The pipe’s file-descriptor pair was created before the spawn, ' +
+    'so the child inherited one end. If this buffer ever filled, <code>write()</code> would block — <code>mp.Queue</code> hides that by buffering unboundedly ' +
+    'in the producer’s memory instead, which is exactly why the orphan guard exists: an engine writing to a pipe nobody drains grows without relief.');
+  hopRow('4 · kernel wakes the bridge', 'context switch',
+    'The bridge thread sits in a blocking <code>read()</code> on its end. Data arriving makes the kernel schedule it — this context switch is typically the ' +
+    'biggest single cost in the hop, tens of microseconds, more than the pickle itself at these sizes.');
+  hopRow('5 · unpickle', 'API process',
+    'The bridge runs the byte-stream instructions and builds <b>brand-new</b> TokenEvents in the parent’s heap. Same values, different objects — nothing was ' +
+    '“sent”, everything was reconstructed.');
+  hopRow('6 · call_soon_threadsafe', 'the self-pipe trick',
+    'The event loop thread may be asleep inside <code>kqueue</code>/<code>epoll</code>, so asyncio wakes it by writing one byte to a pipe the loop always ' +
+    'watches. One hop therefore crosses <b>two pipes and two thread wakeups</b>: engine → bridge (inter-process), then bridge → event loop (intra-process).');
+  hopRow('7 · _dispatch on the loop', 'measured end',
+    `All of the above, end to end: <b>${tot.hop_ms_p50} ms</b> median against a <b>${medStep} ms</b> median step — ` +
+    `~${(tot.hop_ms_p50 / medStep * 100).toFixed(2)}% of a step.`);
+  hopPanel.appendChild(anat);
+  hopPanel.appendChild(para('<b>The design rules fall straight out of these mechanics.</b> The hop’s cost is almost entirely fixed <i>per message</i> ' +
+    '(syscalls, context switches, pickle framing), not per byte — 180 B and 18 KB cost nearly the same — so the win comes from cutting message count: ' +
+    `batch per step, never per token (at max_batch=${SP.meta.config.max_batch} the naive version would be up to ${SP.meta.config.max_batch} bridge-and-loop ` +
+    'wakeups per forward pass instead of one). Pickling is proportional to object-graph size, so rich state stays home: the 1.4 GB of weights load <i>in</i> ' +
+    'the engine process and never move; only ids, floats, and small dataclasses travel. And on the wider spectrum this is the simple end — pickle over pipes ' +
+    'here, ZMQ (same fundamentals, cross-host framing; vLLM’s choice) one step up, and <b>shared memory</b> at the far end: don’t serialize at all, place the ' +
+    'data in a region both processes map and send only a handle across — how PyTorch moves tensors between processes, and the trick to reach for if KV blocks ' +
+    'ever need to cross a boundary (Phase 10’s disaggregated prefill/decode).'));
+
+  body.append(transport.root, diagPanel, cardPanel, hopPanel);
   svg.appendChild(dotG);
 
   function setStage(i) {
