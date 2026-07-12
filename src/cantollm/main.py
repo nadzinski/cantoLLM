@@ -45,10 +45,14 @@ def cmd_serve(args):
     import uvicorn
 
     from cantollm.api import create_app
-    from cantollm.engine import ContinuousBatchingEngine, SequentialEngine
-    from cantollm.engine.batching import BatchingConfig
+    from cantollm.engine import (
+        ContinuousBatchingEngine,
+        EngineProcessClient,
+        SequentialEngine,
+    )
+    from cantollm.engine.batching import BatchingConfig, build_qwen3_batched_scheduler
     from cantollm.registry import EngineRegistry
-    from cantollm.runtime import build_runtime
+    from cantollm.runtime import build_runtime, build_tokenizer_runtime
 
     device = select_device()
     registry = EngineRegistry()
@@ -61,20 +65,32 @@ def cmd_serve(args):
                 "batched speculation is out of scope)"
             )
         spec = qwen3_spec(args.model)
-        runtime = build_runtime(spec, device, attention="padded")
         config = BatchingConfig(
             max_batch=args.max_batch,
             max_seq_len=args.batch_max_seq_len,
             max_tokens_per_step=args.max_tokens_per_step,
         )
-        engine = ContinuousBatchingEngine.from_runtime(runtime, config)
+        if args.in_process:
+            runtime = build_runtime(spec, device, attention="padded")
+            engine = ContinuousBatchingEngine.from_runtime(runtime, config)
+            api_runtime = runtime
+            where = "in-process"
+        else:
+            # The engine process loads the weights (at engine.start(), inside
+            # the app lifespan); the API process only ever holds the tokenizer.
+            engine = EngineProcessClient(
+                build_qwen3_batched_scheduler,
+                {"size": args.model, "device": str(device), "config": config},
+            )
+            api_runtime = build_tokenizer_runtime(spec)
+            where = "engine process"
         model_name = spec.name
         # The per-slot capacity doubles as the admission cap.
         registry.register(
-            model_name, engine, runtime, max_request_tokens=config.max_seq_len
+            model_name, engine, api_runtime, max_request_tokens=config.max_seq_len
         )
         engine_desc = (
-            f"continuous batching (max_batch={config.max_batch}, "
+            f"continuous batching, {where} (max_batch={config.max_batch}, "
             f"slot={config.max_seq_len} tok, "
             f"budget={config.max_tokens_per_step} tok/step)"
         )
@@ -107,7 +123,14 @@ def cmd_serve(args):
     print("  GET  /docs         — OpenAPI docs")
     print(f"\nModel: {model_name}  ·  Engine: {engine_desc}\n")
 
-    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+    # uvloop + httptools, explicitly rather than via "auto": the API now
+    # serves many concurrent streams (and, post-split, the IPC bridge), and
+    # the end-of-phase baseline shouldn't depend on which extras happened to
+    # be importable.
+    uvicorn.run(
+        app, host=args.host, port=args.port, log_level="info",
+        loop="uvloop", http="httptools",
+    )
 
 
 # ── Subcommand: chat ────────────────────────────────────────────────
@@ -199,6 +222,10 @@ def parse_args():
     serve_parser.add_argument("--max-tokens-per-step", type=int, default=256,
                               help="Batched engine: total new tokens per forward pass; "
                                    "bounds the prefill chunk width (default: 256)")
+    serve_parser.add_argument("--in-process", action="store_true",
+                              help="Batched engine: run the scheduler inside the API "
+                                   "process (debugging aid; default is a dedicated "
+                                   "engine process)")
 
     # chat
     chat_parser = subparsers.add_parser("chat", help="Chat client (connects to a running server)")

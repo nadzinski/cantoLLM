@@ -226,7 +226,7 @@ wants to own its own process. Perf optimizations (SDPA, `torch.compile`, CUDA gr
 deliberately deferred to Phase 3: this phase is about getting the scheduler and batching
 right on a correctness-first attention path, then optimizing the mature target.
 
-**Status (2026-07-11):** Feature work item (1) is done — the in-process
+**Status (2026-07-12):** Feature work item (1) is done — the in-process
 continuous-batching engine serves via `--engine batched`, built step-by-step
 per `continuous-batching-plan.md` (steps 0–9; postscript there records where
 execution deviated from the written plan). Landed: shared sampler with the
@@ -248,9 +248,12 @@ logprobs surface on the OpenAI dialect (`"logprobs": true`), and text-level
 stop sequences work on both dialects (`stop_sequences` / `stop`), matched with
 holdback at the decoder layer and stopping generation via the abort path.
 Still deferred: the Phase-0 bench-harness spec (these are rough numbers, not
-the spec'd baseline). Open: feature work item (2), the API/engine process
-split — the command-queue and one-dispatch-per-step shapes were built
-IPC-ready for it.
+the spec'd baseline). Feature work item (2), the API/engine process split,
+is also done: `--engine batched` now spawns a dedicated engine process by
+default (`--in-process` opts out), IPC over multiprocessing spawn queues
+with per-step event batches, uvicorn pinned to uvloop+httptools — decisions
+in `process-split-design.md`. Open: minimal CUDA bring-up, then the
+end-of-phase 5090 bench baseline (which also wants the Phase-0 bench spec).
 
 **Author note:** the in-process scheduler, batched forward, and padded KV
 are being written by hand by the project author for learning. Assistants

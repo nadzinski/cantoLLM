@@ -292,5 +292,6 @@ remains consciously deferred.
 
 All steps in this plan are done: steps 0–11 (through the viz refresh) plus
 the optional tail steps 12–13 (logprobs, stop strings) landed 2026-07-11.
-Phase 2 item (2), the process split, picks up the deliberately IPC-shaped
-command queue and per-step event dispatch.
+Phase 2 item (2), the process split, picked up the deliberately IPC-shaped
+command queue and per-step event dispatch as designed — landed 2026-07-12;
+decisions and wire protocol in `process-split-design.md`.

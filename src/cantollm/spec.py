@@ -16,7 +16,11 @@ import torch
 
 from cantollm.models.qwen3.model import Qwen3
 from cantollm.models.qwen3.tokenizer import Qwen3Tokenizer
-from cantollm.models.qwen3.weights import download_weights, load_weights_into_model
+from cantollm.models.qwen3.weights import (
+    download_tokenizer,
+    download_weights,
+    load_weights_into_model,
+)
 
 
 MODEL_CONFIGS: dict[str, dict] = {
@@ -93,6 +97,10 @@ class ModelSpec:
     weights_loader: Callable[[], tuple[str, dict]]
     apply_weights: Callable[[Any, dict, dict], None]
     tokenizer_factory: Callable[[str], Any]
+    tokenizer_files_loader: Callable[[], str]
+    """Fetch just the tokenizer files (no weights) and return their local
+    dir — what the API process uses when the model itself lives in the
+    engine process."""
     chat_template: str
 
 
@@ -103,6 +111,9 @@ def qwen3_spec(size: str) -> ModelSpec:
 
     def _load_weights() -> tuple[str, dict]:
         return download_weights(model_size=size, use_instruct=True)
+
+    def _tokenizer_files() -> str:
+        return download_tokenizer(model_size=size, use_instruct=True)
 
     def _build_tokenizer(local_dir: str) -> Qwen3Tokenizer:
         return Qwen3Tokenizer(
@@ -122,5 +133,6 @@ def qwen3_spec(size: str) -> ModelSpec:
         weights_loader=_load_weights,
         apply_weights=load_weights_into_model,
         tokenizer_factory=_build_tokenizer,
+        tokenizer_files_loader=_tokenizer_files,
         chat_template="qwen3-chatml",
     )

@@ -11,7 +11,7 @@ Shape (decisions 5 and 6 of the design note):
                                                           │ drained at the
                                                           ▼ top of each step
                                                   scheduler thread:
-                                                  apply commands → step()
+                                                  drive_scheduler()
                                                           │ one
                                                           ▼ call_soon_threadsafe
                                                     _dispatch on the loop
@@ -19,17 +19,10 @@ Shape (decisions 5 and 6 of the design note):
                                                           ▼
                               unbounded per-request asyncio.Queues → clients
 
-Threading rules that keep this lock-free:
-  - `_queues` is touched ONLY on the event loop (submit registers, _dispatch
-    routes and closes, shutdown/_fail sweep). The scheduler thread never
-    reads it.
-  - The scheduler is touched ONLY by the scheduler thread.
-  - The command queue is the only object both sides touch.
-
-Backpressure: none, by design. Queues are unbounded (a request's event
-count is capped by admission's prompt+max_tokens bound, and events are
-tiny); a consumer that goes away triggers disconnect→abort, which frees the
-KV slot — capacity, not memory, is the resource worth reclaiming.
+The API-facing half (submit/dispatch/fail, and the threading and
+backpressure rules) lives in `EventMultiplexer` — shared with the
+process-split client in `process.py`, which runs the same `drive_scheduler`
+loop in a child process instead of a thread.
 
 Failure policy: an exception in `step()` is batch-wide by construction (one
 shared forward), so every in-flight request gets an error event, the engine
@@ -42,12 +35,13 @@ import asyncio
 import logging
 import queue
 import threading
-from collections.abc import AsyncIterator
+from collections.abc import Callable
 
 from typing import TYPE_CHECKING
 
 from cantollm.engine.batching.allocator import SlotAllocator
 from cantollm.engine.batching.config import BatchingConfig
+from cantollm.engine.batching.mux import EventMultiplexer
 from cantollm.engine.batching.types import (
     Abort,
     AddRequest,
@@ -55,7 +49,7 @@ from cantollm.engine.batching.types import (
     SchedulerLike,
     Shutdown,
 )
-from cantollm.engine.types import InferenceRequest, TokenEvent
+from cantollm.engine.types import TokenEvent
 
 if TYPE_CHECKING:
     from cantollm.runtime import ModelRuntime
@@ -63,33 +57,99 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _JOIN_TIMEOUT_S = 5.0
+_IDLE_POLL_S = 0.5
 
 
-class ContinuousBatchingEngine:
+def scheduler_from_runtime(
+    runtime: "ModelRuntime", config: BatchingConfig
+) -> SchedulerLike:
+    """The production composition: the runtime's batched-forward front, a
+    freshly preallocated KV pool, and a fresh allocator behind the real
+    scheduler. Used by `ContinuousBatchingEngine.from_runtime` in-process
+    and by the engine-process factory after the split."""
+    from cantollm.engine.batching.scheduler import ContinuousBatchingScheduler
+
+    return ContinuousBatchingScheduler(
+        forward_fn=runtime.forward_batched,
+        pool=runtime.new_kv_pool(config),
+        allocator=SlotAllocator(config.max_batch),
+        config=config,
+    )
+
+
+def drive_scheduler(
+    scheduler: SchedulerLike,
+    commands,
+    emit: Callable[[list[TokenEvent]], None],
+    should_stop: Callable[[], bool] | None = None,
+) -> None:
+    """The engine's steady-state loop: drain commands, apply, step, emit —
+    until a Shutdown command arrives (returns) or the scheduler raises
+    (propagates; the caller owns failure policy).
+
+    Runs on the in-process scheduler thread and, after the process split,
+    as the body of the engine process — `commands` only needs the stdlib
+    get/get_nowait surface, which `queue.Queue` and `multiprocessing.Queue`
+    both provide.
+
+    `should_stop` is the process split's orphan guard: when set, the idle
+    block becomes a poll and the loop re-checks it each iteration, so an
+    engine whose API process died stops stepping instead of generating into
+    a pipe nobody drains. When None (in-process), idle blocks indefinitely.
+    """
+    while True:
+        if should_stop is not None and should_stop():
+            return
+        batch: list[Command] = []
+        if scheduler.is_idle():
+            # Nothing to step: block until the world says something.
+            if should_stop is None:
+                batch.append(commands.get())
+            else:
+                try:
+                    batch.append(commands.get(timeout=_IDLE_POLL_S))
+                except queue.Empty:
+                    continue  # loop around to re-check should_stop
+        while True:
+            try:
+                batch.append(commands.get_nowait())
+            except queue.Empty:
+                break
+
+        for cmd in batch:
+            if isinstance(cmd, Shutdown):
+                return
+            if isinstance(cmd, AddRequest):
+                scheduler.add_request(cmd.request)
+            elif isinstance(cmd, Abort):
+                scheduler.abort(cmd.request_id)
+
+        if scheduler.is_idle():
+            continue
+
+        events = scheduler.step()
+        if events:
+            # One emission per step, not per token (IPC-shaped).
+            emit(events)
+
+
+class ContinuousBatchingEngine(EventMultiplexer):
     def __init__(self, scheduler: SchedulerLike):
+        super().__init__()
         self.scheduler = scheduler
         self._commands: queue.Queue[Command] = queue.Queue()
-        self._queues: dict[str, asyncio.Queue[TokenEvent | None]] = {}
-        self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
-        self._failed: str | None = None
 
     @classmethod
     def from_runtime(
         cls, runtime: "ModelRuntime", config: BatchingConfig
     ) -> "ContinuousBatchingEngine":
-        """The production composition: the runtime's batched-forward front,
-        a freshly preallocated KV pool, and a fresh allocator behind the
-        real scheduler. Tests inject a SchedulerLike directly instead."""
-        from cantollm.engine.batching.scheduler import ContinuousBatchingScheduler
+        """Compose the production scheduler in-process. Tests inject a
+        SchedulerLike directly instead."""
+        return cls(scheduler_from_runtime(runtime, config))
 
-        scheduler = ContinuousBatchingScheduler(
-            forward_fn=runtime.forward_batched,
-            pool=runtime.new_kv_pool(config),
-            allocator=SlotAllocator(config.max_batch),
-            config=config,
-        )
-        return cls(scheduler)
+    def _send_command(self, command: Command) -> None:
+        self._commands.put(command)
 
     async def start(self) -> None:
         self._loop = asyncio.get_running_loop()
@@ -108,95 +168,22 @@ class ContinuousBatchingEngine:
             return
         self._commands.put(Shutdown())
         await asyncio.to_thread(self._thread.join, _JOIN_TIMEOUT_S)
-        # Nothing will produce events anymore: close out every in-flight
-        # iterator so no submit() hangs on a queue that can't fill.
-        for rid, q in list(self._queues.items()):
-            q.put_nowait(TokenEvent(finish_reason="abort", request_id=rid))
-            q.put_nowait(None)
-        self._queues.clear()
-
-    def abort(self, request_id: str) -> None:
-        self._commands.put(Abort(request_id))
-
-    async def submit(self, req: InferenceRequest) -> AsyncIterator[TokenEvent]:
-        rid = req.request_id
-        if self._failed is not None:
-            yield TokenEvent(error=self._failed, request_id=rid)
-            return
-
-        # Register the queue before the command goes in, so the request's
-        # very first event can't race past an unregistered consumer.
-        events: asyncio.Queue[TokenEvent | None] = asyncio.Queue()
-        self._queues[rid] = events
-        self._commands.put(AddRequest(req))
-
-        finished = False
-        try:
-            while (evt := await events.get()) is not None:
-                yield evt
-            finished = True
-        finally:
-            self._queues.pop(rid, None)
-            if not finished:
-                # Consumer went away mid-stream (disconnect) — free the slot.
-                self._commands.put(Abort(rid))
+        self._close_all_streams()
 
     # --- scheduler thread ---------------------------------------------
 
     def _run(self) -> None:
-        while True:
-            commands: list[Command] = []
-            if self.scheduler.is_idle():
-                # Nothing to step: block until the world says something.
-                commands.append(self._commands.get())
-            while True:
-                try:
-                    commands.append(self._commands.get_nowait())
-                except queue.Empty:
-                    break
-
-            for cmd in commands:
-                if isinstance(cmd, Shutdown):
-                    return
-                if isinstance(cmd, AddRequest):
-                    self.scheduler.add_request(cmd.request)
-                elif isinstance(cmd, Abort):
-                    self.scheduler.abort(cmd.request_id)
-
-            if self.scheduler.is_idle():
-                continue
-
-            try:
-                events = self.scheduler.step()
-            except Exception as exc:  # batch-wide by construction
-                # Log with the traceback here, on the scheduler thread where
-                # it happened — _fail only carries the message to clients, so
-                # without this the stack of a batch-wide failure is lost.
-                logger.exception("scheduler step failed; failing the engine")
-                self._loop.call_soon_threadsafe(self._fail, str(exc))
-                return
-
-            if events:
-                # One loop hop per step, not per token (IPC-shaped).
-                self._loop.call_soon_threadsafe(self._dispatch, events)
-
-    # --- event loop side ----------------------------------------------
-
-    def _dispatch(self, events: list[TokenEvent]) -> None:
-        for evt in events:
-            q = self._queues.get(evt.request_id)
-            if q is None:
-                continue  # consumer already disconnected; drop silently
-            q.put_nowait(evt)
-            if evt.finish_reason is not None or evt.error is not None:
-                q.put_nowait(None)
-                self._queues.pop(evt.request_id, None)
-
-    def _fail(self, reason: str) -> None:
-        # _failed holds the complete client-facing message; submit() and this
-        # sweep both surface it verbatim.
-        self._failed = f"engine failed: {reason}"
-        for rid, q in list(self._queues.items()):
-            q.put_nowait(TokenEvent(error=self._failed, request_id=rid))
-            q.put_nowait(None)
-        self._queues.clear()
+        try:
+            drive_scheduler(
+                self.scheduler,
+                self._commands,
+                emit=lambda events: self._loop.call_soon_threadsafe(
+                    self._dispatch, events
+                ),
+            )
+        except Exception as exc:  # batch-wide by construction
+            # Log with the traceback here, on the scheduler thread where
+            # it happened — _fail only carries the message to clients, so
+            # without this the stack of a batch-wide failure is lost.
+            logger.exception("scheduler step failed; failing the engine")
+            self._loop.call_soon_threadsafe(self._fail, str(exc))

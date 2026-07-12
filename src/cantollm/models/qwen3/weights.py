@@ -11,6 +11,29 @@ VALID_SIZES = ("0.6B", "1.7B", "4B", "8B", "14B")
 MODEL_DATA_DIR = Path(__file__).parent.parent / "model_data"
 
 
+def download_tokenizer(model_size: str = "0.6B", use_instruct: bool = True) -> str:
+    """Download only the tokenizer file and return its local dir.
+
+    The API process needs a tokenizer but must not pay for (or hold) model
+    weights — those belong to the engine process.
+    """
+    if model_size not in VALID_SIZES:
+        raise ValueError(
+            f"Invalid model size '{model_size}'. Must be one of {VALID_SIZES}"
+        )
+
+    model_name = f"Qwen3-{model_size}" if use_instruct else f"Qwen3-{model_size}-Base"
+    repo_id = f"Qwen/{model_name}"
+    local_dir = MODEL_DATA_DIR / model_name
+
+    hf_hub_download(
+        repo_id=repo_id,
+        filename="tokenizer.json",
+        local_dir=str(local_dir),
+    )
+    return str(local_dir)
+
+
 def download_weights(
     model_size: str = "0.6B", use_instruct: bool = True
 ) -> tuple[str, dict]:
@@ -24,21 +47,10 @@ def download_weights(
         A tuple of (local_dir_path, weights_dict) where weights_dict maps
         HuggingFace parameter names to tensors.
     """
-    if model_size not in VALID_SIZES:
-        raise ValueError(
-            f"Invalid model size '{model_size}'. Must be one of {VALID_SIZES}"
-        )
+    local_dir = Path(download_tokenizer(model_size, use_instruct))
 
     model_name = f"Qwen3-{model_size}" if use_instruct else f"Qwen3-{model_size}-Base"
     repo_id = f"Qwen/{model_name}"
-    local_dir = MODEL_DATA_DIR / model_name
-
-    # Download the tokenizer
-    hf_hub_download(
-        repo_id=repo_id,
-        filename="tokenizer.json",
-        local_dir=str(local_dir),
-    )
 
     if model_size == "0.6B":
         # Small model: single safetensors file

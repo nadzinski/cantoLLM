@@ -41,6 +41,9 @@ def tiny_qwen3_spec() -> ModelSpec:
     def _build_tokenizer(local_dir: str) -> FakeTokenizer:
         return FakeTokenizer()
 
+    def _no_tokenizer_files() -> str:
+        return ""
+
     return ModelSpec(
         name="qwen3-tiny",
         size="tiny",
@@ -50,5 +53,6 @@ def tiny_qwen3_spec() -> ModelSpec:
         weights_loader=_no_load,
         apply_weights=_no_apply,
         tokenizer_factory=_build_tokenizer,
+        tokenizer_files_loader=_no_tokenizer_files,
         chat_template="qwen3-chatml",
     )

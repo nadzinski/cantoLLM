@@ -12,13 +12,16 @@ import time
 from dataclasses import dataclass, field
 
 from cantollm.engine.engine import InferenceEngine
-from cantollm.runtime import ModelRuntime
+from cantollm.runtime import ModelRuntime, TokenizerRuntime
 
 
 @dataclass
 class RegistryEntry:
     engine: InferenceEngine
-    runtime: ModelRuntime
+    runtime: ModelRuntime | TokenizerRuntime
+    """Full runtime for in-process engines; tokenizer-only for models whose
+    weights live in an engine process. The API layer only reads
+    `.tokenizer` and the lifecycle hooks either way."""
     registered_at: float = field(default_factory=time.time)
     max_request_tokens: int | None = None
     """Admission cap: reject requests with prompt + max_tokens above this.
@@ -35,7 +38,7 @@ class EngineRegistry:
         self,
         name: str,
         engine: InferenceEngine,
-        runtime: ModelRuntime,
+        runtime: ModelRuntime | TokenizerRuntime,
         *,
         max_request_tokens: int | None = None,
     ) -> None:

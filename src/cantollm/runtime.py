@@ -112,6 +112,30 @@ class ModelRuntime:
         pass
 
 
+class TokenizerRuntime:
+    """API-process counterpart of ModelRuntime when the engine runs in its
+    own process: the API layer needs `spec` metadata and a tokenizer
+    (tokenization stays API-side, per Phase 1a) and must not pay for weights
+    it never touches — those live in the engine process. Satisfies the
+    registry's runtime surface (tokenizer/start/shutdown)."""
+
+    def __init__(self, spec: ModelSpec, tokenizer: Any):
+        self.spec = spec
+        self.tokenizer = tokenizer
+
+    async def start(self) -> None:
+        pass
+
+    async def shutdown(self) -> None:
+        pass
+
+
+def build_tokenizer_runtime(spec: ModelSpec) -> TokenizerRuntime:
+    """Fetch tokenizer files only (no weights) and build the API-side
+    runtime for a model served from an engine process."""
+    return TokenizerRuntime(spec, spec.tokenizer_factory(spec.tokenizer_files_loader()))
+
+
 def _load_model(
     spec: ModelSpec,
     device: torch.device,
