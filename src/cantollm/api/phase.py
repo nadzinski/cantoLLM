@@ -22,6 +22,28 @@ from cantollm.stream_events import StreamEvent, TextChunk, ThinkingEndEvent, Thi
 Phase = Literal["thinking", "text"]
 
 
+def logprobs_for_emitted(
+    entries: list[tuple[str, float | None]], emitted_len: int
+) -> list[tuple[str, float | None]]:
+    """Keep only the content-logprob entries that fall within emitted content.
+
+    `content_logprobs` is recorded per text-phase token, before the stop
+    watcher decides how much text is actually emitted — so when a stop
+    sequence matches, the tokens forming it (excluded from `content`) still
+    have entries. Drop every entry that begins at or past `emitted_len`; a
+    token straddling the boundary contributed emitted characters and is kept.
+    Alignment is approximate at multi-byte boundaries, as the docstring on
+    `DecodeState.content_logprobs` notes."""
+    kept: list[tuple[str, float | None]] = []
+    consumed = 0
+    for text, lp in entries:
+        if consumed >= emitted_len:
+            break
+        kept.append((text, lp))
+        consumed += len(text)
+    return kept
+
+
 @dataclass
 class DecodeState:
     thinking: int = 0

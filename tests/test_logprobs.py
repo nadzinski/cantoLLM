@@ -173,3 +173,69 @@ class TestOpenAILogprobs:
         resp = asyncio.run(main())
         assert resp.status_code == 400  # OpenAI invalid_request_error, not 422
         assert resp.json()["error"]["type"] == "invalid_request_error"
+
+    def _client_with(self, script, id_to_text):
+        engine = FakeEngine(script=script)
+        tokenizer = FakeTokenizer(id_to_text=id_to_text)
+        registry = FakeRegistry(
+            entries={"m": (engine, FakeRuntime(tokenizer=tokenizer))}
+        )
+        app = create_app(registry)
+        transport = httpx.ASGITransport(app=app)
+        return httpx.AsyncClient(transport=transport, base_url="http://t")
+
+    def test_non_streaming_logprobs_exclude_stop_sequence_tokens(self):
+        """logprobs.content must align 1:1 with emitted content — a stop
+        sequence's tokens are excluded from content, so their per-token
+        entries must be dropped too."""
+        script = [
+            ScriptStep(token_id=2000, logprob=-0.25),
+            ScriptStep(token_id=2001, logprob=-1.5),
+            ScriptStep(token_id=2002, logprob=-0.03125),
+        ]
+
+        async def main():
+            async with self._client_with(
+                script, {2000: "a", 2001: "b", 2002: "c"}
+            ) as client:
+                # decoded "abc"; stop "bc" matches -> emitted content is "a".
+                return await client.post("/v1/chat/completions", json={
+                    "model": "m", "max_tokens": 8, "logprobs": True,
+                    "stop": ["bc"],
+                    "messages": [{"role": "user", "content": "hi"}],
+                })
+
+        choice = asyncio.run(main()).json()["choices"][0]
+        assert choice["message"]["content"] == "a"
+        assert [e["token"] for e in choice["logprobs"]["content"]] == ["a"]
+        assert [e["logprob"] for e in choice["logprobs"]["content"]] == [-0.25]
+
+    def test_streaming_logprobs_not_duplicated_by_flush(self):
+        """A logprob entry must ride exactly one chunk. Token 2001 decodes to
+        'bZ'; with stop 'Zz' the trailing 'Z' is held mid-token and released
+        by the end-of-stream flush as a separate chunk — whose logprob must
+        NOT re-attach the already-emitted entry."""
+        script = [
+            ScriptStep(token_id=2000, logprob=-0.25),
+            ScriptStep(token_id=2001, logprob=-1.5),
+        ]
+
+        async def main():
+            async with self._client_with(
+                script, {2000: "a", 2001: "bZ"}
+            ) as client:
+                return await client.post("/v1/chat/completions", json={
+                    "model": "m", "max_tokens": 8, "stream": True,
+                    "logprobs": True, "stop": ["Zz"],
+                    "messages": [{"role": "user", "content": "hi"}],
+                })
+
+        chunks, _ = _parse_openai_sse(asyncio.run(main()).text)
+        all_lps = []
+        for c in chunks:
+            choices = c.get("choices") or []
+            if choices and choices[0].get("logprobs"):
+                all_lps.extend(
+                    e["logprob"] for e in choices[0]["logprobs"]["content"]
+                )
+        assert all_lps == [-0.25, -1.5]  # each once, not [-0.25, -1.5, -1.5]

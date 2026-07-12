@@ -28,7 +28,11 @@ from cantollm.api.openai_types import (
     OpenAIErrorEnvelope,
     TokenLogprob,
 )
-from cantollm.api.phase import DecodeState, phase_tagged_events
+from cantollm.api.phase import (
+    DecodeState,
+    logprobs_for_emitted,
+    phase_tagged_events,
+)
 from cantollm.decoder import StopStringWatcher
 from cantollm.engine.types import TokenEvent
 from cantollm.stream_events import TextChunk
@@ -198,11 +202,15 @@ async def render_chat_completion(
 
     choice_logprobs = None
     if logprobs_requested:
-        # Entries whose engine event carried no logprob are dropped —
-        # OpenAI's schema requires a float per entry.
+        # Align entries with emitted content (drop stop-sequence tokens that
+        # are excluded from `content`), then drop entries whose engine event
+        # carried no logprob — OpenAI's schema requires a float per entry.
+        emitted = logprobs_for_emitted(
+            state.content_logprobs, len("".join(visible))
+        )
         choice_logprobs = ChoiceLogprobs(content=[
             TokenLogprob(**_token_logprob_entry(text, lp))
-            for text, lp in state.content_logprobs
+            for text, lp in emitted
             if lp is not None
         ])
 
@@ -264,6 +272,13 @@ async def render_chat_completion_sse(
         )
 
     async def produce():
+        # Each content_logprobs entry is attached to exactly one emitted chunk:
+        # the cursor advances past every entry appended since the last text
+        # chunk, so a chunk that releases several held-back tokens carries all
+        # their logprobs, and a flush-only chunk (no new entries — e.g. the
+        # stop watcher's released tail) carries none. Prevents the double-count
+        # the old `content_logprobs[-1]` re-attach produced.
+        logprob_cursor = 0
         try:
             # Opening chunk: role only.
             await out.put(emit({"role": "assistant"}))
@@ -275,14 +290,16 @@ async def render_chat_completion_sse(
                     continue
                 key = "reasoning_content" if phase == "thinking" else "content"
                 chunk_logprobs = None
-                if logprobs_requested and phase == "text" and state.content_logprobs:
-                    # Lockstep with phase_tagged_events: the entry for the
-                    # token that produced this chunk was just appended.
-                    text, lp = state.content_logprobs[-1]
-                    if lp is not None:
-                        chunk_logprobs = {
-                            "content": [_token_logprob_entry(text, lp)]
-                        }
+                if logprobs_requested and phase == "text":
+                    new_entries = state.content_logprobs[logprob_cursor:]
+                    logprob_cursor = len(state.content_logprobs)
+                    entries = [
+                        _token_logprob_entry(text, lp)
+                        for text, lp in new_entries
+                        if lp is not None
+                    ]
+                    if entries:
+                        chunk_logprobs = {"content": entries}
                 await out.put(emit({key: dec_evt.text}, logprobs=chunk_logprobs))
 
             if state.error is not None:
