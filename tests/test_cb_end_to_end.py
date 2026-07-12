@@ -223,7 +223,7 @@ class TestThroughTheAPI:
             assert body["stop_reason"] == "max_tokens"
             assert body["usage"]["output_tokens"] == 5
         assert over_cap.status_code == 400
-        assert "exceeds this model's limit" in over_cap.json()["detail"]
+        assert "exceeds this model's limit" in over_cap.json()["error"]["message"]
         events = parse_sse(streamed.text)
         assert events[0].event == "message_start"
         assert any(e.event == "message_stop" for e in events)

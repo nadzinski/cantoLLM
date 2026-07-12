@@ -464,7 +464,10 @@ def test_non_streaming_error_returns_500():
 
     status, body = _run(run())
     assert status == 500
-    assert "boom" in body.get("detail", "")
+    # Anthropic error envelope, not FastAPI's {"detail": ...}.
+    assert body["type"] == "error"
+    assert body["error"]["type"] == "api_error"
+    assert "boom" in body["error"]["message"]
 
 
 # ── 9. Pydantic validation ───────────────────────────────────────────
@@ -492,10 +495,13 @@ def test_validation_rejects_bad_requests():
                     "messages": [{"role": "user", "content": "hi"}],
                 },
             )
-            return missing_max.status_code, empty_messages.status_code, negative_max.status_code
+            return missing_max, empty_messages, negative_max
 
-    s1, s2, s3 = _run(run())
-    assert (s1, s2, s3) == (422, 422, 422)
+    missing_max, empty_messages, negative_max = _run(run())
+    # Anthropic returns 400 invalid_request_error for a malformed body, not 422.
+    for r in (missing_max, empty_messages, negative_max):
+        assert r.status_code == 400
+        assert r.json()["error"]["type"] == "invalid_request_error"
 
 
 def test_validation_rejects_out_of_range_sampling_params():
@@ -524,11 +530,11 @@ def test_validation_rejects_out_of_range_sampling_params():
                 )
             ]
 
-    assert _run(run()) == [422, 422, 422, 422]
+    assert _run(run()) == [400, 400, 400, 400]
 
 
 def test_unknown_request_fields_rejected():
-    """extra='forbid': unimplemented Anthropic fields and typos must 422
+    """extra='forbid': unimplemented Anthropic fields and typos must 400
     rather than be silently dropped — a request that believes it carried
     tools or a stop_sequence shouldn't get a plain answer instead."""
     tokenizer = _tokenizer_for("hi")
@@ -552,7 +558,7 @@ def test_unknown_request_fields_rejected():
                 )
             ]
 
-    assert _run(run()) == [422, 422, 422]
+    assert _run(run()) == [400, 400, 400]
 
 
 # ── Tokenization runs on a thread pool (doesn't serialize the event loop) ──
@@ -624,7 +630,45 @@ def test_tokenizer_value_error_becomes_400():
 
     r = _run(run())
     assert r.status_code == 400
-    assert "prompt too long" in r.json()["detail"]
+    body = r.json()
+    assert body["error"]["type"] == "invalid_request_error"
+    assert "prompt too long" in body["error"]["message"]
+
+
+def test_unknown_model_returns_anthropic_404_envelope():
+    tokenizer = _tokenizer_for("hi")
+    engine = FakeEngine(script=_script_from_text("hi"))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            return await client.post(
+                "/v1/messages",
+                json={**_messages_body(10, False), "model": "does-not-exist"},
+            )
+
+    r = _run(run())
+    assert r.status_code == 404
+    body = r.json()
+    assert body == {
+        "type": "error",
+        "error": {"type": "not_found_error", "message": body["error"]["message"]},
+    }
+    assert "does-not-exist" in body["error"]["message"]
+
+
+def test_non_dialect_path_keeps_default_error_shape():
+    """Only the two dialect paths get rewritten envelopes; an unknown path's
+    404 keeps FastAPI's {"detail": ...} default."""
+    tokenizer = _tokenizer_for("hi")
+    engine = FakeEngine(script=_script_from_text("hi"))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            return await client.get("/no-such-endpoint")
+
+    r = _run(run())
+    assert r.status_code == 404
+    assert "detail" in r.json()
 
 
 # Reference so ruff doesn't complain about imported-but-unused names.

@@ -170,4 +170,6 @@ class TestOpenAILogprobs:
                 body["top_logprobs"] = 5
                 return await client.post("/v1/chat/completions", json=body)
 
-        assert asyncio.run(main()).status_code == 422
+        resp = asyncio.run(main())
+        assert resp.status_code == 400  # OpenAI invalid_request_error, not 422
+        assert resp.json()["error"]["type"] == "invalid_request_error"

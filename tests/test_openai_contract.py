@@ -348,6 +348,10 @@ def test_non_streaming_error_returns_500():
 
     r = _run(run())
     assert r.status_code == 500
+    # OpenAI error envelope, not FastAPI's {"detail": ...}.
+    body = r.json()
+    assert body["error"]["type"] == "server_error"
+    assert "boom" in body["error"]["message"]
 
 
 # ── 7. Unsupported fields get 400 ────────────────────────────────────
@@ -366,7 +370,9 @@ def test_unknown_top_level_field_rejected():
             )
 
     r = _run(run())
-    assert r.status_code == 422  # Pydantic extra="forbid" rejects at validation
+    # extra="forbid" rejects, surfaced as OpenAI's 400 invalid_request_error.
+    assert r.status_code == 400
+    assert r.json()["error"]["type"] == "invalid_request_error"
 
 
 def test_out_of_range_sampling_params_rejected():
@@ -391,7 +397,7 @@ def test_out_of_range_sampling_params_rejected():
                 )
             ]
 
-    assert _run(run()) == [422, 422, 422, 422]
+    assert _run(run()) == [400, 400, 400, 400]
 
 
 def test_unknown_content_part_type_rejected():
@@ -413,7 +419,8 @@ def test_unknown_content_part_type_rejected():
             )
 
     r = _run(run())
-    assert r.status_code == 422
+    assert r.status_code == 400
+    assert r.json()["error"]["type"] == "invalid_request_error"
 
 
 def test_non_leading_system_message_rejected():

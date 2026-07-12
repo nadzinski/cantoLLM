@@ -74,7 +74,7 @@ class TestAnthropicAdmission:
 
         resp, engine = asyncio.run(main())
         assert resp.status_code == 400
-        detail = resp.json()["detail"]
+        detail = resp.json()["error"]["message"]
         for expected in ("3 tokens", "8", "11", "10"):
             assert expected in detail, f"{expected!r} missing from: {detail}"
         # The engine was never touched.
@@ -110,5 +110,5 @@ class TestOpenAIAdmission:
 
         resp, engine = asyncio.run(main())
         assert resp.status_code == 400
-        assert "exceeds this model's limit" in resp.json()["detail"]
+        assert "exceeds this model's limit" in resp.json()["error"]["message"]
         assert not engine.completed and not engine.aborted
