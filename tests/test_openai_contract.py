@@ -167,7 +167,9 @@ def test_non_streaming_separates_reasoning_from_content():
     assert choice["finish_reason"] == "stop"
 
     usage = body["usage"]
-    assert usage["completion_tokens"] == 2            # visible text only
+    # OpenAI spec: completion_tokens counts all generated tokens (4 reasoning
+    # + 2 visible); reasoning_tokens is a subset breakdown.
+    assert usage["completion_tokens"] == 6
     assert usage["completion_tokens_details"]["reasoning_tokens"] == 4
     assert usage["total_tokens"] == usage["prompt_tokens"] + usage["completion_tokens"]
 

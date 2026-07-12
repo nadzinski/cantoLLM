@@ -133,10 +133,14 @@ def _error_line(message: str, err_type: str = "server_error") -> str:
 
 
 def _build_usage_dict(state: DecodeState, input_tokens: int) -> dict:
+    # completion_tokens is the full generated count (text + reasoning); the
+    # reasoning share is broken out under completion_tokens_details, a subset
+    # of it — matching OpenAI's spec.
+    completion_tokens = state.text + state.thinking
     usage = {
         "prompt_tokens": input_tokens,
-        "completion_tokens": state.text,
-        "total_tokens": input_tokens + state.text,
+        "completion_tokens": completion_tokens,
+        "total_tokens": input_tokens + completion_tokens,
     }
     if state.thinking:
         usage["completion_tokens_details"] = {
@@ -177,10 +181,13 @@ async def render_chat_completion(
     content = "".join(visible) or None
     reasoning_content = "".join(reasoning) or None
 
+    # completion_tokens includes reasoning tokens; reasoning_tokens is a
+    # subset breakdown of it (OpenAI spec).
+    completion_tokens = state.text + state.thinking
     usage = CompletionUsage(
         prompt_tokens=input_tokens,
-        completion_tokens=state.text,
-        total_tokens=input_tokens + state.text,
+        completion_tokens=completion_tokens,
+        total_tokens=input_tokens + completion_tokens,
         completion_tokens_details=CompletionTokensDetails(
             reasoning_tokens=state.thinking,
         ) if state.thinking else None,
