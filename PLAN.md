@@ -242,8 +242,11 @@ control (API 400 on both dialects, scheduler re-validation, pool write
 bounds). 240 tests green. First numbers (bench.py, 0.6B on MPS, 4 slots,
 concurrency 10): 75.9 tok/s aggregate vs 31.4 unbatched (2.4×), completion
 p50 10.8s vs 36.7s, TTFT p50 6.4s vs 1.4s — the predicted TTFT-for-throughput
-trade, now visible. Moved out of item (1): logprobs and stop strings, to the
-integration plan's tail steps (small, orthogonal, land on both engines).
+trade, now visible. Logprobs and stop strings, moved out of item (1) to the
+integration plan's tail steps, have since landed on both engines: sampled-token
+logprobs surface on the OpenAI dialect (`"logprobs": true`), and text-level
+stop sequences work on both dialects (`stop_sequences` / `stop`), matched with
+holdback at the decoder layer and stopping generation via the abort path.
 Still deferred: the Phase-0 bench-harness spec (these are rough numbers, not
 the spec'd baseline). Open: feature work item (2), the API/engine process
 split — the command-queue and one-dispatch-per-step shapes were built
