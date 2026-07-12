@@ -482,6 +482,8 @@ def test_sse_ping_fires_during_idle_gap(monkeypatch):
     events = parse_sse(body)
     pings = [e for e in events if e.event == "ping"]
     assert len(pings) >= 1, f"expected at least one ping, got events: {[e.event for e in events]}"
+    # The data payload carries the type, so clients dispatching on data.type parse it.
+    assert pings[0].data == {"type": "ping"}
 
 
 # ── 7. Mid-stream abort: adapter cleans up engine generator ──────────

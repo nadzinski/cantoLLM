@@ -262,7 +262,9 @@ async def render_sse(
     async def ping():
         while True:
             await asyncio.sleep(PING_INTERVAL_SECONDS)
-            await out.put("event: ping\ndata: {}\n\n")
+            # Carry the type in the data payload too, so a client dispatching
+            # on `data.type` (as every other event here supports) can parse it.
+            await out.put('event: ping\ndata: {"type": "ping"}\n\n')
 
     producer = asyncio.create_task(produce())
     pinger = asyncio.create_task(ping())
