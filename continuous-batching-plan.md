@@ -290,6 +290,7 @@ reads. The TTFT regression is the predicted admission-gating trade. These
 are rough numbers from the un-spec'd bench harness — the Phase-0 spec
 remains consciously deferred.
 
-Remaining from this plan: step 11 (viz refresh), optional steps 12–13
-(logprobs, stop strings). Phase 2 item (2), the process split, picks up the
-deliberately IPC-shaped command queue and per-step event dispatch.
+All steps in this plan are done: steps 0–11 (through the viz refresh) plus
+the optional tail steps 12–13 (logprobs, stop strings) landed 2026-07-11.
+Phase 2 item (2), the process split, picks up the deliberately IPC-shaped
+command queue and per-step event dispatch.
