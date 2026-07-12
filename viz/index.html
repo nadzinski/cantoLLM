@@ -424,6 +424,7 @@
       <a href="#/" data-route="">Overview</a>
       <a href="#/roadmap" data-route="roadmap">Roadmap</a>
       <a href="#/plumbing" data-route="plumbing">Plumbing</a>
+      <a href="#/split" data-route="split">Process split</a>
       <a href="#/model" data-route="model">Model forward</a>
       <a href="#/speculative" data-route="speculative">Speculative</a>
       <a href="#/tokenflow" data-route="tokenflow">Token flow</a>
@@ -465,6 +466,18 @@
       but runs the middle in its own process (see the Overview’s CB box). Click any node, or scrub / play.
     </p>
     <div id="pl-body"></div>
+  </section>
+
+  <!-- ================= PROCESS SPLIT ================= -->
+  <section id="view-split" data-view hidden>
+    <p class="view-sub">
+      The batched engine’s round trip — the Plumbing pipe rebuilt around a <b>process boundary</b>: same two ends,
+      but the middle crosses twice through <code>multiprocessing</code> queues (commands in, one event batch per step
+      back). Every number here was recorded from a real run: <code>EngineProcessClient</code> in this process, a
+      spawned engine process serving Qwen3-0.6B, three concurrent greedy requests, both sides stamping the same
+      wall clock. Click any node, or scrub / play.
+    </p>
+    <div id="sp-body"></div>
   </section>
 
   <!-- ================= MODEL FORWARD ================= -->
@@ -548,6 +561,7 @@
 <script src="data/trace_cb.js"></script>
 <script src="data/trace_spec.js"></script>
 <script src="data/trace_weights.js"></script>
+<script src="data/trace_split.js"></script>
 <script>
 'use strict';
 
@@ -639,6 +653,7 @@ const TK = window.TRACE_TOKENFLOW || null;    // request lifecycle
 const CB = window.TRACE_CB || null;           // continuous batching prototype
 const TS = window.TRACE_SPEC || null;         // speculative decoding
 const TW = window.TRACE_WEIGHTS || null;      // weights / parameters
+const SP = window.TRACE_SPLIT || null;        // API/engine process split
 
 /* =============== router =============== */
 
@@ -649,6 +664,7 @@ const VIEW_INIT = {
   '': initOverview,
   'roadmap': initRoadmap,
   'plumbing': initPlumbing,
+  'split': initSplit,
   'model': initModel,
   'speculative': initSpeculative,
   'tokenflow': initTokenflow,
@@ -778,7 +794,11 @@ function initOverview() {
     nodata: CB ? null : 'no trace yet — run viz/trace_cb.py',
     zoom: '#/batching',
   }));
-  side.appendChild(el('div', 'cb-arrow', 'sits beside SequentialEngine — same InferenceEngine protocol, but drive_scheduler() owns the model through runtime.forward_batched: on a thread in-process, or (default) as the busy loop of a spawned engine process, with a bridge thread routing event batches back to per-request asyncio queues'));
+  const cbArrow = el('div', 'cb-arrow');
+  cbArrow.innerHTML = 'sits beside SequentialEngine — same InferenceEngine protocol, but drive_scheduler() owns the model ' +
+    'through runtime.forward_batched: on a thread in-process, or (default) as the busy loop of a spawned engine process ' +
+    '(<a href="#/split">how the boundary works → Process split</a>)';
+  side.appendChild(cbArrow);
 
   side.appendChild(ovBox({
     title: 'SpeculativeBackend', path: 'speculative.py',
@@ -1320,6 +1340,313 @@ function initPlumbing() {
 
   function setStage(i) {
     nodeGroups.forEach((gEl, j) => gEl && gEl.classList.toggle('cur', j === i));
+    dotG.style.transform = `translate(${DOT[i][0]}px, ${DOT[i][1]}px)`;
+    const st = STAGES[i];
+    cardTitle.textContent = `${i + 1} · ${st.name}`;
+    threadChip.textContent = st.thread[1];
+    threadChip.className = 'th-chip ' + st.thread[0];
+    codeRef.textContent = st.code;
+    cardBody.innerHTML = '';
+    st.card(cardBody);
+  }
+  transport.set(0);
+}
+
+/* =============== process split view =============== */
+
+function initSplit() {
+  const body = $('sp-body');
+  if (!SP) {
+    body.appendChild(missingPanel('.venv/bin/python viz/trace_split.py',
+      'Spawns a real engine process (loads 0.6B, ~40s) and traces both sides of the IPC boundary.'));
+    return;
+  }
+  const reqs = SP.requests, boot = SP.boot, tot = SP.totals;
+  const rids = Object.keys(reqs);
+  const emitting = SP.steps.filter(s => s.n_events > 0);
+  const stepMs = SP.steps.map(s => s.step_ms).sort((a, b) => a - b);
+  const medStep = stepMs[Math.floor(stepMs.length / 2)];
+  const bytesSorted = SP.steps.map(s => s.batch_bytes).sort((a, b) => a - b);
+  const medBytes = bytesSorted[Math.floor(bytesSorted.length / 2)];
+  const mixedStep = SP.steps.find(s =>
+    s.rows.some(r => r.phase === 'prefill') && s.rows.some(r => r.phase === 'decode')) || SP.steps[0];
+  const longRid = rids.reduce((a, b) => reqs[a].prompt_len >= reqs[b].prompt_len ? a : b);
+  const chunks = SP.steps.flatMap(s => s.rows.filter(r => r.rid === longRid && r.phase === 'prefill').map(r => r.n));
+  const adds = SP.adds.map(a => a.cross_ms).sort((a, b) => a - b);
+
+  /* ---------- SVG: two processes, two crossings ---------- */
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 1120 560');
+  svg.setAttribute('class', 'anat-svg flow-svg');
+  const mk = (tag, attrs, text, parent) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (text !== undefined && text !== null) n.textContent = text;
+    (parent || svg).appendChild(n);
+    return n;
+  };
+  const marr = mk('marker', { id: 'sp-arr', viewBox: '0 0 10 10', refX: 8.5, refY: 5, markerWidth: 6.5, markerHeight: 6.5, orient: 'auto-start-reverse' }, null, mk('defs', {}));
+  mk('path', { d: 'M0,0 L10,5 L0,10 z', style: 'fill:var(--ink2);stroke:none' }, null, marr);
+  const edge = (pts, dash) => mk('path', {
+    d: 'M' + pts.map(p => p.join(',')).join(' L'),
+    class: 'dge' + (dash ? ' dash' : ''), 'marker-end': 'url(#sp-arr)',
+  });
+  const note = (x, y, t, anchor) => mk('text', { x, y, class: 'dgt note', style: `text-anchor:${anchor || 'middle'}` }, t);
+
+  // process boxes + boundary (painted first)
+  mk('rect', { x: 18, y: 58, width: 560, height: 452, rx: 14, class: 'dgb outer' });
+  mk('text', { x: 30, y: 78, class: 'dgt title' }, `api process — uvicorn · pid ${SP.meta.parent_pid}`);
+  const engG = mk('g', { class: 'dg-node' });
+  mk('rect', { x: 692, y: 58, width: 410, height: 452, rx: 14, class: 'dgb outer' }, null, engG);
+  mk('text', { x: 704, y: 78, class: 'dgt title' }, `engine process — spawned · pid ${SP.meta.child_pid}`, engG);
+  mk('path', { d: 'M635,58 L635,510', style: 'stroke:var(--axis);stroke-width:1.6;stroke-dasharray:4 5;fill:none' });
+  note(635, 48, 'process boundary — everything crosses as pickle bytes');
+
+  // thread regions
+  mk('rect', { x: 30, y: 88, width: 536, height: 102, rx: 12, class: 'region-loop' });
+  mk('text', { x: 42, y: 104, class: 'dgt title' }, 'event-loop thread (async)');
+  mk('rect', { x: 30, y: 402, width: 330, height: 102, rx: 12, class: 'region-loop' });
+  mk('text', { x: 42, y: 418, class: 'dgt title' }, 'event-loop thread (async)');
+  mk('rect', { x: 372, y: 402, width: 194, height: 102, rx: 12, class: 'region-build' });
+  mk('text', { x: 384, y: 418, class: 'dgt title' }, 'bridge thread');
+  mk('rect', { x: 704, y: 88, width: 386, height: 414, rx: 12, class: 'region-worker' });
+  mk('text', { x: 716, y: 104, class: 'dgt title' }, 'main thread — sync busy loop');
+
+  // Ready handshake (once, at boot)
+  edge([[704, 97], [570, 97]], true);
+  note(635, 91, 'Ready — once, after model load');
+
+  // nodes: stage → possibly several groups
+  const stageNodes = [];
+  const node = (stage, cx, cy, w, h, lines, cls, tcls, sub) => {
+    const g = mk('g', { class: 'dg-node' });
+    mk('rect', { x: cx - w / 2, y: cy - h / 2, width: w, height: h, rx: 8, class: 'dgb ' + (cls || '') }, null, g);
+    lines.forEach((t, i) => mk('text', { x: cx, y: cy + (i - (lines.length - 1) / 2) * 14 + 4, class: 'dgt small ' + (tcls || '') }, t, g));
+    if (sub) mk('text', { x: cx, y: cy + h / 2 + 13, class: 'dgt note' }, sub, g);
+    g.addEventListener('click', () => transport.set(stage));
+    (stageNodes[stage] = stageNodes[stage] || []).push(g);
+    return g;
+  };
+  engG.addEventListener('click', () => transport.set(0));
+  (stageNodes[0] = stageNodes[0] || []).push(engG);
+
+  // top row — request path
+  node(1, 105, 138, 132, 56, ['FastAPI +', 'tokenize'], 'n-loop', '', 'TokenizerRuntime — no weights');
+  node(1, 262, 138, 142, 56, ['InferenceRequest', '(dataclass)'], 'n-obj', 'mono', 'the contract = wire format');
+  node(2, 442, 138, 168, 56, ['client.submit()', 'EngineProcessClient'], 'n-loop', '', 'engine/batching/mux.py');
+  node(3, 635, 138, 104, 46, ['mp.Queue', 'commands ▸'], 'n-queue', 'mono');
+  node(4, 790, 138, 150, 56, ['drive_scheduler()', 'drain → apply → step'], 'n-worker', '', 'same loop as in-process');
+
+  // scheduler.step() container (stage 5)
+  const stepG = mk('g', { class: 'dg-node' });
+  mk('rect', { x: 712, y: 210, width: 372, height: 150, rx: 12, class: 'dgb inset n-worker' }, null, stepG);
+  mk('text', { x: 898, y: 232, class: 'dgt small' }, `scheduler.step() — ×${tot.steps} this run`, stepG);
+  mk('rect', { x: 758, y: 246, width: 280, height: 46, rx: 8, class: 'dgb dark' }, null, stepG);
+  mk('text', { x: 898, y: 264, class: 'dgt small inv' }, 'Qwen3.forward_batched (black box)', stepG);
+  mk('text', { x: 898, y: 278, class: 'dgt small inv mono' }, '(B, n_new_max) → (B, 151936)', stepG);
+  mk('rect', { x: 788, y: 306, width: 220, height: 36, rx: 8, class: 'dgb' }, null, stepG);
+  mk('text', { x: 898, y: 328, class: 'dgt small' }, 'water-fill plan → sample per row', stepG);
+  stepG.addEventListener('click', () => transport.set(5));
+  (stageNodes[5] = stageNodes[5] || []).push(stepG);
+
+  // bottom row — response path
+  node(6, 790, 450, 150, 56, ['events.put(batch)', 'list[TokenEvent]'], 'n-worker', 'mono', 'one pickle per step — never per token');
+  node(7, 635, 450, 104, 46, ['mp.Queue', '◂ events'], 'n-queue', 'mono');
+  node(8, 469, 450, 150, 56, ['bridge thread', 'get(0.5s) → loop'], 'n-exec', '', 'liveness: is_alive()');
+  node(9, 270, 450, 160, 56, ['_dispatch fan-out', 'per-request queues'], 'n-loop', '', 'call_soon_threadsafe');
+  node(10, 95, 450, 110, 56, ['async for', '→ SSE out'], 'n-loop', '', 'same tail as Plumbing');
+  node(11, 635, 530, 190, 30, ['Shutdown ▸ … ◂ Stopped'], '', 'mono');
+
+  // edges
+  edge([[171, 138], [191, 138]]);
+  edge([[333, 138], [358, 138]]);
+  edge([[526, 138], [583, 138]]);
+  note(554, 128, 'pickle', 'middle');
+  edge([[687, 138], [715, 138]]);
+  edge([[790, 166], [790, 210]]);
+  edge([[790, 360], [790, 422]]);
+  note(802, 394, `emit ×${tot.batches}`, 'start');
+  edge([[715, 450], [687, 450]]);
+  edge([[583, 450], [544, 450]]);
+  note(563, 470, 'unpickle', 'middle');
+  edge([[394, 450], [350, 450]]);
+  edge([[190, 450], [150, 450]]);
+
+  // moving dot
+  const dotG = mk('g', { class: 'dg-dot' });
+  mk('circle', { cx: 0, cy: 0, r: 7, style: 'fill:var(--ink);stroke:var(--surface);stroke-width:2' }, null, dotG);
+  const DOT = [[897, 70], [182, 103], [442, 103], [635, 103], [790, 103], [898, 196], [790, 415], [635, 415], [469, 415], [270, 415], [95, 415], [635, 522]];
+
+  /* ---------- stage cards ---------- */
+  const pre = (t) => { const p = el('pre', 'jsonbox'); p.textContent = t; return p; };
+  const chips = (...pairs) => {
+    const s = el('div', 'statgrid');
+    pairs.forEach(([v, l]) => { const c = el('span', 'statchip'); c.appendChild(el('b', null, v)); c.appendChild(document.createTextNode(' ' + l)); s.appendChild(c); });
+    return s;
+  };
+  const para = (html) => { const p = el('p', 'panel-note'); p.innerHTML = html; return p; };
+  const rowLine = (r) => `slot${r.slot}  ${r.rid.padEnd(9)} ${r.phase.padEnd(7)} @${String(r.start).padStart(3)} +${r.n}`;
+
+  const STAGES = [
+    { name: 'Boot: spawn → load → Ready', thread: ['worker', 'engine process'], code: 'engine/batching/process.py engine_process_main · spawn context', card: (c) => {
+      c.appendChild(para('<code>start()</code> spawns the engine process (<b>spawn, not fork</b> — fork is unsafe once CUDA enters; Linux would default to it) ' +
+        'and blocks until the child sends <code>Ready</code>. Nothing rich crosses at boot: <code>ModelSpec</code> carries closures that don’t pickle, so the ' +
+        'child rebuilds runtime + scheduler from primitives (size, device string, <code>BatchingConfig</code>) via a module-level factory — the weights are ' +
+        'loaded <i>there</i>, never here. The child also ignores SIGINT (the parent owns Ctrl-C) and is <code>daemon=True</code>.'));
+      c.appendChild(chips(
+        [boot.spawn_to_factory_ms + ' ms', 'spawn + imports'],
+        [(boot.load_ms / 1000).toFixed(1) + ' s', 'model load, in the child'],
+        [(boot.ready_ms / 1000).toFixed(1) + ' s', 'start() total, to Ready']));
+    }},
+    { name: 'Tokenize + InferenceRequest — API side', thread: ['loop', 'event loop — API process'], code: 'api/common.py · runtime.py TokenizerRuntime', card: (c) => {
+      c.appendChild(para('Identical to the sequential pipe up to here — Phase 1a put tokenization API-side, and the split is where that pays off: prompt ' +
+        'encoding runs in this process on the tokenizer pool and <b>never competes with the scheduler for a core</b>. The registry holds a ' +
+        '<code>TokenizerRuntime</code> (spec + tokenizer, no model). The <code>InferenceRequest</code> contract is unchanged — it just became the wire format too.'));
+      c.appendChild(pre(rids.map(rid =>
+        `${rid.padEnd(9)} prompt ${String(reqs[rid].prompt_len).padStart(2)} ids · max_tokens ${reqs[rid].max_tokens}`).join('\n')));
+    }},
+    { name: 'submit() — shared multiplexer, different transport', thread: ['loop', 'event loop — API process'], code: 'engine/batching/mux.py EventMultiplexer.submit', card: (c) => {
+      c.appendChild(para('The exact same <code>submit()</code> the in-process engine uses — <code>EventMultiplexer</code> is one class, so the two engines ' +
+        'can’t drift. Register the per-request queue <b>before</b> sending the command (the first event can’t race an unregistered consumer), then the only ' +
+        'difference: <code>_send_command</code> puts onto a multiprocessing queue instead of a thread queue.'));
+      c.appendChild(pre(
+        'events = asyncio.Queue(); self._queues[rid] = events   # register first\n' +
+        'self._send_command(AddRequest(req))                    # → mp.Queue\n' +
+        'while (evt := await events.get()) is not None:\n' +
+        '    yield evt\n' +
+        'finally: if not finished: self._send_command(Abort(rid))   # disconnect → abort'));
+    }},
+    { name: 'Crossing #1 — commands', thread: ['', 'process boundary'], code: 'multiprocessing.Queue — a feeder thread pickles AddRequest / Abort / Shutdown', card: (c) => {
+      c.appendChild(para('The command dataclasses were deliberately message-shaped in the in-process design; here they simply get pickled. Watch the traced ' +
+        `arrival times: the first <code>AddRequest</code> crossed in <b>${adds[0]} ms</b>, but the other two took <b>~${Math.round(adds[adds.length - 1])} ms</b> — ` +
+        'not IPC latency. They arrived while the child was mid-step, and <code>drive_scheduler</code> drains commands <b>at the top of each step</b>: a command ' +
+        'waits for the forward pass in flight, exactly like the in-process engine.'));
+      c.appendChild(chips(
+        [adds[0] + ' ms', 'first AddRequest, engine idle'],
+        [Math.round(adds[adds.length - 1]) + ' ms', 'arrivals during step 0 wait for the drain'],
+        ['step top', 'where commands are applied']));
+    }},
+    { name: 'drive_scheduler() — the busy loop', thread: ['worker', 'engine process main thread'], code: 'engine/batching/engine.py drive_scheduler — same function the in-process thread runs', card: (c) => {
+      c.appendChild(para('The engine’s steady-state loop, extracted so the split is literal reuse: drain commands → apply (<code>add_request</code> re-validates ' +
+        'admission, <code>abort</code> frees the slot) → <code>step()</code> → emit. One difference from the thread version: while idle it polls ' +
+        '<code>get(timeout=0.5)</code> and checks <code>parent_process().is_alive()</code> — the <b>orphan guard</b>. A SIGKILLed API process can’t tell the ' +
+        'child anything, so the child notices on its own and stops generating into a pipe nobody drains.'));
+      c.appendChild(pre(
+        'while True:\n' +
+        '    if should_stop(): return          # parent died → orphan guard\n' +
+        '    batch = drain(commands)           # blocks/polls while idle\n' +
+        '    apply(batch)                      # AddRequest · Abort · Shutdown→return\n' +
+        '    if scheduler.is_idle(): continue\n' +
+        '    events = scheduler.step()\n' +
+        '    if events: emit(events)           # events.put — one batch per step'));
+    }},
+    { name: 'scheduler.step() — untouched by the split', thread: ['worker', 'engine process main thread'], code: 'engine/batching/scheduler.py — internals on the Continuous batching tab', card: (c) => {
+      c.appendChild(para('The scheduler needed <b>zero changes</b> — that’s the payoff being demonstrated. Chunked prefill and decode mix per step under the ' +
+        `water-fill budget (${SP.meta.config.max_tokens_per_step} tok/step here): <code>${longRid}</code>’s ${reqs[longRid].prompt_len}-token prompt prefilled ` +
+        `in chunks of ${chunks.join('+')} while the others decoded. A real mixed step from this run:`));
+      c.appendChild(pre(`step ${mixedStep.i}  (${mixedStep.step_ms} ms)\n` + mixedStep.rows.map(rowLine).join('\n')));
+      c.appendChild(chips(
+        [String(tot.steps), 'steps this run'],
+        [stepMs[0] + '–' + stepMs[stepMs.length - 1] + ' ms', 'step duration range'],
+        [String(SP.meta.config.max_batch), 'KV slots']));
+    }},
+    { name: 'Emit — one batch per step', thread: ['worker', 'engine process main thread'], code: 'process.py engine_process_main: emit=events.put', card: (c) => {
+      c.appendChild(para('The design rule from PLAN.md, kept: events batch <b>per engine step, not per token</b> — per-token IPC would eat every win. ' +
+        'The batches are tiny: a <code>TokenEvent</code> is a few ints and floats, so a whole step’s output pickles to a couple hundred bytes.'));
+      c.appendChild(chips(
+        [String(tot.batches), 'batches sent'],
+        [String(tot.events), 'TokenEvents inside'],
+        [medBytes + ' B', 'median batch, pickled'],
+        [fmtMB(tot.bytes), 'total for the whole run']));
+    }},
+    { name: 'Crossing #2 — events', thread: ['', 'process boundary'], code: 'multiprocessing.Queue — list[TokenEvent], one pickle per step', card: (c) => {
+      c.appendChild(para('Both processes stamp the same wall clock, so the hop is directly measurable: child’s <code>events.put()</code> to the batch landing ' +
+        `on the parent’s event loop. Median <b>${tot.hop_ms_p50} ms</b> against a median step of <b>${medStep} ms</b> — ` +
+        `the boundary costs ~${(tot.hop_ms_p50 / medStep * 100).toFixed(2)}% of a step. This is why the split doesn’t show up in throughput, and why ` +
+        'per-step batching (previous stage) is all the cleverness the transport needs.'));
+      c.appendChild(chips(
+        [tot.hop_ms_p50 + ' ms', 'hop p50 (emit → loop)'],
+        [tot.hop_ms_max + ' ms', 'hop max'],
+        [medStep + ' ms', 'median step, for scale']));
+    }},
+    { name: 'Bridge thread — the listener', thread: ['exec', 'bridge thread — API process'], code: 'process.py EngineProcessClient._bridge_loop', card: (c) => {
+      c.appendChild(para('A dedicated thread turns blocking queue reads into event-loop calls. It understands exactly three things: a <b>list</b> is a step ' +
+        'batch → <code>call_soon_threadsafe(_dispatch)</code>; a <b>farewell</b> (<code>EngineFailed</code> / <code>Stopped</code>) ends the stream of messages; ' +
+        'and <b>silence</b> is checked — every 0.5&nbsp;s timeout it verifies <code>proc.is_alive()</code>, so a hard-killed engine (segfault, OOM-kill) fails ' +
+        'all in-flight requests with the exit code instead of hanging them forever. That check is the API-side half of the liveness story (stage 4 has the other half).'));
+      c.appendChild(chips(
+        ['0.5 s', 'poll timeout'],
+        ['batch · farewell · silence', 'the three message kinds'],
+        ['exit code', 'what a corpse reports']));
+    }},
+    { name: '_dispatch — fan-out on the loop', thread: ['loop', 'event loop — API process'], code: 'mux.py _dispatch — _queues is touched ONLY on the event loop', card: (c) => {
+      c.appendChild(para('Same code as in-process, same threading rule: the request-id → <code>asyncio.Queue</code> map is only ever touched on the event ' +
+        'loop, so there are no locks anywhere in the client. Each event routes by <code>request_id</code> (this is where that field, added back in Phase 1a, ' +
+        'becomes load-bearing); a finish or error also enqueues the <code>None</code> terminator and drops the entry.'));
+      c.appendChild(chips(
+        [String(rids.length), 'concurrent streams'],
+        [String(tot.events), 'events routed'],
+        ['0', 'locks']));
+    }},
+    { name: 'Consumer → SSE — same tail as Plumbing', thread: ['loop', 'event loop — API process'], code: 'api/phase.py · decoder.py · *_adapter.py — unchanged', card: (c) => {
+      c.appendChild(para('From <code>async for</code> onward nothing knows the engine lives elsewhere — phases, incremental decoding, SSE framing are the ' +
+        'sequential pipe’s stages 11–12 verbatim. The per-request results show the batching trade the Roadmap talks about: first-come admission means ' +
+        `<code>${rids[0]}</code> saw its first token in ${reqs[rids[0]].ttft_ms} ms while <code>${longRid}</code> waited ${reqs[longRid].ttft_ms} ms behind the others’ prefills.`));
+      c.appendChild(pre(rids.map(rid => {
+        const r = reqs[rid];
+        return `${rid.padEnd(9)} ttft ${String(r.ttft_ms).padStart(5)} ms · ${String(r.n_tokens).padStart(2)} tok · ${FIN_GLYPH[r.finish] || r.finish}  ${JSON.stringify(r.text.replace(/^<think>\s*<\/think>\s*/, '').slice(0, 32))}…`;
+      }).join('\n')));
+    }},
+    { name: 'Shutdown + the failure matrix', thread: ['', 'both processes'], code: 'process.py shutdown() · wire protocol: Ready → batches → EngineFailed | Stopped', card: (c) => {
+      c.appendChild(para('Clean path, as traced: latch <code>_failed</code> (late submits fail fast) → <code>Shutdown</code> command → the drive loop returns → ' +
+        `child sends <code>Stopped</code> and exits → parent joins and closes any leftover streams. <b>${SP.shutdown.ms} ms</b>, exit code ` +
+        `<b>${SP.shutdown.exitcode}</b>. The unclean paths all have owners: a step exception → <code>EngineFailed</code>, batch-wide error events, child exits; ` +
+        'kill&nbsp;-9 the <i>engine</i> → the bridge’s silence check reports “engine process died (exit code N)”; kill&nbsp;-9 the <i>API</i> → the child’s ' +
+        'orphan guard stops the loop. No heartbeat protocol — just farewells plus liveness checks in both directions.'));
+      c.appendChild(chips(
+        [SP.shutdown.ms + ' ms', 'clean shutdown'],
+        [String(SP.shutdown.exitcode), 'engine exit code'],
+        ['both directions', 'death detection']));
+    }},
+  ];
+
+  /* ---------- transport + card wiring ---------- */
+  const cardPanel = el('section', 'panel');
+  const cardHead = el('div', 'stage-head');
+  const cardTitle = el('h2', null, '');
+  const threadChip = el('span', 'th-chip');
+  const codeRef = el('span', 'code-ref');
+  cardHead.append(cardTitle, threadChip, codeRef);
+  cardPanel.appendChild(cardHead);
+  const cardBody = el('div');
+  cardPanel.appendChild(cardBody);
+
+  const transport = makeTransport({
+    max: STAGES.length - 1,
+    labelFn: (i) => `stage ${i + 1} / ${STAGES.length} — ${STAGES[i].name}`,
+    onSet: setStage,
+    playMs: 2600,
+    playLoopTo: 3,
+    hint: 'to cross the boundary',
+  });
+  activeTransports['split'] = transport;
+
+  const diagPanel = el('section', 'panel');
+  diagPanel.appendChild(el('h2', null, 'Two processes, two crossings — commands in, event batches out'));
+  diagPanel.appendChild(el('p', 'panel-note',
+    'Request flows left → right along the top, crosses into the engine process, and streams back right → left along the bottom. ' +
+    'Solid outer boxes are OS processes; dashed regions are threads inside them; the queue chips sit on the pickle boundary. ' +
+    'Play loops the request cycle.'));
+  const scroll = el('div', 'kv-scroll');
+  scroll.appendChild(svg);
+  diagPanel.appendChild(scroll);
+
+  body.append(transport.root, diagPanel, cardPanel);
+  svg.appendChild(dotG);
+
+  function setStage(i) {
+    stageNodes.forEach((groups, j) => (groups || []).forEach(g => g.classList.toggle('cur', j === i)));
     dotG.style.transform = `translate(${DOT[i][0]}px, ${DOT[i][1]}px)`;
     const st = STAGES[i];
     cardTitle.textContent = `${i + 1} · ${st.name}`;

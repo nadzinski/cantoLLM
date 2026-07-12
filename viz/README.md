@@ -25,6 +25,14 @@ detail lives behind the zoom targets):
   right, and the response path along the bottom (`TokenEvent` → bounded
   `asyncio.Queue` → consumer → decoder/phases → SSE). Thread regions, the
   backpressure story, and a per-stage detail card with the real traced payloads.
+  This is the sequential engine's pipe; the batched counterpart is the next tab.
+- **Process split** — the Plumbing counterpart for `--engine batched`: the same
+  round trip rebuilt around the process boundary, traced from a real run of
+  `EngineProcessClient` + a spawned engine process serving Qwen3-0.6B. Two
+  process boxes, two `mp.Queue` crossings, the bridge thread, and per-stage
+  cards with the measured numbers: spawn→Ready timing, command-drain waits,
+  per-step batch pickle sizes, IPC hop latency vs step duration, shutdown
+  handshake, and the failure matrix (farewells + liveness both directions).
 - **Model forward** — one real greedy generation through Qwen3-0.6B, scrubbable
   per forward pass: input tokens, mask shape, KV growth (with memory math),
   top-5 sampled candidates, and a block-anatomy diagram whose tensor shapes were
@@ -68,6 +76,7 @@ before first use:
 .venv/bin/python viz/trace_forward.py      # ~40s     → data/trace_forward.js + data/trace_tokenflow.js
 .venv/bin/python viz/trace_weights.py      # instant  → data/trace_weights.js (safetensors headers only)
 .venv/bin/python viz/trace_speculative.py  # ~2-3min  → data/trace_spec.js (loads 0.6B + 1.7B, runs spec + baseline)
+.venv/bin/python viz/trace_split.py        # ~40s     → data/trace_split.js (spawns a real engine process on 0.6B)
 ```
 
 The Tokenizer tab is live rather than trace-based — it needs its small server
@@ -105,6 +114,12 @@ changes to `src/` or `prototypes/`:
 - `trace_cb.py` — wraps the prototype scheduler's `_plan_step` /
   `_build_input_ids` / `greedy_sample` and snapshots queue/active state around
   each real `step()` call.
+- `trace_split.py` — runs the real process split and instruments both sides:
+  the module-level scheduler factory (pickled by reference across spawn) wraps
+  the real scheduler's `add_request`/`_plan_step`/`step` inside the engine
+  process and dumps its half to JSON at exit; the parent wraps
+  `EngineProcessClient._dispatch` and times each stream. Both sides stamp
+  `time.time()` on one host, so IPC latencies subtract directly.
 
 Traces are emitted as `window.TRACE_* = {...}` JS files (not JSON) so
 `index.html` works under `file://`, where `fetch()` of local files is blocked.
