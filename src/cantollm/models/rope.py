@@ -3,7 +3,7 @@ import math
 import torch
 
 
-def precompute_freqs_cis(dim: int, max_seq_len: int, theta: float = 100000.0):
+def precompute_freqs_cis(dim: int, max_seq_len: int, theta: float = 1000000.0):
     """
     Precompute complex numbers to do RoPE rotations for every combination of 
     1) seq position = 0...max_seq_len - 1

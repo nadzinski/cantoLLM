@@ -23,6 +23,7 @@ TINY_ARCH = {
     "num_groups": 4,
     "head_dim": 8,
     "max_seq_len": 128,
+    "rope_theta": 1_000_000.0,
     "num_transformers": 2,
     "dtype": None,
 }

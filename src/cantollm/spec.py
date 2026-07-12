@@ -23,6 +23,7 @@ MODEL_CONFIGS: dict[str, dict] = {
     "0.6B": {
         "token_count": 151_936,
         "max_seq_len": 40_960,
+        "rope_theta": 1_000_000.0,
         "token_embedding_dim": 1024,
         "num_heads": 16,
         "num_transformers": 28,
@@ -34,6 +35,7 @@ MODEL_CONFIGS: dict[str, dict] = {
     "1.7B": {
         "token_count": 151_936,
         "max_seq_len": 40_960,
+        "rope_theta": 1_000_000.0,
         "token_embedding_dim": 2048,
         "num_heads": 16,
         "num_transformers": 28,
@@ -45,6 +47,7 @@ MODEL_CONFIGS: dict[str, dict] = {
     "4B": {
         "token_count": 151_936,
         "max_seq_len": 40_960,
+        "rope_theta": 1_000_000.0,
         "token_embedding_dim": 2560,
         "num_heads": 32,
         "num_transformers": 36,
@@ -56,6 +59,7 @@ MODEL_CONFIGS: dict[str, dict] = {
     "8B": {
         "token_count": 151_936,
         "max_seq_len": 40_960,
+        "rope_theta": 1_000_000.0,
         "token_embedding_dim": 4096,
         "num_heads": 32,
         "num_transformers": 36,
@@ -67,6 +71,7 @@ MODEL_CONFIGS: dict[str, dict] = {
     "14B": {
         "token_count": 151_936,
         "max_seq_len": 40_960,
+        "rope_theta": 1_000_000.0,
         "token_embedding_dim": 5120,
         "num_heads": 40,
         "num_transformers": 40,

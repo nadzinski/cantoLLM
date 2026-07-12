@@ -298,7 +298,11 @@ class Qwen3(nn.Module):
 
         max_seq_len = qwen3_config["max_seq_len"]
         head_dim = qwen3_config["head_dim"]
-        freqs_cis = precompute_freqs_cis(head_dim, max_seq_len)
+        # rope_theta must match the value the weights were trained with
+        # (config.json's "rope_theta"; 1e6 for the Qwen3 family).
+        freqs_cis = precompute_freqs_cis(
+            head_dim, max_seq_len, theta=qwen3_config["rope_theta"]
+        )
         self.register_buffer("freqs_cis", freqs_cis)
 
     def _validate_cache(self, start_pos, kv_cache):
