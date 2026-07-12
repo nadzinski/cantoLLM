@@ -110,65 +110,74 @@ async def phase_tagged_events(
         released = stop_watcher.feed(chunk.text)
         return TextChunk(released) if released else None
 
-    async for evt in events:
-        if evt.error is not None:
-            state.error = evt.error
-            break
-        if evt.finish_reason is not None:
-            state.finish_reason = evt.finish_reason
-            break
-        if evt.token_id is None:
-            continue
-        # Phase *before* this token classifies it. A marker token's only
-        # TextChunk is the outgoing phase's held bytes flushed at the boundary
-        # (see StreamingDecoder._release_held), so those chunks belong to
-        # `was_thinking`; for content tokens `was_thinking == phase_is_thinking`.
-        was_thinking = phase_is_thinking
-        phase_is_thinking, bucket = _classify(evt.token_id, tokenizer, phase_is_thinking)
-        setattr(state, bucket, getattr(state, bucket) + 1)
-        state.total += 1
-        dec_events = list(decoder.process(evt.token_id))
-        if bucket == "text":
-            piece = "".join(
-                d.text for d in dec_events if isinstance(d, TextChunk)
-            )
-            state.content_logprobs.append((piece, evt.logprob))
-        for dec_evt in dec_events:
+    try:
+        async for evt in events:
+            if evt.error is not None:
+                state.error = evt.error
+                break
+            if evt.finish_reason is not None:
+                state.finish_reason = evt.finish_reason
+                break
+            if evt.token_id is None:
+                continue
+            # Phase *before* this token classifies it. A marker token's only
+            # TextChunk is the outgoing phase's held bytes flushed at the
+            # boundary (see StreamingDecoder._release_held), so those chunks
+            # belong to `was_thinking`; for content tokens
+            # `was_thinking == phase_is_thinking`.
+            was_thinking = phase_is_thinking
+            phase_is_thinking, bucket = _classify(evt.token_id, tokenizer, phase_is_thinking)
+            setattr(state, bucket, getattr(state, bucket) + 1)
+            state.total += 1
+            dec_events = list(decoder.process(evt.token_id))
+            if bucket == "text":
+                piece = "".join(
+                    d.text for d in dec_events if isinstance(d, TextChunk)
+                )
+                state.content_logprobs.append((piece, evt.logprob))
+            for dec_evt in dec_events:
+                match dec_evt:
+                    case ThinkingStartEvent():
+                        yield "thinking", dec_evt
+                    case ThinkingEndEvent():
+                        yield "thinking", dec_evt
+                    case TextChunk() if was_thinking:
+                        yield "thinking", dec_evt
+                    case TextChunk():
+                        scanned = scan_text(dec_evt)
+                        if scanned is not None:
+                            yield "text", scanned
+                        if stop_watcher is not None and stop_watcher.matched is not None:
+                            state.stop_sequence = stop_watcher.matched
+                            # Stop generation: the finally below closes the
+                            # engine stream → submit()'s abort → slot freed.
+                            return
+
+        for dec_evt in decoder.flush():
             match dec_evt:
-                case ThinkingStartEvent():
-                    yield "thinking", dec_evt
                 case ThinkingEndEvent():
                     yield "thinking", dec_evt
-                case TextChunk() if was_thinking:
+                case TextChunk() if phase_is_thinking:
                     yield "thinking", dec_evt
                 case TextChunk():
                     scanned = scan_text(dec_evt)
                     if scanned is not None:
                         yield "text", scanned
-                    if stop_watcher is not None and stop_watcher.matched is not None:
-                        state.stop_sequence = stop_watcher.matched
-                        # Close the engine's stream deterministically: this
-                        # is submit()'s finally → abort → slot freed.
-                        await events.aclose()
-                        return
 
-    for dec_evt in decoder.flush():
-        match dec_evt:
-            case ThinkingEndEvent():
-                yield "thinking", dec_evt
-            case TextChunk() if phase_is_thinking:
-                yield "thinking", dec_evt
-            case TextChunk():
-                scanned = scan_text(dec_evt)
-                if scanned is not None:
-                    yield "text", scanned
-
-    if stop_watcher is not None:
-        if stop_watcher.matched is not None:
-            # A match completed by the decoder's own flush (held UTF-8 bytes).
-            state.stop_sequence = stop_watcher.matched
-        else:
-            # No match came: release the watcher's held-back tail.
-            tail = stop_watcher.flush()
-            if tail:
-                yield "text", TextChunk(tail)
+        if stop_watcher is not None:
+            if stop_watcher.matched is not None:
+                # A match completed by the decoder's own flush (held UTF-8 bytes).
+                state.stop_sequence = stop_watcher.matched
+            else:
+                # No match came: release the watcher's held-back tail.
+                tail = stop_watcher.flush()
+                if tail:
+                    yield "text", TextChunk(tail)
+    finally:
+        # Drive the engine generator's cleanup deterministically rather than
+        # leaving it suspended for GC. On a normal finish the loop breaks with
+        # the terminal event still queued behind the yielded one; on a stop
+        # match or client disconnect it's mid-stream. aclose runs submit()'s
+        # finally now (freeing the KV slot on the batched engine) and is a
+        # no-op on an already-exhausted or closed generator.
+        await events.aclose()
