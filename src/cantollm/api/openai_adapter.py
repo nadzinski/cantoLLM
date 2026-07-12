@@ -28,6 +28,7 @@ from cantollm.api.openai_types import (
     TokenLogprob,
 )
 from cantollm.api.phase import DecodeState, phase_tagged_events
+from cantollm.decoder import StopStringWatcher
 from cantollm.engine.types import TokenEvent
 from cantollm.stream_events import TextChunk
 
@@ -43,6 +44,20 @@ def _to_finish_reason(finish_reason: str | None) -> FinishReason | None:
     if finish_reason == "max_tokens":
         return "length"
     return None
+
+
+def _final_finish_reason(state: DecodeState) -> FinishReason | None:
+    # A matched stop string is a plain "stop" on this dialect (OpenAI does
+    # not report which sequence matched).
+    if state.stop_sequence is not None:
+        return "stop"
+    return _to_finish_reason(state.finish_reason)
+
+
+def _watcher_for(stop: str | list[str] | None) -> StopStringWatcher | None:
+    if not stop:
+        return None
+    return StopStringWatcher([stop] if isinstance(stop, str) else list(stop))
 
 
 def _new_completion_id() -> str:
@@ -140,13 +155,16 @@ async def render_chat_completion(
     completion_id: str,
     created: int,
     logprobs_requested: bool = False,
+    stop: str | list[str] | None = None,
 ) -> ChatCompletion:
     """Drain the event stream into a single ChatCompletion."""
     state = DecodeState()
     visible: list[str] = []
     reasoning: list[str] = []
 
-    async for phase, dec_evt in phase_tagged_events(events, tokenizer, state):
+    async for phase, dec_evt in phase_tagged_events(
+        events, tokenizer, state, _watcher_for(stop)
+    ):
         if not isinstance(dec_evt, TextChunk):
             # ThinkingStart/End markers are internal framing — OpenAI has no
             # wire concept for them.
@@ -188,7 +206,7 @@ async def render_chat_completion(
                 content=content,
                 reasoning_content=reasoning_content,
             ),
-            finish_reason=_to_finish_reason(state.finish_reason),
+            finish_reason=_final_finish_reason(state),
             logprobs=choice_logprobs,
         )],
         usage=usage,
@@ -204,6 +222,7 @@ async def render_chat_completion_sse(
     created: int,
     include_usage: bool,
     logprobs_requested: bool = False,
+    stop: str | list[str] | None = None,
 ) -> AsyncIterator[str]:
     """Stream the event stream as OpenAI SSE chunks.
 
@@ -239,7 +258,9 @@ async def render_chat_completion_sse(
             # Opening chunk: role only.
             await out.put(emit({"role": "assistant"}))
 
-            async for phase, dec_evt in phase_tagged_events(events, tokenizer, state):
+            async for phase, dec_evt in phase_tagged_events(
+                events, tokenizer, state, _watcher_for(stop)
+            ):
                 if not isinstance(dec_evt, TextChunk):
                     continue
                 key = "reasoning_content" if phase == "thinking" else "content"
@@ -263,7 +284,7 @@ async def render_chat_completion_sse(
                 return
 
             # Closing chunk: empty delta + finish_reason.
-            await out.put(emit({}, finish_reason=_to_finish_reason(state.finish_reason)))
+            await out.put(emit({}, finish_reason=_final_finish_reason(state)))
 
             if include_usage:
                 await out.put(_usage_only_chunk_line(

@@ -69,7 +69,8 @@ class ChatCompletionRequest(BaseModel):
     # OpenAI accepts both; max_completion_tokens is preferred post-o1.
     max_tokens: int | None = Field(default=None, gt=0)
     max_completion_tokens: int | None = Field(default=None, gt=0)
-    # Accepted but currently ignored — stop-string support lands in Phase 2.
+    # Custom stop strings, matched text-level in the adapter (they can span
+    # token boundaries); the matched sequence is never emitted.
     stop: str | list[str] | None = None
     # Chosen-token logprob per content token. `top_logprobs` (the k
     # alternatives) stays rejected via extra="forbid" — we track only the

@@ -49,9 +49,11 @@ def build_anthropic_router(
 
         if body.stream:
             return StreamingResponse(
-                render_sse(events, tokenizer, body.model, input_tokens),
+                render_sse(events, tokenizer, body.model, input_tokens,
+                           stop_sequences=body.stop_sequences),
                 media_type="text/event-stream",
             )
-        return await render_message(events, tokenizer, body.model, input_tokens)
+        return await render_message(events, tokenizer, body.model, input_tokens,
+                                    stop_sequences=body.stop_sequences)
 
     return router

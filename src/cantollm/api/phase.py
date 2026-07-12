@@ -15,7 +15,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Literal
 
-from cantollm.decoder import StreamingDecoder
+from cantollm.decoder import StopStringWatcher, StreamingDecoder
 from cantollm.engine.types import TokenEvent
 from cantollm.stream_events import StreamEvent, TextChunk, ThinkingEndEvent, ThinkingStartEvent
 
@@ -29,6 +29,10 @@ class DecodeState:
     total: int = 0
     finish_reason: str | None = None
     error: str | None = None
+    stop_sequence: str | None = None
+    """The stop string that ended the stream, when one matched. The wire
+    stop reason then comes from this, not from `finish_reason` (the engine
+    reports "abort" — it was told to stop, it doesn't know why)."""
     content_logprobs: list[tuple[str, float | None]] = field(default_factory=list)
     """(token_text, logprob) per text-phase token, in emission order. The
     token text is the piece the incremental decoder released for that token
@@ -50,6 +54,7 @@ async def phase_tagged_events(
     events: AsyncIterator[TokenEvent],
     tokenizer,
     state: DecodeState,
+    stop_watcher: StopStringWatcher | None = None,
 ) -> AsyncIterator[tuple[Phase, StreamEvent]]:
     """Drive StreamingDecoder from an async TokenEvent source, tagging each
     emitted event with the phase it belongs to.
@@ -64,9 +69,24 @@ async def phase_tagged_events(
     phase so callers can branch consistently; for ThinkingEndEvent the
     yielded phase reflects the outgoing thinking phase (the next TextChunk
     will be tagged 'text').
+
+    `stop_watcher` scans visible-text chunks only (thinking passes through):
+    emitted text is filtered through its holdback so no partial stop string
+    ever escapes; on a match the matched string lands on
+    `state.stop_sequence` and the engine's stream is closed — which is the
+    disconnect→abort path, so generation actually stops and the slot frees.
+    With an active watcher, streaming per-chunk logprob attribution becomes
+    approximate (held-back text lags its token); `state.content_logprobs`
+    stays exact.
     """
     decoder = StreamingDecoder(tokenizer)
     phase_is_thinking = False
+
+    def scan_text(chunk: TextChunk) -> TextChunk | None:
+        if stop_watcher is None:
+            return chunk
+        released = stop_watcher.feed(chunk.text)
+        return TextChunk(released) if released else None
 
     async for evt in events:
         if evt.error is not None:
@@ -92,12 +112,36 @@ async def phase_tagged_events(
                     yield "thinking", dec_evt
                 case ThinkingEndEvent():
                     yield "thinking", dec_evt
+                case TextChunk() if phase_is_thinking:
+                    yield "thinking", dec_evt
                 case TextChunk():
-                    yield ("thinking" if phase_is_thinking else "text"), dec_evt
+                    scanned = scan_text(dec_evt)
+                    if scanned is not None:
+                        yield "text", scanned
+                    if stop_watcher is not None and stop_watcher.matched is not None:
+                        state.stop_sequence = stop_watcher.matched
+                        # Close the engine's stream deterministically: this
+                        # is submit()'s finally → abort → slot freed.
+                        await events.aclose()
+                        return
 
     for dec_evt in decoder.flush():
         match dec_evt:
             case ThinkingEndEvent():
                 yield "thinking", dec_evt
+            case TextChunk() if phase_is_thinking:
+                yield "thinking", dec_evt
             case TextChunk():
-                yield ("thinking" if phase_is_thinking else "text"), dec_evt
+                scanned = scan_text(dec_evt)
+                if scanned is not None:
+                    yield "text", scanned
+
+    if stop_watcher is not None:
+        if stop_watcher.matched is not None:
+            # A match completed by the decoder's own flush (held UTF-8 bytes).
+            state.stop_sequence = stop_watcher.matched
+        else:
+            # No match came: release the watcher's held-back tail.
+            tail = stop_watcher.flush()
+            if tail:
+                yield "text", TextChunk(tail)

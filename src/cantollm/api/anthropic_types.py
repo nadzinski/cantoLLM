@@ -30,6 +30,9 @@ class MessagesRequest(BaseModel):
     temperature: float = 0.7
     top_p: float = 0.9
     stream: bool = False
+    # Custom text sequences that end generation; matched text-level in the
+    # adapter (they can span token boundaries), never emitted to the client.
+    stop_sequences: list[str] = Field(default_factory=list)
 
 
 # ── Models listing ────────────────────────────────────────────────────

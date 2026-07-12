@@ -34,6 +34,7 @@ from cantollm.api.anthropic_types import (
     sse,
 )
 from cantollm.api.phase import DecodeState, phase_tagged_events
+from cantollm.decoder import StopStringWatcher
 from cantollm.engine.types import TokenEvent
 from cantollm.stream_events import TextChunk, ThinkingEndEvent, ThinkingStartEvent
 
@@ -55,10 +56,21 @@ def _new_message_id() -> str:
     return f"msg_{uuid.uuid4().hex[:24]}"
 
 
+def _watcher_for(stop_sequences: list[str] | None) -> StopStringWatcher | None:
+    return StopStringWatcher(stop_sequences) if stop_sequences else None
+
+
+def _final_stop_reason(state: DecodeState) -> StopReason | None:
+    if state.stop_sequence is not None:
+        return "stop_sequence"
+    return _to_stop_reason(state.finish_reason)
+
+
 async def _decoded_events(
     events: AsyncIterator[TokenEvent],
     tokenizer,
     state: DecodeState,
+    stop_watcher: StopStringWatcher | None = None,
 ):
     """Adapter-local view of phase_tagged_events that drops the phase tag.
 
@@ -66,7 +78,9 @@ async def _decoded_events(
     ThinkingStartEvent/ThinkingEndEvent markers, so the phase tuple is
     discarded; the helper is here for the counter side-effects on `state`.
     """
-    async for _phase, dec_evt in phase_tagged_events(events, tokenizer, state):
+    async for _phase, dec_evt in phase_tagged_events(
+        events, tokenizer, state, stop_watcher
+    ):
         yield dec_evt
 
 
@@ -75,6 +89,7 @@ async def render_message(
     tokenizer,
     model_name: str,
     input_tokens: int,
+    stop_sequences: list[str] | None = None,
 ) -> MessageResponse:
     """Drain the event stream into a single MessageResponse."""
     state = DecodeState()
@@ -83,7 +98,9 @@ async def render_message(
     current_thinking: list[str] = []
     in_thinking = False
 
-    async for dec_evt in _decoded_events(events, tokenizer, state):
+    async for dec_evt in _decoded_events(
+        events, tokenizer, state, _watcher_for(stop_sequences)
+    ):
         match dec_evt:
             case ThinkingStartEvent():
                 in_thinking = True
@@ -112,7 +129,8 @@ async def render_message(
         id=_new_message_id(),
         content=content_blocks,
         model=model_name,
-        stop_reason=_to_stop_reason(state.finish_reason),
+        stop_reason=_final_stop_reason(state),
+        stop_sequence=state.stop_sequence,
         usage=Usage(input_tokens=input_tokens, output_tokens=state.total),
     )
 
@@ -122,6 +140,7 @@ async def render_sse(
     tokenizer,
     model_name: str,
     input_tokens: int,
+    stop_sequences: list[str] | None = None,
 ) -> AsyncIterator[str]:
     """Stream the event stream as Anthropic SSE event strings.
 
@@ -147,7 +166,9 @@ async def render_sse(
             in_thinking = False
             started_text_block = False
 
-            async for dec_evt in _decoded_events(events, tokenizer, state):
+            async for dec_evt in _decoded_events(
+                events, tokenizer, state, _watcher_for(stop_sequences)
+            ):
                 match dec_evt:
                     case ThinkingStartEvent():
                         in_thinking = True
@@ -187,7 +208,10 @@ async def render_sse(
                 return
 
             await out.put(sse(MessageDeltaEvent(
-                delta=MessageDeltaBody(stop_reason=_to_stop_reason(state.finish_reason)),
+                delta=MessageDeltaBody(
+                    stop_reason=_final_stop_reason(state),
+                    stop_sequence=state.stop_sequence,
+                ),
                 usage=StreamUsage(
                     output_tokens=state.total,
                     thinking_tokens=state.thinking,
