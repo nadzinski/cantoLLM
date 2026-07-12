@@ -96,6 +96,11 @@ class ContinuousBatchingEngine:
         self._thread.start()
 
     async def shutdown(self) -> None:
+        # Mark shut down first: a submit() arriving during or after shutdown
+        # would otherwise register a queue and block forever on a command
+        # queue no thread will drain. submit() checks _failed and fails fast.
+        if self._failed is None:
+            self._failed = "engine is shut down"
         if self._thread is None:
             return
         self._commands.put(Shutdown())
@@ -113,7 +118,7 @@ class ContinuousBatchingEngine:
     async def submit(self, req: InferenceRequest) -> AsyncIterator[TokenEvent]:
         rid = req.request_id
         if self._failed is not None:
-            yield TokenEvent(error=f"engine failed: {self._failed}", request_id=rid)
+            yield TokenEvent(error=self._failed, request_id=rid)
             return
 
         # Register the queue before the command goes in, so the request's
@@ -181,8 +186,10 @@ class ContinuousBatchingEngine:
                 self._queues.pop(evt.request_id, None)
 
     def _fail(self, reason: str) -> None:
-        self._failed = reason
+        # _failed holds the complete client-facing message; submit() and this
+        # sweep both surface it verbatim.
+        self._failed = f"engine failed: {reason}"
         for rid, q in list(self._queues.items()):
-            q.put_nowait(TokenEvent(error=f"engine failed: {reason}", request_id=rid))
+            q.put_nowait(TokenEvent(error=self._failed, request_id=rid))
             q.put_nowait(None)
         self._queues.clear()

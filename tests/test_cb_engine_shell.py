@@ -243,6 +243,22 @@ class TestShutdown:
 
         asyncio.run(main())
 
+    def test_submit_after_shutdown_fails_fast(self):
+        """A submit() arriving after shutdown must not hang: with no scheduler
+        thread to drain the command queue, awaiting the first event would
+        block forever. shutdown() latches _failed so submit() errors out."""
+        async def main():
+            engine = await start_engine(ScriptedScheduler({}))
+            await engine.shutdown()
+            return await asyncio.wait_for(
+                collect(engine, make_request("late")), timeout=2.0
+            )
+
+        stream = asyncio.run(main())
+        assert len(stream) == 1
+        assert stream[0].error is not None
+        assert "shut down" in stream[0].error
+
 
 class TestStepFailure:
     def test_step_exception_errors_all_inflight_and_fails_engine(self):
