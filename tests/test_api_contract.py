@@ -527,6 +527,34 @@ def test_validation_rejects_out_of_range_sampling_params():
     assert _run(run()) == [422, 422, 422, 422]
 
 
+def test_unknown_request_fields_rejected():
+    """extra='forbid': unimplemented Anthropic fields and typos must 422
+    rather than be silently dropped — a request that believes it carried
+    tools or a stop_sequence shouldn't get a plain answer instead."""
+    tokenizer = _tokenizer_for("hi")
+    engine = FakeEngine(script=_script_from_text("hi"))
+
+    def body(**overrides):
+        return {
+            "model": "test-model", "max_tokens": 10,
+            "messages": [{"role": "user", "content": "hi"}],
+            **overrides,
+        }
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            return [
+                (await client.post("/v1/messages", json=body(**o))).status_code
+                for o in (
+                    {"tools": [{"name": "x"}]},
+                    {"top_k": 5},
+                    {"stop_sequence": ["x"]},  # typo for stop_sequences
+                )
+            ]
+
+    assert _run(run()) == [422, 422, 422]
+
+
 # ── Tokenization runs on a thread pool (doesn't serialize the event loop) ──
 
 

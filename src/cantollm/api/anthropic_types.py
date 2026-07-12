@@ -36,6 +36,12 @@ class MessagesRequest(BaseModel):
     # Custom text sequences that end generation; matched text-level in the
     # adapter (they can span token boundaries), never emitted to the client.
     stop_sequences: list[str] = Field(default_factory=list)
+    # Reject unknown fields rather than silently dropping behavior-changing
+    # ones (tools, tool_choice, top_k, thinking, metadata) or typos
+    # (stop_sequence for stop_sequences). Matches the OpenAI schema and the
+    # project's fail-loud policy; a 400 beats a plain-text answer to a request
+    # the client believes carried tools.
+    model_config = {"extra": "forbid"}
 
 
 # ── Models listing ────────────────────────────────────────────────────
