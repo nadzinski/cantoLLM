@@ -231,7 +231,7 @@ wants to own its own process. Perf optimizations (SDPA, `torch.compile`, CUDA gr
 deliberately deferred to Phase 3: this phase is about getting the scheduler and batching
 right on a correctness-first attention path, then optimizing the mature target.
 
-**Status (2026-07-12):** Feature work item (1) is done — the in-process
+**Status (2026-07-18):** Complete. Feature work item (1) is done — the in-process
 continuous-batching engine serves via `--engine batched`, built step-by-step
 per `continuous-batching-plan.md` (steps 0–9; postscript there records where
 execution deviated from the written plan). Landed: shared sampler with the
@@ -264,9 +264,21 @@ fixed-length mode on both dialects; closed-loop sweeps + open-loop Poisson
 arrivals; the executor spawns servers per config point (`canto bench run`)
 with a control-panel UI (`canto bench ui`, port 8002); four LLM-authored,
 token-verified workload sets committed under `bench/workloads/`; Mac smoke
-shakedown in `bench/history/`; 386 tests green. Open: run `cuda-bringup.md`
-on the 5090, then execute the `bench/configs/baseline_5090_*.toml` runs —
-the spec'd baseline that closes this phase.
+shakedown in `bench/history/`; 386 tests green. The 5090 bring-up
+(2026-07-18) was clean — `cuda-bringup.md`'s checklist passed end-to-end
+(kill-9 resilience and 4B@16×8192 scale sanity included), so that file is
+now deletable. The spec'd baseline ran the same day: all four
+`baseline_5090_*` configs plus a knee-extension open-loop config
+(`knee_5090_openloop.toml`), all cells valid, in `bench/history/2026-07-18*`.
+Phase 3's "before" numbers: 0.6B batched peaks at 1145 tok/s (16 slots,
+c=16, TTFT p50 50 ms) vs sequential's 165 at c=4 (~7×); 4B batched 469
+tok/s at c=8; open-loop knee at ~9 rps with the textbook p99-then-p50
+latency blow-up; long-context is the einsum path's weak spot (85 tok/s at
+c=4, engine-ITL p99 ~196 ms from prefill stalls). Sharpest Phase 3 lead:
+0.6B step time is ~11.4 ms nearly independent of row count (occupancy 0.49
+vs 0.98, same step duration) — decode is per-step-overhead-bound, so CUDA
+graphs may matter more than SDPA on small models; SDPA's clearest win is
+long context.
 
 **Author note:** the in-process scheduler, batched forward, and padded KV
 are being written by hand by the project author for learning. Assistants

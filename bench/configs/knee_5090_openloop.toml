@@ -1,0 +1,35 @@
+# Knee-hunt extension for the Phase-2 baseline: the baseline_5090_batched
+# open-loop sweep (0.5-4 rps) sat entirely below the knee — closed-loop
+# capacity on the 16-slot server is ~1145 tok/s ~= 9 rps at 128 output
+# tokens. This sweep straddles it: 5-8 rps approach saturation from below
+# (tails should grow), 10 rps sits past it (queue growth for the whole
+# window). max_inflight raised so the load generator, not the cap, decides.
+schema_version = 1
+name = "knee-5090-openloop"
+
+[server]
+model = "0.6B"
+engine = "batched"
+device = "cuda"
+port = 8377
+health_timeout_s = 900
+max_batch = 16
+batch_max_seq_len = 4096
+max_tokens_per_step = 256
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 8
+repeats = 3
+seed = 0
+
+[[points]]
+workload = "short_chat"
+mode = "open"
+arrivals = "poisson"
+rate_rps = [5.0, 6.0, 7.0, 8.0, 10.0]
+total_requests = 192
+max_inflight = 256

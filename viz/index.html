@@ -856,8 +856,8 @@ function initRoadmap() {
         'Thinking tokens emitted DeepSeek-R1-style as <code>reasoning_content</code>',
         'Deferred to 3.5: the production-hygiene bundle (metrics are uninteresting until there’s a scheduler to measure)',
       ] },
-    { id: '2', title: 'continuous batching + split', hw: '5090 · 1 H100 day', status: 'loose',
-      statusLine: 'Status (2026-07-12): items (1) and (2) done — the CB engine serves via --engine batched (steps 0–13 of continuous-batching-plan.md incl. logprobs + stop strings; author hand-wrote ✍ the attention math + scheduler), and the API/engine process split landed (dedicated engine process by default; --in-process opts out; process-split-design.md). 323 tests. First numbers: 75.9 vs 31.4 tok/s aggregate (2.4×), TTFT trade visible. Open: 5090 validation of the CUDA bring-up (code committed, untested — cuda-bringup.md), then the end-of-phase bench baseline (wants the Phase-0 spec).',
+    { id: '2', title: 'continuous batching + split', hw: '5090 · 1 H100 day', status: 'done',
+      statusLine: 'Status (2026-07-18): Complete. The CB engine serves via --engine batched (steps 0–13 of continuous-batching-plan.md incl. logprobs + stop strings; author hand-wrote ✍ the attention math + scheduler); the API/engine process split landed (dedicated engine process by default; process-split-design.md); the bench harness landed as spec + implementation (bench-spec.md). 5090 bring-up was clean and the spec’d baseline ran 2026-07-18: 0.6B batched peaks at 1145 tok/s (16 slots, c=16, TTFT p50 50 ms) vs sequential’s 165 (~7×); open-loop knee at ~9 rps; long context is the einsum path’s weak spot. Phase 3’s “before” is on the record in bench/history/.',
       goal: 'The headline feature: many concurrent requests share each forward pass. Padded KV, no paging yet. Correctness-first attention path — perf work deliberately deferred to Phase 3.',
       items: [
         'Scheduler landed ✍: FCFS queue, running set, water-fill token budget; <b>chunked prefill</b> fell out as predicted; logprobs + stop strings landed as tail steps',
@@ -865,7 +865,7 @@ function initRoadmap() {
         'Three-layer admission: API 400 (both dialects) · scheduler re-validation · pool write bounds',
         'Process split landed: mp spawn + two queues (commands in, one event batch per step out — never per token), Ready/EngineFailed/Stopped wire protocol, liveness both directions, <code>TokenizerRuntime</code> so the API process never loads weights; uvloop + httptools pinned',
         'Batched speculation explicitly disabled — ragged accept counts stay a Phase-10 research detour',
-        'Bench (rough, spec still deferred): 2.4× aggregate on 4 slots on the Mac; per-request TTFT worsened under load exactly as predicted — the tradeoff, made visible',
+        'Bench (5090 baseline, spec’d): 1145 vs 165 tok/s aggregate (~7×) on 0.6B; the TTFT trade appeared (1.5 s queue wait at c=16 on 8 slots) and doubling slots dissolved it (50 ms) — and a ~11.4 ms step time nearly independent of row count says small-model decode is per-step-overhead-bound (a Phase 3 CUDA-graphs lead)',
         '→ See the <a href="#/batching">Continuous batching</a> and <a href="#/wiring">CB wiring</a> tabs',
       ] },
     { id: '3', title: 'CUDA beachhead', hw: '5090 · 1 H100 day', status: 'active',
@@ -968,7 +968,7 @@ function initRoadmap() {
   });
   // "you are here" flag
   mk('text', { x: xActive, y: LY + 68, style: 'font:700 11px var(--sans);letter-spacing:.06em;fill:#8a5a00;text-anchor:middle' }, '▲ YOU ARE HERE');
-  mk('text', { x: xActive, y: LY + 84, style: 'font:10.5px var(--sans);fill:var(--muted);text-anchor:middle' }, '5090 validation + bench baseline, then SDPA');
+  mk('text', { x: xActive, y: LY + 84, style: 'font:10.5px var(--sans);fill:var(--muted);text-anchor:middle' }, 'baseline in hand — SDPA, then compile + CUDA graphs');
 
   const diagPanel = el('section', 'panel');
   diagPanel.appendChild(el('h2', null, 'The line — phases 0 → 10, from PLAN.md'));
