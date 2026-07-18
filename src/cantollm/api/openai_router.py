@@ -124,6 +124,13 @@ def build_openai_router(
             or DEFAULT_MAX_TOKENS
         )
 
+        if body.ignore_eos and body.stop:
+            raise HTTPException(
+                status_code=400,
+                detail="ignore_eos and stop are mutually exclusive: "
+                "ignore_eos requests fixed-length output, stop sequences end it early.",
+            )
+
         tokenizer = entry.runtime.tokenizer
         try:
             req = await tokenize_and_build_request(
@@ -135,6 +142,7 @@ def build_openai_router(
                 max_tokens=max_tokens,
                 tokenizer=tokenizer,
                 executor=tokenizer_executor,
+                ignore_eos=body.ignore_eos,
             )
             check_admission(req, entry.max_request_tokens)
         except (ValueError, TypeError, KeyError) as exc:

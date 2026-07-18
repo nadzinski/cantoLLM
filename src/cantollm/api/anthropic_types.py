@@ -36,6 +36,11 @@ class MessagesRequest(BaseModel):
     # Custom text sequences that end generation; matched text-level in the
     # adapter (they can span token boundaries), never emitted to the client.
     stop_sequences: list[str] = Field(default_factory=list)
+    # Bench-harness knob (vLLM-precedent name): disable EOS/stop-token
+    # termination so generation runs to exactly max_tokens — fixed-length
+    # output makes perf numbers comparable across engines and phases.
+    # Mutually exclusive with `stop_sequences` (400 in the router).
+    ignore_eos: bool = False
     # Reject unknown fields rather than silently dropping behavior-changing
     # ones (tools, tool_choice, top_k, thinking, metadata) or typos
     # (stop_sequence for stop_sequences). Matches the OpenAI schema and the

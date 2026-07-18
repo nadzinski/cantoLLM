@@ -79,6 +79,11 @@ class ChatCompletionRequest(BaseModel):
     # alternatives) stays rejected via extra="forbid" — we track only the
     # sampled token's probability.
     logprobs: bool = False
+    # Bench-harness knob (vLLM-precedent name): disable EOS/stop-token
+    # termination so generation runs to exactly max_tokens — fixed-length
+    # output makes perf numbers comparable across engines and phases.
+    # Mutually exclusive with `stop` (400 in the router).
+    ignore_eos: bool = False
     # `user` is a free-form id OpenAI uses for abuse tracking; harmless pass-through.
     user: str | None = None
     # Everything else (tools, tool_choice, n, top_logprobs, response_format,

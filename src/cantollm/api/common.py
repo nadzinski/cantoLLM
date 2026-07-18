@@ -41,6 +41,7 @@ def _build_sync(
     sampling_params: SamplingParams,
     max_tokens: int,
     tokenizer,
+    ignore_eos: bool,
 ) -> InferenceRequest:
     prompt_token_ids = tokenizer.encode_conversation(messages, system=system)
     return InferenceRequest(
@@ -48,7 +49,9 @@ def _build_sync(
         prompt_token_ids=prompt_token_ids,
         sampling_params=sampling_params,
         max_tokens=max_tokens,
-        stop_token_ids=tokenizer.stop_token_ids,
+        # An empty stop set means only max_tokens ends generation — the
+        # bench harness's fixed-length mode (ignore_eos).
+        stop_token_ids=set() if ignore_eos else tokenizer.stop_token_ids,
     )
 
 
@@ -60,6 +63,7 @@ async def tokenize_and_build_request(
     max_tokens: int,
     tokenizer,
     executor: ThreadPoolExecutor,
+    ignore_eos: bool = False,
 ) -> InferenceRequest:
     """Tokenize `messages` on the executor and wrap into an InferenceRequest.
 
@@ -70,5 +74,6 @@ async def tokenize_and_build_request(
     """
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(
-        executor, _build_sync, messages, system, sampling_params, max_tokens, tokenizer,
+        executor, _build_sync, messages, system, sampling_params, max_tokens,
+        tokenizer, ignore_eos,
     )

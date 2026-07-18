@@ -474,3 +474,64 @@ def test_max_completion_tokens_preferred_over_max_tokens():
 
     body = _run(run())
     assert body["choices"][0]["finish_reason"] == "length"
+
+
+# ── ignore_eos (bench fixed-length mode) ─────────────────────────────
+
+
+def test_ignore_eos_builds_empty_stop_set():
+    text = "abc"
+    tokenizer = _tokenizer_for(text)
+    engine = FakeEngine(script=_script_from_text(text))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            r = await client.post(
+                "/v1/chat/completions",
+                json=_chat_body(stream=False, max_tokens=3, ignore_eos=True),
+            )
+            assert r.status_code == 200
+            return r.json()
+
+    body = _run(run())
+    assert engine.last_request.stop_token_ids == set()
+    # Script length == max_tokens → the fake finishes on max_tokens, which
+    # is the only exit fixed-length runs should ever take.
+    assert body["choices"][0]["finish_reason"] == "length"
+
+
+def test_default_keeps_tokenizer_stop_set():
+    text = "abc"
+    tokenizer = _tokenizer_for(text)
+    engine = FakeEngine(script=_script_from_text(text))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            r = await client.post(
+                "/v1/chat/completions",
+                json=_chat_body(stream=False, max_tokens=100),
+            )
+            assert r.status_code == 200
+
+    _run(run())
+    assert engine.last_request.stop_token_ids == tokenizer.stop_token_ids
+
+
+def test_ignore_eos_with_stop_is_400():
+    tokenizer = _tokenizer_for("a")
+    engine = FakeEngine(script=_script_from_text("a"))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            r = await client.post(
+                "/v1/chat/completions",
+                json=_chat_body(
+                    stream=False, max_tokens=10, ignore_eos=True, stop="END",
+                ),
+            )
+            assert r.status_code == 400
+            assert "mutually exclusive" in r.json()["error"]["message"]
+
+    _run(run())
+    # Rejected at the door: the engine never saw a request.
+    assert engine.last_request is None

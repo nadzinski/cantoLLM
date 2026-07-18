@@ -793,3 +793,40 @@ def test_non_dialect_path_keeps_default_error_shape():
 
 # Reference so ruff doesn't complain about imported-but-unused names.
 _ = STOP_TOKEN_ID
+
+
+# ── ignore_eos (bench fixed-length mode) ─────────────────────────────
+
+
+def test_ignore_eos_builds_empty_stop_set():
+    tokenizer = _tokenizer_for("abc")
+    engine = FakeEngine(script=_script_from_text("abc"))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            body = _messages_body(max_tokens=3, stream=False)
+            body["ignore_eos"] = True
+            r = await client.post("/v1/messages", json=body)
+            assert r.status_code == 200
+            return r.json()
+
+    body = _run(run())
+    assert engine.last_request.stop_token_ids == set()
+    assert body["stop_reason"] == "max_tokens"
+
+
+def test_ignore_eos_with_stop_sequences_is_400():
+    tokenizer = _tokenizer_for("a")
+    engine = FakeEngine(script=_script_from_text("a"))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            body = _messages_body(max_tokens=10, stream=False)
+            body["ignore_eos"] = True
+            body["stop_sequences"] = ["END"]
+            r = await client.post("/v1/messages", json=body)
+            assert r.status_code == 400
+            assert "mutually exclusive" in r.json()["error"]["message"]
+
+    _run(run())
+    assert engine.last_request is None

@@ -149,6 +149,7 @@ class FakeEngine:
     abort_calls: list[str] = field(default_factory=list)
     started: bool = False
     shutdown_called: bool = False
+    last_request: InferenceRequest | None = None
 
     async def start(self) -> None:
         self.started = True
@@ -160,6 +161,7 @@ class FakeEngine:
         self.abort_calls.append(request_id)
 
     async def submit(self, req: InferenceRequest) -> AsyncIterator[TokenEvent]:
+        self.last_request = req
         tokens_emitted = 0
         try:
             for step in self.script:

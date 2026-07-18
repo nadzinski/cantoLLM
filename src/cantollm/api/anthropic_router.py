@@ -28,6 +28,13 @@ def build_anthropic_router(
                 detail=f"Model '{body.model}' is not registered. Available: {registry.names()}",
             )
 
+        if body.ignore_eos and body.stop_sequences:
+            raise HTTPException(
+                status_code=400,
+                detail="ignore_eos and stop_sequences are mutually exclusive: "
+                "ignore_eos requests fixed-length output, stop sequences end it early.",
+            )
+
         tokenizer = entry.runtime.tokenizer
         try:
             req = await tokenize_and_build_request(
@@ -39,6 +46,7 @@ def build_anthropic_router(
                 max_tokens=body.max_tokens,
                 tokenizer=tokenizer,
                 executor=tokenizer_executor,
+                ignore_eos=body.ignore_eos,
             )
             check_admission(req, entry.max_request_tokens)
         except (ValueError, TypeError, KeyError) as exc:
