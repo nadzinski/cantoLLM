@@ -1,0 +1,53 @@
+# Quick harness shakedown on the Mac (MPS, 0.6B, batched split engine).
+# Minutes, not hours — sanity for the pipeline, not a baseline.
+schema_version = 1
+name = "smoke-mac"
+
+[server]
+model = "0.6B"
+engine = "batched"
+device = "auto"
+port = 8377
+health_timeout_s = 900     # first run may download weights
+max_batch = 4
+batch_max_seq_len = 2048
+max_tokens_per_step = 64
+
+[defaults]
+dialect = "openai"
+max_tokens = 64
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 4
+repeats = 2                # smoke: 2 is enough to exercise the CV math
+seed = 0
+
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [2, 4]
+requests_per_level = 12
+
+[[points]]
+workload = "short_chat"
+mode = "open"
+arrivals = "poisson"
+rate_rps = [0.5]
+total_requests = 12
+max_inflight = 16
+
+# Natural-stop realism check (finish-reason distribution).
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [2]
+requests_per_level = 8
+ignore_eos = false
+
+# Cross-dialect parity cell.
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [2]
+requests_per_level = 8
+dialect = "anthropic"

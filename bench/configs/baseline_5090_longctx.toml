@@ -1,0 +1,38 @@
+# Phase-2 close-out baseline, long-context companion: 0.6B batched, 5090.
+# Split from baseline_5090_batched.toml because the 8k band (verified up to
+# ~8.6k input tokens) exceeds a 4096-token slot — this variant sizes slots
+# to fit (10240 ≥ 8597 + 128) with fewer of them, and widens the per-step
+# budget so chunked prefill of an 8k prompt doesn't take 34 steps.
+schema_version = 1
+name = "baseline-5090-longctx"
+
+[server]
+model = "0.6B"
+engine = "batched"
+device = "cuda"
+port = 8377
+health_timeout_s = 900
+max_batch = 4
+batch_max_seq_len = 10240
+max_tokens_per_step = 512
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 4
+repeats = 3
+seed = 0
+
+[[points]]
+workload = "long_context"
+mode = "closed"
+concurrency = [1, 2, 4]
+requests_per_level = 16
+
+[[points]]
+workload = "long_context"
+mode = "closed"
+concurrency = [4]
+requests_per_level = 32

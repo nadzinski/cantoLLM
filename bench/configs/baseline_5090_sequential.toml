@@ -1,0 +1,41 @@
+# Phase-2 close-out baseline, part 2/4: 0.6B sequential engine, 5090.
+# (Long-context stays here: sequential admission is the arch cap, 40960.)
+# The "before batching" reference — levels capped at 4 (FCFS serializes
+# anyway; higher levels only stretch queue-wait). Client metrics only
+# (sequential exposes no engine stats). See baseline_5090_batched.toml.
+schema_version = 1
+name = "baseline-5090-sequential"
+
+[server]
+model = "0.6B"
+engine = "sequential"
+device = "cuda"
+port = 8377
+health_timeout_s = 900
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 4
+repeats = 3
+seed = 0
+
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [1, 2, 4]
+requests_per_level = 24
+
+[[points]]
+workload = "long_context"
+mode = "closed"
+concurrency = [1, 2]
+requests_per_level = 12
+
+[[points]]
+workload = "code"
+mode = "closed"
+concurrency = [1, 2, 4]
+requests_per_level = 24

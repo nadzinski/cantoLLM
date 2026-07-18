@@ -179,19 +179,57 @@ def cmd_webchat(args):
 # ── Subcommand: bench ───────────────────────────────────────────────
 
 def cmd_bench(args):
-    """Run concurrent requests against a running server."""
-    from cantollm.clients.bench import run_bench
+    """Bench harness dispatch: run | ui | verify-workloads (bench-spec.md)."""
+    if args.bench_command == "run":
+        from cantollm.bench.executor import run_from_config_path
 
-    run_bench(
-        url=args.url,
-        prompts_path=args.prompts,
-        concurrency=args.concurrency,
-        max_tokens=args.max_tokens,
-        temperature=args.temperature,
-        top_p=args.top_p,
-        verbose=args.verbose,
-        output_path=args.output,
-    )
+        if args.attach and not args.url:
+            sys.exit("error: --attach requires --url")
+        handle = run_from_config_path(
+            args.config,
+            attach_url=args.url if args.attach else None,
+            capture_text=args.capture_text,
+        )
+        _print_bench_summary(handle)
+        sys.exit(0 if handle.status == "done" else 1)
+
+    elif args.bench_command == "ui":
+        from cantollm.bench.service import run_service
+
+        run_service(host=args.host, port=args.port)
+
+    elif args.bench_command == "verify-workloads":
+        from cantollm.bench.verify import verify_workloads
+
+        for report in verify_workloads(model_size=args.model):
+            print(
+                f"{report['file']}: {report['prompts']} prompts, "
+                f"input_tokens min/p50/max = {report['input_tokens_min']}"
+                f"/{report['input_tokens_p50']}/{report['input_tokens_max']}"
+            )
+    else:
+        sys.exit("usage: canto bench {run,ui,verify-workloads} ...")
+
+
+def _print_bench_summary(handle):
+    """Headline lines per cell — full tables live in the run dir + UI."""
+    print(f"\nrun {handle.run_id}: {handle.status}")
+    for state in handle.cells:
+        cell = state.cell
+        median = state.median or {}
+        line = f"  [{state.status:<7}] {cell.workload} {cell.mode}@{cell.level:g}"
+        if median.get("aggregate_tok_s") is not None:
+            ttft = median.get("ttft_p50")
+            line += f"  agg={median['aggregate_tok_s']:.1f} tok/s"
+            if ttft is not None:
+                line += f"  ttft_p50={ttft:.2f}s"
+        if median.get("warnings"):
+            line += f"  [{len(median['warnings'])} warning(s)]"
+        if state.reason:
+            line += f"  ({state.reason.splitlines()[0][:80]})"
+        print(line)
+    if handle.run_dir is not None:
+        print(f"  -> {handle.run_dir.path}/run.json")
 
 
 # ── Argument parsing ────────────────────────────────────────────────
@@ -273,24 +311,31 @@ def parse_args():
     web_parser.add_argument("--port", type=int, default=8001,
                             help="Port for the web UI (default: 8001)")
 
-    # bench
-    bench_parser = subparsers.add_parser("bench", help="Fire concurrent requests at a running server")
-    bench_parser.add_argument("--url", default="http://localhost:8000",
-                              help="Server URL (default: http://localhost:8000)")
-    bench_parser.add_argument("--prompts", required=True,
-                              help="File of prompts, one per line (# for comments)")
-    bench_parser.add_argument("--concurrency", "-c", type=int, default=4,
-                              help="Number of concurrent workers (default: 4)")
-    bench_parser.add_argument("--max-tokens", type=int, default=2048,
-                              help="Max tokens per response (default: 2048)")
-    bench_parser.add_argument("--temperature", "-t", type=float, default=0.7,
-                              help="Sampling temperature (default: 0.7)")
-    bench_parser.add_argument("--top-p", type=float, default=0.9,
-                              help="Top-p sampling threshold (default: 0.9)")
-    bench_parser.add_argument("--verbose", "-v", action="store_true",
-                              help="Print per-request start/ttft/done events")
-    bench_parser.add_argument("--output", "-o", default=None,
-                              help="Write full results (including generated text) as JSON to this path")
+    # bench (the harness — see bench-spec.md)
+    bench_parser = subparsers.add_parser("bench", help="Benchmark harness (bench-spec.md)")
+    bench_sub = bench_parser.add_subparsers(dest="bench_command")
+
+    bench_run = bench_sub.add_parser("run", help="Execute a run config headlessly")
+    bench_run.add_argument("config", help="Run config TOML (bench/configs/*.toml)")
+    bench_run.add_argument("--attach", action="store_true",
+                           help="Don't spawn servers; drive --url instead "
+                                "(also the vLLM-comparison path)")
+    bench_run.add_argument("--url", default=None,
+                           help="Base URL of the already-running server (--attach)")
+    bench_run.add_argument("--capture-text", action="store_true",
+                           help="Also persist generated text (gitignored file; debug)")
+
+    bench_ui = bench_sub.add_parser("ui", help="Control panel: launch/watch/compare runs")
+    bench_ui.add_argument("--host", default="127.0.0.1",
+                          help="Bind address (default: 127.0.0.1)")
+    bench_ui.add_argument("--port", type=int, default=8002,
+                          help="Port (default: 8002)")
+
+    bench_verify = bench_sub.add_parser(
+        "verify-workloads", help="Stamp real token counts into bench/workloads/*.jsonl")
+    bench_verify.add_argument("--model", choices=list(MODEL_CONFIGS.keys()),
+                              default="0.6B",
+                              help="Tokenizer to verify against (default: 0.6B)")
 
     return parser.parse_args(), parser
 

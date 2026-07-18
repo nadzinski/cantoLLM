@@ -45,3 +45,4 @@ model_data/
 # Misc
 .DS_Store
 .agents/
+bench/history/*/output_text*

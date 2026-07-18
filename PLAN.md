@@ -50,8 +50,13 @@ first → feature work → hardware → what falls out.
 
 **Goal:** small housekeeping before real work; costs a day, pays dividends forever.
 
-**Status (2026-04-19):** Rename done (`src/cantollm/` with Qwen3 code under
-`models/qwen3/`). Open: benchmark harness spec document.
+**Status (2026-07-12):** Complete. Rename done 2026-04-19 (`src/cantollm/` with
+Qwen3 code under `models/qwen3/`). The benchmark harness spec — deferred since
+then — landed as `bench-spec.md` together with a full implementation (built in
+the Phase 2 tail, superseding the spec-only deliverable): workloads, load
+models, exact metric definitions, run protocol, engine instrumentation
+contract, results schema, and reporting format, with the harness itself under
+`src/cantollm/bench/` (`canto bench run|ui|verify-workloads`).
 
 - Rename `src/qwen3/` → `src/cantollm/`. `qwen3` becomes a backend subfolder for
   Qwen3-specific code (model, tokenizer, weight loader). Generic code (engine, api,
@@ -247,13 +252,21 @@ integration plan's tail steps, have since landed on both engines: sampled-token
 logprobs surface on the OpenAI dialect (`"logprobs": true`), and text-level
 stop sequences work on both dialects (`stop_sequences` / `stop`), matched with
 holdback at the decoder layer and stopping generation via the abort path.
-Still deferred: the Phase-0 bench-harness spec (these are rough numbers, not
-the spec'd baseline). Feature work item (2), the API/engine process split,
-is also done: `--engine batched` now spawns a dedicated engine process by
-default (`--in-process` opts out), IPC over multiprocessing spawn queues
-with per-step event batches, uvicorn pinned to uvloop+httptools — decisions
-in `process-split-design.md`. Open: minimal CUDA bring-up, then the
-end-of-phase 5090 bench baseline (which also wants the Phase-0 bench spec).
+(Those first numbers were rough, pre-spec.) Feature work item (2), the
+API/engine process split, is also done: `--engine batched` now spawns a
+dedicated engine process by default (`--in-process` opts out), IPC over
+multiprocessing spawn queues with per-step event batches, uvicorn pinned to
+uvloop+httptools — decisions in `process-split-design.md`. The bench
+harness (the Phase-0 debt) landed 2026-07-12 as spec + full implementation
+(`bench-spec.md`, `src/cantollm/bench/`): per-step engine stats ride the
+IPC event batch (`StepUpdate`) into `GET /debug/engine-stats`; `ignore_eos`
+fixed-length mode on both dialects; closed-loop sweeps + open-loop Poisson
+arrivals; the executor spawns servers per config point (`canto bench run`)
+with a control-panel UI (`canto bench ui`, port 8002); four LLM-authored,
+token-verified workload sets committed under `bench/workloads/`; Mac smoke
+shakedown in `bench/history/`; 386 tests green. Open: run `cuda-bringup.md`
+on the 5090, then execute the `bench/configs/baseline_5090_*.toml` runs —
+the spec'd baseline that closes this phase.
 
 **Author note:** the in-process scheduler, batched forward, and padded KV
 are being written by hand by the project author for learning. Assistants

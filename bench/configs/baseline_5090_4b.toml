@@ -1,0 +1,38 @@
+# Phase-2 close-out baseline, part 3/4: 4B batched, 5090 — the realistic-
+# compute point (0.6B underplays the forward pass). max_batch stays 8
+# (bench-spec.md §8). Long-context is excluded here (8k band exceeds the
+# 4096 slot; see baseline_5090_longctx.toml). See baseline_5090_batched.toml
+# for the full matrix.
+schema_version = 1
+name = "baseline-5090-4b"
+
+[server]
+model = "4B"
+engine = "batched"
+device = "cuda"
+port = 8377
+health_timeout_s = 1800    # 4B weights download on first run
+max_batch = 8
+batch_max_seq_len = 4096
+max_tokens_per_step = 256
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 8
+repeats = 3
+seed = 0
+
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [1, 2, 4, 8]
+requests_per_level = 32
+
+[[points]]
+workload = "code"
+mode = "closed"
+concurrency = [1, 4, 8]
+requests_per_level = 32
