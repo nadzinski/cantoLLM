@@ -15,8 +15,9 @@
       <label>Model
         <select id="model"></select>
       </label>
+      <!-- This client speaks the Anthropic dialect, which caps temperature at 1. -->
       <label>Temp <span id="temp-val">0.7</span>
-        <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7" />
+        <input type="range" id="temperature" min="0" max="1" step="0.05" value="0.7" />
       </label>
       <label>Top-p <span id="topp-val">0.9</span>
         <input type="range" id="top_p" min="0" max="1" step="0.05" value="0.9" />

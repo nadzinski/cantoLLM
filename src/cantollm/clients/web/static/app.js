@@ -206,8 +206,14 @@ async function sendMessage(text) {
     });
 
     if (!resp.ok || !resp.body) {
-      const errText = await resp.text().catch(() => `HTTP ${resp.status}`);
-      throw new Error(errText || `HTTP ${resp.status}`);
+      // API errors come back as {"type":"error","error":{"message":...}} —
+      // surface the message, not the raw JSON.
+      let msg = `HTTP ${resp.status}`;
+      try {
+        const errJson = await resp.json();
+        msg = errJson.error?.message || JSON.stringify(errJson);
+      } catch { /* non-JSON body; keep the status line */ }
+      throw new Error(msg);
     }
 
     await parseSSEStream(resp.body.getReader(), (event, data) => {

@@ -5,6 +5,7 @@ running CantoLLM API server (e.g. `cantollm serve` on :8000). The proxy keeps
 the SPA same-origin, so no CORS config is needed on the upstream.
 """
 
+import asyncio
 import http.client
 from pathlib import Path
 from urllib.parse import urlparse
@@ -64,7 +65,11 @@ def create_web_app(upstream: str) -> FastAPI:
         body_bytes = await request.body()
         client_accept = request.headers.get("accept", "text/event-stream")
 
-        def stream() -> "iter[bytes]":
+        # Send the request and read the response head off the event loop, so
+        # the upstream status/content-type can be forwarded instead of
+        # unconditionally claiming 200 + SSE — a 400 body labeled as an event
+        # stream renders as nothing at all in the browser client.
+        def open_upstream() -> tuple[http.client.HTTPConnection, http.client.HTTPResponse]:
             conn = _connect(host, port, use_tls)
             try:
                 conn.request(
@@ -76,7 +81,15 @@ def create_web_app(upstream: str) -> FastAPI:
                         "Accept": client_accept,
                     },
                 )
-                resp = conn.getresponse()
+                return conn, conn.getresponse()
+            except Exception:
+                conn.close()
+                raise
+
+        conn, resp = await asyncio.to_thread(open_upstream)
+
+        def stream() -> "iter[bytes]":
+            try:
                 while True:
                     chunk = resp.read1(4096)
                     if not chunk:
@@ -85,7 +98,11 @@ def create_web_app(upstream: str) -> FastAPI:
             finally:
                 conn.close()
 
-        return StreamingResponse(stream(), media_type="text/event-stream")
+        return StreamingResponse(
+            stream(),
+            status_code=resp.status,
+            media_type=resp.getheader("Content-Type", "text/event-stream"),
+        )
 
     return app
 
