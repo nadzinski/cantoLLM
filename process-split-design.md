@@ -15,9 +15,9 @@ EngineProcessClient                          engine_process_main
   submit()/abort()  ──AddRequest/Abort/Shutdown──▶  command mp.Queue
   per-request asyncio.Queues                            │ drained per step
         ▲ call_soon_threadsafe                          ▼
-  bridge thread  ◀──Ready | list[TokenEvent] | ──  drive_scheduler():
-                    EngineFailed | Stopped         apply commands → step()
-                    (events mp.Queue)              → one put per step
+  bridge thread  ◀──Ready | StepUpdate | ────  drive_scheduler():
+                    EngineFailed | Stopped     apply commands → step()
+                    (events mp.Queue)          → one put per step
 ```
 
 Both halves were already written for this: commands were message-shaped
@@ -60,10 +60,20 @@ can't drift apart behaviorally.
 4. **Wire protocol, child → parent, in order:** `Ready` once the scheduler
    is built (start() blocks on it — model load can be a long first-run
    download, so there's no overall deadline; only child death breaks the
-   wait), then per-step `list[TokenEvent]` batches (one pickle per step,
-   never per token), then exactly one farewell: `EngineFailed(reason)` (load
-   or step failure; the batch-wide failure policy carries over verbatim) or
+   wait), then per-step `StepUpdate` messages (one pickle per step, never
+   per token), then exactly one farewell: `EngineFailed(reason)` (load or
+   step failure; the batch-wide failure policy carries over verbatim) or
    `Stopped` (Shutdown acknowledged).
+
+   *Amended for the bench harness (2026-07-12, bench-spec.md §4):* the
+   per-step message was originally a bare `list[TokenEvent]`. It is now
+   `StepUpdate(events, stats)` — the same event batch plus an optional
+   fixed-size `StepStats` record (engine/batching/stats.py) collected
+   observer-style in `drive_scheduler`; `Ready` gained `load_seconds` and
+   the built scheduler's capacity. Still one pickle per step; with a
+   collector attached, prefill-only steps (no events, stats only) now
+   cross too. The parent accumulates stats in a ring on the shared
+   multiplexer, served by `GET /debug/engine-stats`.
 
 5. **Liveness in both directions, no heartbeat protocol.** The parent's
    bridge thread polls `events.get(timeout=0.5)` and, if the child died

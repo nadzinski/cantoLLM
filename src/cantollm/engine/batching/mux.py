@@ -22,6 +22,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator
 
+from cantollm.engine.batching.stats import EngineStatsAccumulator, StepUpdate
 from cantollm.engine.batching.types import Abort, AddRequest, Command
 from cantollm.engine.types import InferenceRequest, TokenEvent
 
@@ -31,6 +32,9 @@ class EventMultiplexer:
         self._queues: dict[str, asyncio.Queue[TokenEvent | None]] = {}
         self._loop: asyncio.AbstractEventLoop | None = None
         self._failed: str | None = None
+        # Bench-harness view (batching/stats.py): both engines' per-step
+        # updates land here; /debug/engine-stats reads it.
+        self.engine_stats = EngineStatsAccumulator()
 
     def _send_command(self, command: Command) -> None:
         raise NotImplementedError
@@ -62,6 +66,13 @@ class EventMultiplexer:
                 self._send_command(Abort(rid))
 
     # --- event loop side ----------------------------------------------
+
+    def _dispatch_update(self, update: StepUpdate) -> None:
+        """Per-step entry point: route the events, then record the stats.
+        Order matters only for tests that assert on both — clients see
+        events exactly as `_dispatch` always delivered them."""
+        self._dispatch(update.events)
+        self.engine_stats.record(update)
 
     def _dispatch(self, events: list[TokenEvent]) -> None:
         for evt in events:

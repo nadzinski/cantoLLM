@@ -13,6 +13,7 @@ from fastapi import FastAPI
 
 from cantollm.api.anthropic_router import build_anthropic_router
 from cantollm.api.common_router import build_common_router
+from cantollm.api.debug_router import build_debug_router
 from cantollm.api.errors import install_error_handlers
 from cantollm.api.openai_router import build_openai_router
 from cantollm.registry import EngineRegistry
@@ -47,4 +48,5 @@ def create_app(
     app.include_router(build_common_router(registry))
     app.include_router(build_anthropic_router(registry, tokenizer_executor))
     app.include_router(build_openai_router(registry, tokenizer_executor))
+    app.include_router(build_debug_router(registry))
     return app

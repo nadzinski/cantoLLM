@@ -78,6 +78,10 @@ def traced_qwen3_scheduler(size, device, config, trace_path):
             "rows": plan_box.pop("rows", []),
             "events": [{"rid": e.request_id, "tok": e.token_id, "fin": e.finish_reason}
                        for e in events],
+            # Events-only payload size. Since the bench-harness amendment
+            # (process-split-design.md decision 4) the wire message is
+            # StepUpdate(events, stats) — this understates each pickle by
+            # the fixed-size StepStats rider (~200 bytes).
             "batch_bytes": len(pickle.dumps(events)),
         })
         return events

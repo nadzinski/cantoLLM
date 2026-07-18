@@ -377,3 +377,61 @@ class TestApiSmoke:
         assert kinds[-1] == "message_stop"
         deltas = [e for e in events if e.event == "content_block_delta"]
         assert deltas, "no content streamed over the process boundary"
+
+
+class TestStepStatsAcrossTheWire:
+    def test_real_scheduler_ships_stats_and_load_seconds(self):
+        """A real scheduler in the child gets a StepStatsCollector, so
+        StepUpdates arrive with stats and the parent-side accumulator
+        fills; Ready carries the factory's load time."""
+
+        async def main():
+            client = await start_client(toy_scheduler_factory)
+            try:
+                events = await collect(
+                    client, make_request("r1", [1, 2, 3, 4, 5], max_tokens=4)
+                )
+                return events, client.engine_stats.read()
+            finally:
+                await client.shutdown()
+
+        events, stats = asyncio.run(main())
+        tokens_emitted = sum(1 for e in events if e.token_id is not None)
+
+        assert isinstance(stats["load_seconds"], float)
+        assert stats["load_seconds"] >= 0.0
+        assert stats["engine_kind"] == "batched-split"
+        assert stats["capacity"] == {"max_batch": 3, "max_seq_len": 64}
+        assert stats["totals"]["output_tokens"] == tokens_emitted
+        assert stats["totals"]["steps"] >= 1
+
+        steps = stats["steps"]
+        assert steps and all(s["rows"] >= 1 for s in steps)
+        # Prompt fits one budget: first step is pure prefill of 5.
+        assert steps[0]["prefill_tokens"] == 5
+        assert sum(s["decode_tokens"] for s in steps) >= tokens_emitted - 1
+        # ITL gaps close once per token after the first.
+        assert len(stats["itl"]) == max(0, tokens_emitted - 1)
+
+    def test_scripted_double_ships_events_without_stats(self):
+        """Doubles without the scheduler surface get no collector — updates
+        cross with stats=None and only token totals accumulate."""
+
+        async def main():
+            client = await start_client(never_finishing_factory)
+            try:
+                stream = client.submit(make_request("r1", [1], max_tokens=5))
+                got = []
+                async for evt in stream:
+                    got.append(evt)
+                    if len(got) == 2:
+                        break  # disconnect → abort
+                await wait_for(lambda: client.engine_stats._total_output_tokens >= 2)
+                return client.engine_stats.read()
+            finally:
+                await client.shutdown()
+
+        stats = asyncio.run(main())
+        assert stats["steps"] == []
+        assert stats["totals"]["steps"] == 0
+        assert stats["totals"]["output_tokens"] >= 2

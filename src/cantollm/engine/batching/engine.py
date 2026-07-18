@@ -36,12 +36,12 @@ import logging
 import queue
 import threading
 from collections.abc import Callable
-
 from typing import TYPE_CHECKING
 
 from cantollm.engine.batching.allocator import SlotAllocator
 from cantollm.engine.batching.config import BatchingConfig
 from cantollm.engine.batching.mux import EventMultiplexer
+from cantollm.engine.batching.stats import StepStatsCollector, StepUpdate
 from cantollm.engine.batching.types import (
     Abort,
     AddRequest,
@@ -49,7 +49,6 @@ from cantollm.engine.batching.types import (
     SchedulerLike,
     Shutdown,
 )
-from cantollm.engine.types import TokenEvent
 
 if TYPE_CHECKING:
     from cantollm.runtime import ModelRuntime
@@ -80,8 +79,9 @@ def scheduler_from_runtime(
 def drive_scheduler(
     scheduler: SchedulerLike,
     commands,
-    emit: Callable[[list[TokenEvent]], None],
+    emit: Callable[[StepUpdate], None],
     should_stop: Callable[[], bool] | None = None,
+    collector: StepStatsCollector | None = None,
 ) -> None:
     """The engine's steady-state loop: drain commands, apply, step, emit —
     until a Shutdown command arrives (returns) or the scheduler raises
@@ -96,6 +96,11 @@ def drive_scheduler(
     block becomes a poll and the loop re-checks it each iteration, so an
     engine whose API process died stops stepping instead of generating into
     a pipe nobody drains. When None (in-process), idle blocks indefinitely.
+
+    `collector` (bench instrumentation, see batching/stats.py) snapshots
+    scheduler state around each step; with one, every step emits — a
+    prefill-only step carries no events but its stats still matter. With
+    None the emission rule is unchanged: only steps with events emit.
     """
     while True:
         if should_stop is not None and should_stop():
@@ -127,10 +132,13 @@ def drive_scheduler(
         if scheduler.is_idle():
             continue
 
+        if collector is not None:
+            collector.before_step(scheduler)
         events = scheduler.step()
-        if events:
+        stats = collector.after_step(scheduler, events) if collector is not None else None
+        if events or stats is not None:
             # One emission per step, not per token (IPC-shaped).
-            emit(events)
+            emit(StepUpdate(events=events, stats=stats))
 
 
 class ContinuousBatchingEngine(EventMultiplexer):
@@ -139,6 +147,11 @@ class ContinuousBatchingEngine(EventMultiplexer):
         self.scheduler = scheduler
         self._commands: queue.Queue[Command] = queue.Queue()
         self._thread: threading.Thread | None = None
+        self.engine_stats.engine_kind = "batched-inprocess"
+        config = getattr(scheduler, "config", None)
+        if config is not None:
+            self.engine_stats.max_batch = config.max_batch
+            self.engine_stats.max_seq_len = config.max_seq_len
 
     @classmethod
     def from_runtime(
@@ -177,9 +190,10 @@ class ContinuousBatchingEngine(EventMultiplexer):
             drive_scheduler(
                 self.scheduler,
                 self._commands,
-                emit=lambda events: self._loop.call_soon_threadsafe(
-                    self._dispatch, events
+                emit=lambda update: self._loop.call_soon_threadsafe(
+                    self._dispatch_update, update
                 ),
+                collector=StepStatsCollector.for_scheduler(self.scheduler),
             )
         except Exception as exc:  # batch-wide by construction
             # Log with the traceback here, on the scheduler thread where

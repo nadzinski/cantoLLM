@@ -12,12 +12,13 @@ enters the picture, and macOS defaults to spawn anyway):
   submit()/abort() ──AddRequest/Abort/Shutdown──▶ command queue ──▶ child:
                                                   drive_scheduler()
                                                         │ one put per step:
-                                                        ▼ list[TokenEvent]
+                                                        ▼ StepUpdate(events, stats)
   per-request asyncio.Queues ◀─call_soon_threadsafe─ bridge thread
 
-Wire protocol child → parent, in order: `Ready` once the scheduler is built
-(start() blocks on it), then per-step event batches (plain lists — one
-pickle per step, never per token), then exactly one farewell:
+Wire protocol child → parent, in order: `Ready(load_seconds)` once the
+scheduler is built (start() blocks on it), then per-step `StepUpdate`s —
+the step's token events plus its bench stats record (batching/stats.py);
+one pickle per step, never per token — then exactly one farewell:
 `EngineFailed` (load or step failure; the child exits) or `Stopped`
 (Shutdown acknowledged).
 
@@ -44,6 +45,7 @@ import multiprocessing as mp
 import queue
 import signal
 import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -51,6 +53,7 @@ from typing import Any
 from cantollm.engine.batching.config import BatchingConfig
 from cantollm.engine.batching.engine import drive_scheduler, scheduler_from_runtime
 from cantollm.engine.batching.mux import EventMultiplexer
+from cantollm.engine.batching.stats import StepStatsCollector, StepUpdate
 from cantollm.engine.batching.types import Command, SchedulerLike, Shutdown
 
 logger = logging.getLogger(__name__)
@@ -67,7 +70,17 @@ SchedulerFactory = Callable[..., SchedulerLike]
 
 @dataclass(frozen=True)
 class Ready:
-    """Scheduler built, model loaded, commands welcome."""
+    """Scheduler built, model loaded, commands welcome.
+
+    Carries the bench harness's engine metadata (bench-spec.md §5): how
+    long the factory (weights download + load) took, and the built
+    scheduler's capacity — the child reports what it actually constructed
+    rather than the parent guessing from factory kwargs.
+    """
+
+    load_seconds: float = 0.0
+    max_batch: int | None = None
+    max_seq_len: int | None = None
 
 
 @dataclass(frozen=True)
@@ -119,6 +132,7 @@ def engine_process_main(
     logging.basicConfig(level=logging.INFO)
     parent = mp.parent_process()
 
+    load_start = time.perf_counter()
     try:
         scheduler = scheduler_factory(**factory_kwargs)
     except Exception as exc:
@@ -126,13 +140,19 @@ def engine_process_main(
         events.put(EngineFailed(f"engine process failed to start: {exc}"))
         return
 
-    events.put(Ready())
+    config = getattr(scheduler, "config", None)
+    events.put(Ready(
+        load_seconds=time.perf_counter() - load_start,
+        max_batch=getattr(config, "max_batch", None),
+        max_seq_len=getattr(config, "max_seq_len", None),
+    ))
     try:
         drive_scheduler(
             scheduler,
             commands,
             emit=events.put,
             should_stop=lambda: not parent.is_alive(),
+            collector=StepStatsCollector.for_scheduler(scheduler),
         )
     except Exception as exc:  # batch-wide by construction
         logger.exception("scheduler step failed; engine process exiting")
@@ -165,6 +185,7 @@ class EngineProcessClient(EventMultiplexer):
         self._events: mp.Queue | None = None
         self._proc: mp.Process | None = None
         self._bridge: threading.Thread | None = None
+        self.engine_stats.engine_kind = "batched-split"
 
     def _send_command(self, command: Command) -> None:
         try:
@@ -208,6 +229,9 @@ class EngineProcessClient(EventMultiplexer):
                     raise RuntimeError(self._failed)
                 continue
             if isinstance(msg, Ready):
+                self.engine_stats.load_seconds = msg.load_seconds
+                self.engine_stats.max_batch = msg.max_batch
+                self.engine_stats.max_seq_len = msg.max_seq_len
                 return
             if isinstance(msg, EngineFailed):
                 self._failed = msg.reason
@@ -252,8 +276,8 @@ class EngineProcessClient(EventMultiplexer):
                     )
                     return
                 continue
-            if isinstance(msg, list):
-                self._loop.call_soon_threadsafe(self._dispatch, msg)
+            if isinstance(msg, StepUpdate):
+                self._loop.call_soon_threadsafe(self._dispatch_update, msg)
             elif isinstance(msg, EngineFailed):
                 self._loop.call_soon_threadsafe(self._fail, msg.reason)
                 return
