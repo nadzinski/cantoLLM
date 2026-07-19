@@ -1,0 +1,54 @@
+# Exploration (not part of the Phase-2 baseline): how far does slot-count
+# scaling go on 0.6B? The baseline showed 8→16 slots lifting saturated
+# throughput 683→1145 tok/s with step time nearly independent of row count
+# (per-step-overhead-bound) — so keep adding rows until the curve bends.
+# 48×4096 slots is ~22 GB of KV; 64 would not leave weights headroom.
+# The level×slot cross product is deliberate: c=48 on 24 slots shows the
+# queue-wait TTFT, c=48 on 48 slots shows whether admission dissolves it.
+schema_version = 1
+name = "explore-5090-wide-slots"
+
+[server]
+model = "0.6B"
+engine = "batched"
+device = "cuda"
+port = 8377
+health_timeout_s = 900
+batch_max_seq_len = 4096
+max_tokens_per_step = 256
+
+[server.matrix]
+max_batch = [24, 32, 48]
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 8
+repeats = 3
+seed = 0
+
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [16]
+requests_per_level = 128
+
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [24]
+requests_per_level = 192
+
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [32]
+requests_per_level = 256
+
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [48]
+requests_per_level = 384

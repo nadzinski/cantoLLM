@@ -278,7 +278,12 @@ c=4, engine-ITL p99 ~196 ms from prefill stalls). Sharpest Phase 3 lead:
 0.6B step time is ~11.4 ms nearly independent of row count (occupancy 0.49
 vs 0.98, same step duration) — decode is per-step-overhead-bound, so CUDA
 graphs may matter more than SDPA on small models; SDPA's clearest win is
-long context.
+long context. A post-baseline wide-slots exploration
+(`explore_5090_wide_slots.toml`, max_batch up to 48) traced the row-scaling
+curve to its bend: 1913 tok/s at 48 fully-occupied slots with TTFT p50
+still 130 ms; step time fits ~9.2 ms fixed + ~0.29 ms/row (asymptote
+~3400 tok/s), so the free-rows regime ends around 16 rows — Phase 3's
+two constants, measured: CUDA graphs attack the floor, SDPA the slope.
 
 **Author note:** the in-process scheduler, batched forward, and padded KV
 are being written by hand by the project author for learning. Assistants
