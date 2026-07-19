@@ -399,6 +399,28 @@
   .queue-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; font-size: 12.5px; color: var(--ink2); }
   .queue-empty { color: var(--muted); font-style: italic; }
 
+  /* ---- flashattention ---- */
+  .fa-svg { display: block; width: 100%; max-width: 620px; height: auto; }
+  .fa-svg .fa-tile { fill: var(--plane); stroke: var(--grid); }
+  .fa-svg .fa-tile.cur { fill: color-mix(in srgb, var(--sA) 55%, var(--surface)); stroke: var(--sA); stroke-width: 1.6; }
+  .fa-svg .fa-tile.done { fill: color-mix(in srgb, var(--sA) 13%, var(--surface)); stroke: color-mix(in srgb, var(--sA) 35%, var(--grid)); }
+  .fa-svg .fa-tile.skip { fill: none; stroke: var(--grid); stroke-dasharray: 3 3; }
+  .fa-svg .fa-cut { fill: var(--surface); opacity: 0.85; pointer-events: none; }
+  .fa-svg .fa-diag { stroke: var(--axis); stroke-width: 1; }
+  .fa-svg .fa-lbl { font: 600 10px var(--mono); fill: var(--muted); text-anchor: middle; }
+  .fa-svg .fa-rlbl { font: 600 10px var(--mono); fill: var(--muted); text-anchor: end; }
+  .fa-svg .fa-brk { stroke: var(--axis); fill: none; }
+  .fa-svg .fa-io { fill: var(--plane); stroke: var(--axis); }
+  .fa-svg .fa-io.done { fill: color-mix(in srgb, var(--sB) 50%, var(--surface)); stroke: var(--sB); }
+  .fa-svg .fa-io.out.done { fill: var(--ink); stroke: var(--ink); }
+  .fa-svg .fa-io.cur { fill: color-mix(in srgb, var(--sC) 70%, var(--surface)); stroke: var(--sC); }
+  .fa-state-title { font: 600 12.5px var(--mono); margin: 2px 0 8px; }
+  .fa-state .fa-line { font-size: 12.5px; color: var(--ink2); padding: 4px 0; border-bottom: 1px dashed var(--grid); }
+  .fa-state .fa-line:last-child { border-bottom: 0; }
+  .fa-ctrs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .fa-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 11.5px; color: var(--ink2); align-items: center; }
+  .fa-legend .swatch { width: 11px; height: 11px; border-radius: 2px; display: inline-block; vertical-align: -1px; margin-right: 5px; }
+
   .tooltip {
     position: fixed; z-index: 10; pointer-events: none;
     background: var(--ink); color: var(--plane);
@@ -432,6 +454,7 @@
       <a href="#/weights" data-route="weights">Weights</a>
       <a href="#/batching" data-route="batching">Continuous batching</a>
       <a href="#/wiring" data-route="wiring">CB wiring</a>
+      <a href="#/flash" data-route="flash">FlashAttention</a>
     </nav>
   </header>
 
@@ -549,6 +572,17 @@
       step by step, blue pieces never changed.
     </p>
     <div id="wr-body"></div>
+  </section>
+
+  <!-- ================= FLASHATTENTION ================= -->
+  <section id="view-flash" data-view hidden>
+    <p class="view-sub">
+      Why Phase 3 swaps the einsum attention core for <code>F.scaled_dot_product_attention</code>: what
+      materializing the score tensor costs (anchored to this repo's own 5090 baseline), how FlashAttention
+      streams the same math through on-chip SRAM without the tensor ever existing, and what the fused CUDA
+      kernel actually does. Static design content, no trace needed — revisit when the <code>SDPABackend</code> lands.
+    </p>
+    <div id="fl-body"></div>
   </section>
 
   <footer id="foot"></footer>
@@ -672,6 +706,7 @@ const VIEW_INIT = {
   'weights': initWeights,
   'batching': initBatching,
   'wiring': initWiring,
+  'flash': initFlash,
 };
 
 function route() {
@@ -3324,6 +3359,272 @@ function initWiring() {
     st.card(cardBody);
   }
   setStage(0);
+}
+
+/* =============== flashattention view =============== */
+
+function initFlash() {
+  const body = $('fl-body');
+  const para = (html) => { const p = el('p', 'panel-note'); p.style.fontSize = '12.5px'; p.innerHTML = html; return p; };
+
+  /* ---------- panel 1: what the einsum path pays ---------- */
+  const p1 = el('section', 'panel');
+  p1.appendChild(el('h2', null, 'What the einsum path pays — the score tensor as a resident of HBM'));
+  p1.appendChild(para('The hand-written batched path (<code>models/attention/padded.py · forward_batched</code>) does what every unfused ' +
+    'attention does: compute the scores as a real tensor, then walk it through four more kernels. KV caching already spares it the full ' +
+    'S×S — queries are only the <i>new</i> tokens — but the new×history strip is plenty. Numbers below are the worst-case padded chunk-step ' +
+    'from the longctx baseline: <code>max_batch 4 × num_new 256 (padded) × history 8192</code>, Qwen3-0.6B ' +
+    '(16 heads as 8 KV groups × 2, head_dim 128, bf16). Every kernel boundary is a forced HBM round-trip — registers and SRAM don\'t ' +
+    'survive a kernel\'s end, so anything passed between kernels must live in HBM:'));
+  const anat1 = el('div', 'anat');
+  const opRow = (op, sub, html) => {
+    const r = el('div', 'anat-row');
+    const left = el('div', 'anat-op');
+    left.innerHTML = op + (sub ? ` <small>${sub}</small>` : '');
+    const right = el('div', 'panel-note');
+    right.style.margin = '0';
+    right.innerHTML = html;
+    r.append(left, right);
+    anat1.appendChild(r);
+  };
+  opRow('einsum("bighd,bjgd→bghij")', 'padded.py:125',
+    'One batched-matmul kernel. Its output — scores <code>(B4, G8, H2, new 256, hist 8192)</code> = 134 M values, <b>268 MB</b> in bf16 — ' +
+    'is written to HBM, because that is where kernel outputs go.');
+  opRow('.masked_fill(mask, −inf)', 'padded.py:129',
+    'Out-of-place elementwise kernel: reads the 268 MB back, writes a fresh 268 MB copy with the causal fence applied.');
+  opRow('softmax(x / √d, dim=−1)', 'padded.py:130',
+    'The divide is its own out-of-place kernel, then softmax — <b>two more full round-trips</b> (read + write each).');
+  opRow('einsum("bghij,bjgd→bighd")', 'padded.py:135',
+    'Reads all 268 MB of attention weights back one final time to produce the (comparatively tiny) output.');
+  opRow('total', 'per layer · per chunk-step',
+    '<b>≈ 2.1 GB of score traffic per layer, ~60 GB across 28 layers</b> — ≈ 33 ms at the 5090\'s ~1.8 TB/s for one worst-case step, in ' +
+    'memory traffic alone. The bench sees it: the longctx cell (c=4, 8 K prompts) runs 85 tok/s, engine ITL p50 26.6 ms / p99 196 ms, and ' +
+    'TTFT p50 ≈ 0.98 s ≈ 32 chunk-steps × ~30 ms. Decode steps (num_new = 1) shrink the tensor 256×, which is why short_chat barely ' +
+    'notices — and why SDPA attacks the <b>0.29 ms/row slope and the prefill stalls</b>, not the 8.97 ms floor.');
+  p1.appendChild(anat1);
+
+  /* ---------- panel 2: the tile animation ---------- */
+  const QB = 4, KB = 8, START_BLKS = 4;   // 256 new (4×64) against 256 cached; history = 512 = 8 KV blocks
+  const TILE = 46, PITCH = 51, GX = 78, GY = 64;
+
+  const steps = [{ t: 'intro' }];
+  for (let qi = 0; qi < QB; qi++) {
+    steps.push({ t: 'load', qi });
+    const lim = START_BLKS + qi;          // rightmost reachable KV block; partial (diagonal) tile
+    for (let kj = 0; kj <= lim; kj++) steps.push({ t: 'tile', qi, kj, part: kj === lim });
+    steps.push({ t: 'write', qi });
+  }
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 524 272');
+  svg.setAttribute('class', 'fa-svg');
+  const mk = (tag, attrs, text, parent) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (text !== undefined && text !== null) n.textContent = text;
+    (parent || svg).appendChild(n);
+    return n;
+  };
+
+  // brackets over cached vs new KV columns
+  const cachedEnd = GX + START_BLKS * PITCH - 5, newStart = GX + START_BLKS * PITCH;
+  mk('path', { d: `M ${GX} 40 v -6 H ${cachedEnd} v 6`, class: 'fa-brk' });
+  mk('path', { d: `M ${newStart} 40 v -6 H ${GX + KB * PITCH - 5} v 6`, class: 'fa-brk' });
+  mk('text', { x: (GX + cachedEnd) / 2, y: 26, class: 'fa-lbl' }, 'cached · start_pos = 256');
+  mk('text', { x: (newStart + GX + KB * PITCH - 5) / 2, y: 26, class: 'fa-lbl' }, 'new chunk · 256');
+  for (let c = 0; c < KB; c++) mk('text', { x: GX + c * PITCH + TILE / 2, y: 58, class: 'fa-lbl' }, `K${c}`);
+  mk('text', { x: 60, y: 58, class: 'fa-lbl' }, 'Q in');
+  mk('text', { x: 499, y: 58, class: 'fa-lbl' }, 'O out');
+
+  const tiles = [], qStrips = [], oStrips = [];
+  for (let qi = 0; qi < QB; qi++) {
+    const y = GY + qi * PITCH;
+    mk('text', { x: 44, y: y + TILE / 2 + 4, class: 'fa-rlbl' }, `Q${qi}`);
+    qStrips.push(mk('rect', { x: 50, y, width: 20, height: TILE, rx: 3, class: 'fa-io' }));
+    oStrips.push(mk('rect', { x: 489, y, width: 20, height: TILE, rx: 3, class: 'fa-io out' }));
+    tiles.push([]);
+    const lim = START_BLKS + qi;
+    for (let kj = 0; kj < KB; kj++) {
+      const x = GX + kj * PITCH;
+      const r = mk('rect', { x, y, width: TILE, height: TILE, rx: 3, class: 'fa-tile' + (kj > lim ? ' skip' : '') });
+      tiles[qi].push(kj > lim ? null : r);
+      if (kj === lim) {  // boundary tile: pale upper-right corner = masked in-register
+        mk('path', { d: `M ${x} ${y} L ${x + TILE} ${y} L ${x + TILE} ${y + TILE} Z`, class: 'fa-cut' });
+        mk('line', { x1: x, y1: y, x2: x + TILE, y2: y + TILE, class: 'fa-diag' });
+      }
+    }
+  }
+
+  const ctrs = el('div', 'fa-ctrs');
+  const cEin = el('span', 'statchip'), cFla = el('span', 'statchip');
+  ctrs.append(cEin, cFla);
+  const legend = el('div', 'fa-legend');
+  const leg = (style, label) => {
+    const s = el('span');
+    const sw = el('span', 'swatch'); sw.style.cssText = style;
+    s.append(sw, document.createTextNode(label));
+    legend.appendChild(s);
+  };
+  leg('background: color-mix(in srgb, var(--sA) 13%, var(--surface)); border: 1px solid var(--sA);', 'computed, then discarded — never left SRAM/registers');
+  leg('background: none; border: 1px dashed var(--axis);', 'never launched (causal skip)');
+  leg('background: linear-gradient(135deg, color-mix(in srgb, var(--sA) 13%, var(--surface)) 45%, var(--surface) 45%); border: 1px solid var(--axis);', 'boundary tile — mask applied in-register');
+  leg('background: color-mix(in srgb, var(--sB) 50%, var(--surface)); border: 1px solid var(--sB);', 'Q tile read from HBM, once');
+  leg('background: var(--ink); border: 1px solid var(--ink);', 'O tile written to HBM, once');
+
+  const p2 = el('section', 'panel');
+  p2.appendChild(el('h2', null, 'How flash streams it — the same trapezoid, tile by tile'));
+  p2.appendChild(para('One (batch row · head) slice of that same chunk-step, tiled 64×64: <b>4 query blocks × up to 8 KV blocks</b>. ' +
+    'Each query block is owned by one CUDA thread block for its whole life. The strips are the only HBM traffic; the grid in the middle ' +
+    'is compute that never gets an address. Scrub, or play.'));
+  const cols = el('div', 'cols-2');
+  const colL = el('div'), colR = el('div', 'fa-state');
+  colL.append(svg, ctrs, legend);
+  const stTitle = el('div', 'fa-state-title');
+  const stBody = el('div');
+  colR.append(stTitle, stBody);
+  cols.append(colL, colR);
+  p2.appendChild(cols);
+
+  /* ---------- panel 3: anatomy of the fused kernel ---------- */
+  const p3 = el('section', 'panel');
+  p3.appendChild(el('h2', null, 'Anatomy of the fused kernel — what one thread block does'));
+  p3.appendChild(para('“Fused” means matmul → mask → softmax → matmul happen inside <b>one</b> kernel launch instead of five, so the ' +
+    'intermediates can die in registers instead of crossing HBM between kernels. The launch itself:'));
+  const anat3 = el('div', 'anat');
+  const kRow = (op, sub, html) => {
+    const r = el('div', 'anat-row');
+    const left = el('div', 'anat-op');
+    left.innerHTML = op + (sub ? ` <small>${sub}</small>` : '');
+    const right = el('div', 'panel-note');
+    right.style.margin = '0';
+    right.innerHTML = html;
+    r.append(left, right);
+    anat3.appendChild(r);
+  };
+  kRow('1 · launch geometry', 'grid = (Q blocks, heads, rows)',
+    'One thread block per (query block, head, batch row) — for the chunk-step above that\'s 4·16·4 = <b>256 independent blocks</b> of ' +
+    '4–8 warps each, comfortably filling the 5090\'s 170 SMs. Each block owns its Q tile start to finish and never talks to the others.');
+  kRow('2 · prologue', 'HBM → SRAM, once',
+    'The block\'s Q tile (16 KB) loads into shared memory; fp32 accumulators <b>O</b>, <b>ℓ</b>, <b>m</b> zero out in registers. ' +
+    'SRAM is ~100–228 KB per SM depending on generation — tiny, but an order of magnitude faster than HBM. Tile sizes are picked ' +
+    'so Q + one K tile + one V tile + accumulators fit.');
+  kRow('3 · inner loop', 'stream K, V tiles',
+    '<code>S = Q·K_jᵀ/√d</code> on tensor cores — bf16 in, fp32 accumulate, result in <b>registers</b>. The causal check is a comparison ' +
+    'inside the loop (or the whole tile is skipped); the bool mask tensor <code>build_batched_mask</code> materializes simply has no ' +
+    'equivalent here.');
+  kRow('4 · online softmax', 'the algebra that makes streaming legal',
+    'Softmax normally needs the whole row before it can normalize. The trick: keep a running max <b>m</b> and running denominator ' +
+    '<b>ℓ</b>, and when a new tile raises the max, rescale everything accumulated so far by <code>e^(m−m′)</code>. Only m and ℓ — two ' +
+    'numbers per query row — persist between tiles. That identity is the entire reason the 268 MB never needs to exist at once.');
+  kRow('5 · epilogue', 'the only write',
+    '<code>O/ℓ</code> goes to HBM — 16 KB per block. Scores and softmax weights never had an address.');
+  kRow('6 · the honest ledger', 'more FLOPs, fewer bytes',
+    'Flash does <b>extra</b> arithmetic — every rescale is work the einsum path never does — and wins anyway, because attention at these ' +
+    'shapes is bandwidth-bound, not FLOPs-bound. (Training wins twice: the backward pass recomputes tiles instead of storing S, trading ' +
+    'FLOPs for memory again.)');
+  p3.appendChild(anat3);
+
+  /* ---------- panel 4: SDPA and Phase 3 ---------- */
+  const p4 = el('section', 'panel');
+  p4.appendChild(el('h2', null, 'SDPA and Phase 3 — where this lands in cantoLLM'));
+  p4.appendChild(para('<code>F.scaled_dot_product_attention</code> is not a kernel — it\'s a <b>dispatcher</b>. Per call it inspects ' +
+    'shapes, dtype, device, and mask, and routes to one of: the <b>flash</b> backend (the fused kernel above; happiest with ' +
+    '<code>is_causal</code> and no explicit mask), the <b>memory-efficient</b> backend (xFormers-style tiling; accepts arbitrary masks), ' +
+    'or the <b>math</b> fallback — which materializes scores exactly like the einsum path. Which backend you actually get is the whole ' +
+    'game, and the dispatch rules are torch-version-specific: verify against the pinned torch, don\'t assume.'));
+  p4.appendChild(para('The seam is already shaped for it: <code>SDPABackend</code> slots into the <code>AttentionMethod</code> protocol ' +
+    'next to the einsum and padded methods, touching neither the scheduler nor the KV layout. The einsum path stays as the correctness ' +
+    'oracle and Mac/CPU fallback — and the step-5 equivalence-suite pattern carries over with one change: flash reorders floating-point ' +
+    'accumulation by tile, so the contract is tolerance (<code>atol</code>), not bit-exactness. Design questions the hand-written ' +
+    'backend owns: our per-row ragged causality (<code>j ≤ start_pos + i</code>) handed over as an explicit bool mask likely lands on ' +
+    'the memory-efficient backend, while hitting flash means restructuring toward <code>is_causal</code>/varlen — deciding which truth ' +
+    'to hand SDPA <i>is</i> most of the design. Plus: <code>enable_gqa=True</code> instead of expanding K/V 2×, and padded query rows ' +
+    'still burn garbage compute (same tradeoff as today, same <code>max_tokens_per_step</code> tuning).'));
+  p4.appendChild(para('<b>What the baseline predicts:</b> SDPA claims the slope, not the floor. Expect the longctx cells ' +
+    '(85 tok/s, ITL p99 196 ms) and 4B-code prefill interference to move most, the 0.29 ms/row decode slope to flatten some, and 0.6B ' +
+    'short_chat decode — dominated by the 8.97 ms per-step floor — to barely move at all. That last one is the expected result, not a ' +
+    'failed optimization; the floor belongs to CUDA graphs. Phase 3 re-runs the same bench configs and compares in the panel: the ' +
+    'first before/after that measures an optimization rather than a feature.'));
+
+  /* ---------- transport + step logic ---------- */
+  const stepName = (s) => s.t === 'intro' ? 'setup' : s.t === 'load' ? `load Q${s.qi}` : s.t === 'tile' ? `tile (${s.qi},${s.kj})` : `write O${s.qi}`;
+  const transport = makeTransport({
+    max: steps.length - 1,
+    labelFn: (i) => `step ${i} / ${steps.length - 1} — ${stepName(steps[i])}`,
+    onSet: setStep,
+    playMs: 1100,
+    playLoopTo: 0,
+  });
+  activeTransports['flash'] = transport;
+
+  body.append(p1, transport.root, p2, p3, p4);
+
+  const line = (html) => { const d = el('div', 'fa-line'); d.innerHTML = html; return d; };
+
+  function setStep(i) {
+    const idxOf = {};
+    let loadIdx = {}, writeIdx = {};
+    steps.forEach((s, j) => {
+      if (s.t === 'tile') idxOf[s.qi + ',' + s.kj] = j;
+      if (s.t === 'load') loadIdx[s.qi] = j;
+      if (s.t === 'write') writeIdx[s.qi] = j;
+    });
+    let nTiles = 0;
+    for (let qi = 0; qi < QB; qi++) {
+      for (let kj = 0; kj < KB; kj++) {
+        const r = tiles[qi][kj];
+        if (!r) continue;
+        const j = idxOf[qi + ',' + kj];
+        r.setAttribute('class', 'fa-tile' + (j === i ? ' cur' : j < i ? ' done' : ''));
+        if (j <= i) nTiles++;
+      }
+      qStrips[qi].setAttribute('class', 'fa-io' + (loadIdx[qi] === i ? ' cur' : loadIdx[qi] < i ? ' done' : ''));
+      oStrips[qi].setAttribute('class', 'fa-io out' + (writeIdx[qi] === i ? ' cur' : writeIdx[qi] < i ? ' done' : ''));
+    }
+    cEin.innerHTML = `einsum path: <b>${(nTiles * 8)} KB</b> of scores materialized`;
+    cFla.innerHTML = `flash: <b>0 B</b>`;
+
+    const s = steps[i];
+    stBody.innerHTML = '';
+    if (s.t === 'intro') {
+      stTitle.textContent = 'the setup — one (batch row · head) of a real chunk-step';
+      stBody.append(
+        line('A prefill chunk: <b>256 new tokens</b> entering attention against <b>256 already cached</b> — one (row, head) slice of the ' +
+          'padded worst case from the panel above. Score strip: 256 × 512.'),
+        line('Flash tiles it 64 × 64. Each of the 4 query blocks is owned by one CUDA thread block, start to finish.'),
+        line('Causality — <code>j ≤ start_pos + i</code>, exactly <code>build_batched_mask</code>\'s rule — kills the top-right corner: ' +
+          'those tiles are <b>never launched</b>.'),
+        line('Press ▶ and watch what reaches HBM (the strips) vs. what only ever lives on-chip (the grid).'));
+    } else if (s.t === 'load') {
+      stTitle.textContent = `load Q${s.qi} — HBM → SRAM, once`;
+      stBody.append(
+        line(`Q block ${s.qi} (64 × 128 bf16, <b>16 KB</b>) streams into shared memory. It will be read against every KV tile in its row ` +
+          'without touching HBM again.'),
+        line('Registers: accumulator <b>O = 0</b> (64 × 128, fp32), running denominator <b>ℓ = 0</b>, running max <b>m = −∞</b>.'));
+    } else if (s.t === 'tile') {
+      stTitle.textContent = `tile (${s.qi}, ${s.kj}) — compute, rescale, discard`;
+      if (s.part) stBody.append(
+        line('<b>Boundary tile.</b> In-register causal mask: elements with <code>j &gt; start_pos + i</code> get −∞ — the comparison ' +
+          '<code>build_batched_mask</code> stores as a (B, new, hist) tensor is just an <code>if</code> here.'));
+      stBody.append(
+        line(`<b>S</b> = Q${s.qi}·K${s.kj}<sup>T</sup> / √128 — tensor cores, bf16 in / fp32 accumulate. 64 × 64, <b>registers only</b>.`),
+        line('<b>m′</b> = max(m, rowmax S) — the running max keeps every exp() in safe range.'),
+        line('<b>P</b> = e<sup>S − m′</sup>; correction c = e<sup>m − m′</sup> — everything summed under the old max gets rescaled by c.'),
+        line(`<b>O</b> ← c·O + P·V${s.kj} (V tile streamed in); <b>ℓ</b> ← c·ℓ + rowsum P; m ← m′.`),
+        line('Tile done: S and P die in registers. The einsum path would have <b>written these 8 KB to HBM</b> — then read them back ' +
+          'three more times.'));
+    } else {
+      stTitle.textContent = `write O${s.qi} — the only output`;
+      stBody.append(
+        line('<b>O</b> ← O / ℓ — the softmax denominator, applied once at the end instead of inside every tile.'),
+        line(`O block ${s.qi} (64 × 128, <b>16 KB</b>) is written to HBM — this row\'s only score-shaped side effect. Its full ` +
+          `64 × ${(START_BLKS + s.qi + 1) * 64} score strip was computed in full and never stored.`),
+        line('Scale check: this toy history is 512; grow it to the longctx run\'s 8192 and the discarded strip per (head · row) is the ' +
+          '268 MB-per-layer tensor from the first panel.'));
+    }
+  }
+  transport.set(0);
 }
 
 /* =============== boot =============== */

@@ -65,6 +65,14 @@ detail lives behind the zoom targets):
   piece morphed into which real module — with the decisions, tricky points,
   and review findings attached to the step they bit. Static design content,
   no trace needed; update it if the integration plan changes.
+- **FlashAttention** — Phase-3 design content: what the einsum path's
+  materialized score tensor costs (anchored to the 5090 longctx baseline
+  numbers), a steppable tile-streaming animation of the online-softmax
+  algorithm, an anatomy of the fused kernel (launch geometry, SRAM residency,
+  the running-max rescale, the single output write), and how
+  `F.scaled_dot_product_attention`'s backend dispatch + the planned
+  `SDPABackend` fit the `AttentionMethod` seam. Static design content, no
+  trace needed; revisit when the SDPA backend lands.
 
 ## Regenerating the traces
 
