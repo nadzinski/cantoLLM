@@ -82,7 +82,7 @@ _SERVER_DEFAULTS = {
 # [server] keys that translate into `canto serve` CLI flags.
 _SERVE_FLAG_KEYS = (
     "model", "engine", "device", "max_batch", "batch_max_seq_len",
-    "max_tokens_per_step",
+    "max_tokens_per_step", "attention",
 )
 
 

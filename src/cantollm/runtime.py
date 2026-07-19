@@ -21,6 +21,7 @@ from cantollm.models.attention import (
     BatchMeta,
     EinsumAttentionMethod,
     PaddedAttentionMethod,
+    SDPAAttentionMethod,
 )
 from cantollm.spec import ModelSpec
 from cantollm.speculative import SpeculativeBackend
@@ -136,18 +137,23 @@ def build_tokenizer_runtime(spec: ModelSpec) -> TokenizerRuntime:
     return TokenizerRuntime(spec, spec.tokenizer_factory(spec.tokenizer_files_loader()))
 
 
+_ATTENTION_METHODS = {
+    "einsum": EinsumAttentionMethod,
+    "padded": PaddedAttentionMethod,
+    "sdpa": SDPAAttentionMethod,
+}
+
+
 def _load_model(
     spec: ModelSpec,
     device: torch.device,
-    attention: Literal["einsum", "padded"] = "einsum",
+    attention: Literal["einsum", "padded", "sdpa"] = "einsum",
 ) -> tuple[torch.nn.Module, str]:
     print(f"Downloading {spec.size} model weights...")
     local_dir, weights_dict = spec.weights_loader()
 
     print("Creating model...")
-    attention_method = (
-        PaddedAttentionMethod() if attention == "padded" else EinsumAttentionMethod()
-    )
+    attention_method = _ATTENTION_METHODS[attention]()
     model = spec.model_cls(
         qwen3_config=spec.arch,
         attention_method=attention_method,
@@ -167,7 +173,7 @@ def build_runtime(
     device: torch.device,
     *,
     speculative: ModelSpec | None = None,
-    attention: Literal["einsum", "padded"] = "einsum",
+    attention: Literal["einsum", "padded", "sdpa"] = "einsum",
 ) -> ModelRuntime:
     if speculative is not None and attention != "einsum":
         # Speculative decoding stays on the sequential engine (PLAN.md:

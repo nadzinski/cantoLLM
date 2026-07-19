@@ -89,7 +89,7 @@ def cmd_serve(args):
             max_tokens_per_step=args.max_tokens_per_step,
         )
         if args.in_process:
-            runtime = build_runtime(spec, device, attention="padded")
+            runtime = build_runtime(spec, device, attention=args.attention)
             engine = ContinuousBatchingEngine.from_runtime(runtime, config)
             api_runtime = runtime
             where = "in-process"
@@ -98,7 +98,12 @@ def cmd_serve(args):
             # the app lifespan); the API process only ever holds the tokenizer.
             engine = EngineProcessClient(
                 build_qwen3_batched_scheduler,
-                {"size": args.model, "device": str(device), "config": config},
+                {
+                    "size": args.model,
+                    "device": str(device),
+                    "config": config,
+                    "attention": args.attention,
+                },
             )
             api_runtime = build_tokenizer_runtime(spec)
             where = "engine process"
@@ -110,7 +115,8 @@ def cmd_serve(args):
         engine_desc = (
             f"continuous batching, {where} (max_batch={config.max_batch}, "
             f"slot={config.max_seq_len} tok, "
-            f"budget={config.max_tokens_per_step} tok/step)"
+            f"budget={config.max_tokens_per_step} tok/step, "
+            f"attention={args.attention})"
         )
     else:
         if args.speculative:
@@ -278,6 +284,11 @@ def parse_args():
     serve_parser.add_argument("--max-tokens-per-step", type=int, default=256,
                               help="Batched engine: total new tokens per forward pass; "
                                    "bounds the prefill chunk width (default: 256)")
+    serve_parser.add_argument("--attention", choices=("padded", "sdpa"),
+                              default="padded",
+                              help="Batched engine: attention method (default: padded "
+                                   "einsum; sdpa = F.scaled_dot_product_attention, "
+                                   "Phase 3). The sequential engine always uses einsum")
     serve_parser.add_argument("--in-process", action="store_true",
                               help="Batched engine: run the scheduler inside the API "
                                    "process (debugging aid; default is a dedicated "

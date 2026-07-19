@@ -1,0 +1,58 @@
+# Phase-3 A/B: padded einsum vs SDPA attend, 0.6B batched, 5090.
+# The first before/after that measures an optimization rather than a feature
+# (PLAN.md Phase 3). Server geometry mirrors baseline_5090_longctx.toml so
+# the padded arm doubles as a re-validation against that history, and the
+# attention sweep is the comparison itself.
+#
+# Predictions on record (PLAN.md Phase 3 Status, step-profiling.md): SDPA
+# claims the slope and the prefill stalls, not the floor — expect the
+# long_context cells (85 tok/s, engine-ITL p99 ~196 ms pre-fix) to move
+# most, and the short_chat point to barely move (decode at these row counts
+# is nearly all per-step CPU-dispatch floor; that non-result is the
+# expected result). Run only after tests/test_sdpa_equivalence.py is green.
+schema_version = 1
+name = "ab-5090-sdpa"
+
+[server]
+model = "0.6B"
+engine = "batched"
+device = "cuda"
+port = 8377
+health_timeout_s = 900
+max_batch = 4
+batch_max_seq_len = 10240
+max_tokens_per_step = 512
+
+[server.matrix]
+attention = ["padded", "sdpa"]
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 4
+repeats = 3
+seed = 0
+
+# The claim: long context is where the materialized score strip hurts.
+[[points]]
+workload = "long_context"
+mode = "closed"
+concurrency = [1, 2, 4]
+requests_per_level = 16
+
+[[points]]
+workload = "long_context"
+mode = "closed"
+concurrency = [4]
+requests_per_level = 32
+
+# The floor-check: short_chat decode at this same geometry. Internally
+# comparable across the attention sweep (not against the 16-slot baseline —
+# different geometry); predicted to be a wash.
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [4]
+requests_per_level = 32

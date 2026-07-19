@@ -99,10 +99,11 @@ class Stopped:
 
 
 def build_qwen3_batched_scheduler(
-    size: str, device: str, config: BatchingConfig
+    size: str, device: str, config: BatchingConfig, attention: str = "padded"
 ) -> SchedulerLike:
     """Production factory — runs inside the engine process: download/load
-    weights onto `device` and compose the real scheduler."""
+    weights onto `device` and compose the real scheduler. `attention` picks
+    the batched attention method ("padded" or "sdpa")."""
     # Imported here, not at module top: runtime.py imports this package for
     # BatchingConfig, so a module-level import would be circular.
     import torch
@@ -110,7 +111,7 @@ def build_qwen3_batched_scheduler(
     from cantollm.runtime import build_runtime
     from cantollm.spec import qwen3_spec
 
-    runtime = build_runtime(qwen3_spec(size), torch.device(device), attention="padded")
+    runtime = build_runtime(qwen3_spec(size), torch.device(device), attention=attention)
     return scheduler_from_runtime(runtime, config)
 
 

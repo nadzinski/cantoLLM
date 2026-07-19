@@ -11,6 +11,12 @@ Fill-in order per continuous-batching-plan.md:
   - `build_batched_mask` — step 4 (geometry/bookkeeping).
   - `forward_batched` — step 5, hand-written (the attention math).
 Shape contracts live on the `AttentionMethod` protocol docstrings.
+
+`forward_batched` is a template: the KV-pool mechanics (validate, ragged
+write, gather) are shared by every pooled method, and the attention compute
+itself lives in `_attend_batched` — the single method `SDPAAttentionMethod`
+overrides. Keeping the mechanics literally the same code means an
+equivalence failure between the two can only be the attend.
 """
 
 from __future__ import annotations
@@ -112,6 +118,28 @@ class PaddedAttentionMethod:
         full_keys = layer_k[meta.slots, :meta.max_history_len]
         full_values = layer_v[meta.slots, :meta.max_history_len]
 
+        return self._attend_batched(queries, full_keys, full_values, mask)
+
+    def _attend_batched(
+        self,
+        queries: torch.Tensor,
+        full_keys: torch.Tensor,
+        full_values: torch.Tensor,
+        mask: torch.Tensor,
+    ) -> torch.Tensor:
+        """The attend: each row's queries against its gathered history.
+
+        The KV-pool mechanics (validate, ragged write, gather) live in
+        `forward_batched` and are shared by every pooled method; subclasses
+        swap only this compute.
+
+        Shapes:
+          queries:     (B, num_new_max, groups, heads_per_group, head_dim)
+          full_keys:   (B, max_history_len, groups, head_dim)
+          full_values: (B, max_history_len, groups, head_dim)
+          mask:        (B, num_new_max, max_history_len) bool, True = masked out
+          returns:     (B, num_new_max, groups, heads_per_group, head_dim)
+        """
         # Form attn matrices for each head by dot product along the head dim
         # I used to study General Relativity so I find einstein summations
         # easier to think about than complicated transpose sequences and
