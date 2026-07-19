@@ -44,7 +44,15 @@ class SDPAAttentionMethod(PaddedAttentionMethod):
         full_values: torch.Tensor,
         mask: torch.Tensor,
     ) -> torch.Tensor:
-        raise NotImplementedError(
-            "the SDPA attend is hand-written by the project author (Phase 3); "
-            "tests/test_sdpa_equivalence.py is the definition of done"
+        queries_sdpa = queries.flatten(2, 3).transpose(1, 2)
+        keys_sdpa = full_keys.transpose(1, 2)
+        values_sdpa = full_values.transpose(1, 2)
+        attn_mask = ~mask[:, None, :, :]
+        output = F.scaled_dot_product_attention(
+            queries_sdpa,
+            keys_sdpa,
+            values_sdpa,
+            attn_mask=attn_mask,
+            enable_gqa=True
         )
+        return output.transpose(1, 2).unflatten(2, (queries.shape[2], -1))
