@@ -99,9 +99,14 @@ class PaddedAttentionMethod:
                     f"[{start_pos}, {start_pos + num_new}) past slot capacity "
                     f"{slot_capacity}"
                 )
-        for r, (slot_idx, start_pos, num_new) in enumerate(meta.rows):
-            layer_k[slot_idx, start_pos:start_pos+num_new] = keys[r, :num_new]
-            layer_v[slot_idx, start_pos:start_pos+num_new] = values[r, :num_new]
+
+        # Optimization: Do the ragged write in one go for all rows using
+        # advanced indexing (a mapping in tensors that are created once per
+        # step for all layers, and which in CUDA live on-GPU) to avoid the
+        # overhead of a CPU->GPU dispatch for each row in each layer
+        m = meta.kv_write_map
+        layer_k[m.slot, m.pos] = keys[m.row, m.off]
+        layer_v[m.slot, m.pos] = values[m.row, m.off]
 
         # gather (pull the KV block out for active slots only, as far as meta.max_history_len)
         full_keys = layer_k[meta.slots, :meta.max_history_len]

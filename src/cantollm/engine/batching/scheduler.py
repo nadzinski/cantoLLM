@@ -75,8 +75,14 @@ def water_fill(budget: int, caps: list[int]) -> list[int]:
     return allocations
 
 
-def build_batch_meta(rows: list[Row]) -> BatchMeta:
-    """Per-step geometry from planned rows (see BatchMeta's docstrings)."""
+def build_batch_meta(
+    rows: list[Row], device: torch.device | None = None
+) -> BatchMeta:
+    """Per-step geometry from planned rows (see BatchMeta's docstrings).
+
+    `device` is where `meta.kv_write_map`'s index tensors land — pass the
+    KV pool's device so the per-step upload happens once, not per layer.
+    """
     specs = [row.slot_meta for row in rows]
     start_pos = torch.tensor([s[1] for s in specs])
     num_new = torch.tensor([s[2] for s in specs])
@@ -89,6 +95,7 @@ def build_batch_meta(rows: list[Row]) -> BatchMeta:
         positions=start_pos[:, None] + torch.arange(num_new_max)[None, :],
         num_new_max=num_new_max,
         max_history_len=int((start_pos + num_new).max()),
+        device=device,
     )
 
 
@@ -226,7 +233,7 @@ class ContinuousBatchingScheduler:
             return events
 
         input_ids = self._build_input_ids(rows)
-        meta = build_batch_meta(rows)
+        meta = build_batch_meta(rows, device=self.pool.k.device)
 
         logits = self.forward_fn(input_ids, meta, self.pool)
         sampled = []

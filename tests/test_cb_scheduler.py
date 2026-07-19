@@ -169,6 +169,56 @@ class TestProvidedPlumbing:
         assert meta.max_history_len == 8
         assert meta.positions.shape == (2, 3)
 
+    def test_kv_write_map(self):
+        # decode (slot 5, pos 100) + mid-prefill chunk of 3 (slot 2, from
+        # pos 256) + decode (slot 7, pos 41): one entry per real token,
+        # aligned across all four columns, pad offsets never addressed.
+        seq_a = CBSequence("a", [9] * 101, GREEDY, 500, set(), slot_idx=5, position=100)
+        seq_b = CBSequence("b", [9] * 600, GREEDY, 500, set(), slot_idx=2, position=256)
+        seq_c = CBSequence("c", [9] * 42, GREEDY, 500, set(), slot_idx=7, position=41)
+        rows = [
+            Row(seq_a, num_new=1, start_pos=100),
+            Row(seq_b, num_new=3, start_pos=256),
+            Row(seq_c, num_new=1, start_pos=41),
+        ]
+
+        meta = build_batch_meta(rows, device=torch.device("cpu"))
+        m = meta.kv_write_map
+
+        assert m.row.tolist() == [0, 1, 1, 1, 2]
+        assert m.off.tolist() == [0, 0, 1, 2, 0]
+        assert m.slot.tolist() == [5, 2, 2, 2, 7]
+        assert m.pos.tolist() == [100, 256, 257, 258, 41]
+        assert all(t.dtype == torch.long for t in m)
+        assert all(t.device.type == "cpu" for t in m)
+        # cached: every layer reads the same map, built once per step
+        assert meta.kv_write_map is m
+
+    def test_kv_write_map_matches_looped_writes(self):
+        # The mapping-driven scatter must land bytes exactly where the
+        # per-row slice-assign loop does (the forward_batched contract).
+        rows_spec = [(5, 100, 1), (2, 256, 3), (7, 41, 1)]
+        seqs = [
+            CBSequence(str(i), [9] * (start + num), GREEDY, 500, set(),
+                       slot_idx=slot, position=start)
+            for i, (slot, start, num) in enumerate(rows_spec)
+        ]
+        rows = [Row(seq, num_new=n, start_pos=s)
+                for seq, (_, s, n) in zip(seqs, rows_spec)]
+        meta = build_batch_meta(rows)
+        num_new_max = meta.num_new_max
+        keys = torch.randn(len(rows), num_new_max, 2, 4)
+
+        looped = torch.zeros(8, 512, 2, 4)
+        for r, (slot_idx, start_pos, num_new) in enumerate(meta.rows):
+            looped[slot_idx, start_pos:start_pos + num_new] = keys[r, :num_new]
+
+        scattered = torch.zeros(8, 512, 2, 4)
+        m = meta.kv_write_map
+        scattered[m.slot, m.pos] = keys[m.row, m.off]
+
+        assert torch.equal(scattered, looped)
+
     def test_constructor_rejects_mismatched_capacities(self):
         config = BatchingConfig(max_batch=2, max_seq_len=64, max_tokens_per_step=8)
         with pytest.raises(ValueError, match="slots"):

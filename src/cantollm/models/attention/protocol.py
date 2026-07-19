@@ -13,9 +13,33 @@ at `cantollm/engine/backend.py`.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from functools import cached_property
+from typing import NamedTuple, Protocol
 
 import torch
+
+
+class KVWriteMap(NamedTuple):
+    """The step's ragged KV write, flattened to one entry per real new token.
+
+    Entry k copies one token's (groups, head_dim) vector:
+    `keys[row[k], off[k]] → layer_k[slot[k], pos[k]]`. All four tensors are
+    (total_new,) long and aligned by position — the alignment is guaranteed
+    by construction (one walk over `BatchMeta.rows` appends all four values
+    per token), not by the types; don't rebuild any column independently.
+    """
+
+    row: torch.Tensor
+    """(total_new,) long — source row in the padded keys/values batch."""
+
+    off: torch.Tensor
+    """(total_new,) long — source offset along that row's num_new axis."""
+
+    slot: torch.Tensor
+    """(total_new,) long — destination slot in the KV pool."""
+
+    pos: torch.Tensor
+    """(total_new,) long — destination position within that slot."""
 
 
 @dataclass(frozen=True)
@@ -24,9 +48,10 @@ class BatchMeta:
 
     Built once per scheduler step and passed unchanged to every layer —
     per-row history lengths are the same across layers. Carries the same
-    facts twice on purpose: `rows` for the per-row bookkeeping loops
-    (ragged KV writes), the tensors for vectorized gathers (RoPE, slot
-    reads). Row order matches the `(B, ...)` batch dim everywhere.
+    facts twice on purpose: `rows` for the per-row bookkeeping (bounds
+    validation, deriving `kv_write_map`), the tensors for vectorized
+    gathers and scatters (RoPE, slot reads, KV writes). Row order matches
+    the `(B, ...)` batch dim everywhere.
     """
 
     rows: list[tuple[int, int, int]]
@@ -49,6 +74,46 @@ class BatchMeta:
 
     max_history_len: int
     """max(start_pos + num_new) over rows — the KV span attention reads."""
+
+    device: torch.device | None = None
+    """Where `kv_write_map`'s index tensors are created (None = CPU).
+    The other tensor fields stay host-side; advanced indexing accepts
+    either, at the cost of an implicit transfer per use."""
+
+    @cached_property
+    def kv_write_map(self) -> KVWriteMap:
+        """The ragged KV write as data instead of control flow.
+
+        Lets `forward_batched` replace its per-row slice-assign loop
+        (one dispatch per row per layer) with one gather + one scatter
+        per tensor:
+
+            m = meta.kv_write_map
+            layer_k[m.slot, m.pos] = keys[m.row, m.off]
+
+        Entries cover only real tokens (off < num_new), so pad columns
+        are never read. Destinations are unique — rows own distinct
+        slots, offsets are distinct within a row — so the scatter is
+        race-free. Cached: built once per step, reused by every layer.
+        """
+        row_l: list[int] = []
+        off_l: list[int] = []
+        slot_l: list[int] = []
+        pos_l: list[int] = []
+        for r, (slot, start, num_new) in enumerate(self.rows):
+            for off in range(num_new):
+                row_l.append(r)
+                off_l.append(off)
+                slot_l.append(slot)
+                pos_l.append(start + off)
+
+        def as_index(values: list[int]) -> torch.Tensor:
+            return torch.tensor(values, dtype=torch.long, device=self.device)
+
+        return KVWriteMap(
+            row=as_index(row_l), off=as_index(off_l),
+            slot=as_index(slot_l), pos=as_index(pos_l),
+        )
 
 
 class AttentionMethod(Protocol):
@@ -134,8 +199,9 @@ class AttentionMethod(Protocol):
         Write each row's new K/V into `layer_k/v[slot, start:start+num_new]`
         (bounds-assert the write — one overlong row must fail loudly, not
         corrupt a neighbor slot), then attend each row's queries against its
-        own slot history `[0, start_pos + num_new)`. Vectorize the math,
-        loop the writes.
+        own slot history `[0, start_pos + num_new)`. Vectorize the math
+        and the writes — the ragged write goes through `meta.kv_write_map`
+        as one gather + scatter per tensor, not a per-row loop.
 
         Shapes:
           queries: (B, num_new_max, groups, heads_per_group, head_dim), post-RoPE
