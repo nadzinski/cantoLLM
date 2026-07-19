@@ -71,7 +71,7 @@ detail lives behind the zoom targets):
   algorithm, an anatomy of the fused kernel (launch geometry, SRAM residency,
   the running-max rescale, the single output write), and how
   `F.scaled_dot_product_attention`'s backend dispatch + the planned
-  `SDPABackend` fit the `AttentionMethod` attachment point. Static design
+  `SDPAAttentionMethod` fit the `AttentionMethod` attachment point. Static design
   content, no trace needed; revisit when the SDPA backend lands.
 - **Flash walkthrough** — FlashAttention rebuilt bottom-up (companion to the
   FlashAttention tab, written from a full step-by-step walkthrough): the cast

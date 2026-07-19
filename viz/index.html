@@ -618,7 +618,7 @@
       Why Phase 3 swaps the einsum attention core for <code>F.scaled_dot_product_attention</code>: what
       materializing the score tensor costs (anchored to this repo's own 5090 baseline), how FlashAttention
       streams the same math through on-chip SRAM without the tensor ever existing, and what the fused CUDA
-      kernel actually does. Static design content, no trace needed — revisit when the <code>SDPABackend</code> lands.
+      kernel actually does. Static design content, no trace needed — revisit when the <code>SDPAAttentionMethod</code> lands.
     </p>
     <div id="fl-body"></div>
   </section>
@@ -956,8 +956,9 @@ function initRoadmap() {
       ] },
     { id: '3', title: 'CUDA beachhead', hw: '5090 · 1 H100 day', status: 'active',
       goal: 'First real perf-tuning pass, against a target whose shape is finally stable.',
+      statusLine: 'Status (2026-07-19): In progress. Step profiling (step-profiling.md) found the decode floor: CPU dispatch — ~2700 CUDA API calls/step, GPU ~60% idle. Top two sinks fixed (ragged KV write vectorized via KVWriteMap; sampling finalize batched to one transfer/step): 0.6B batched 1145 → 1469 tok/s (+28%), per-row cost at 8–16 rows down to ~0.04 ms/row. SDPA design decided: SDPAAttentionMethod keeps the explicit per-row bool mask → memory-efficient backend, accepted (still fused, scores never materialized); flash-proper via lengths metadata moved to Phase 4. Open: SDPA implementation + equivalence tests vs the einsum oracle, re-bench, torch.compile, CUDA graphs, the H100 day.',
       items: [
-        '<code>SDPABackend</code> (F.scaled_dot_product_attention) becomes the CUDA default; einsum stays the correctness reference and Mac fallback',
+        '<code>SDPAAttentionMethod</code> (F.scaled_dot_product_attention) becomes the CUDA default; einsum stays the correctness reference and Mac fallback',
         '<code>torch.compile</code> on the batched forward — dynamic shapes will fight back; compile per batch-size bucket; budget a day of <code>torch._dynamo.explain()</code>',
         'CUDA graphs for steady-state decode, captured per batch-size bucket (1, 4, 16, 32) with eager fallback — “this is exactly how vLLM does it; the implementation detail <i>is</i> the lesson”',
         'First true before/after bench vs Phase 2’s numbers',
@@ -971,10 +972,12 @@ function initRoadmap() {
       ] },
     { id: '4', title: 'paged KV', hw: '5090', status: 'future',
       goal: 'Replace padded contiguous KV with a block-indexed pool + block tables. The memory-management lesson.',
+      statusLine: 'Status (2026-07-19): Not started. Scope note: the flash-proper attention restructure moved here from Phase 3 — expressing raggedness as lengths metadata instead of an explicit mask tensor is the same interface change paging requires, so the two land together.',
       items: [
         '16-token blocks in one preallocated pool; per-request block tables mapping logical position → block id',
         'Allocator with free-list, refcounts, eviction; preemption via recompute-on-resume (swap-to-CPU as the fancy alternative)',
-        '<code>PagedBackend</code> slots into the same AttentionMethod seam — and inherits Phase 2’s runtime-owned-pool + handle shape (see the Weights tab for why: KV = the whole checkpoint at ~13k tokens)',
+        '<code>PagedAttentionMethod</code> slots into the same AttentionMethod protocol — and inherits Phase 2’s runtime-owned-pool + handle shape (see the Weights tab for why: KV = the whole checkpoint at ~13k tokens)',
+        'The attention call moves off F.scaled_dot_product_attention, which takes no block tables: raggedness + paging expressed as lengths-and-tables metadata (flash-attn varlen / flash_attn_with_kvcache, or FlexAttention with the causal bound as index arithmetic) — where flash proper replaces Phase 3’s explicit-mask compromise',
         'Bench: KV utilization and max concurrency climb materially',
       ] },
     { id: '5', title: 'prefix cache + routing', hw: '5090', status: 'future',
@@ -3675,19 +3678,22 @@ function initFlash() {
     '<code>is_causal</code> and no explicit mask), the <b>memory-efficient</b> backend (xFormers-style tiling; accepts arbitrary masks), ' +
     'or the <b>math</b> fallback — which materializes scores exactly like the einsum path. Which backend you actually get is the whole ' +
     'game, and the dispatch rules are torch-version-specific: verify against the pinned torch, don\'t assume.'));
-  p4.appendChild(para('The attachment point is already shaped for it: <code>SDPABackend</code> slots into the <code>AttentionMethod</code> protocol ' +
+  p4.appendChild(para('The attachment point is already shaped for it: <code>SDPAAttentionMethod</code> slots into the <code>AttentionMethod</code> protocol ' +
     'next to the einsum and padded methods, touching neither the scheduler nor the KV layout. The einsum path stays as the correctness ' +
     'oracle and Mac/CPU fallback — and the step-5 equivalence-suite pattern carries over with one change: flash reorders floating-point ' +
-    'accumulation by tile, so the contract is tolerance (<code>atol</code>), not bit-exactness. Design questions the hand-written ' +
-    'backend owns: our per-row ragged causality (<code>j ≤ start_pos + i</code>) handed over as an explicit bool mask likely lands on ' +
-    'the memory-efficient backend, while hitting flash means restructuring toward <code>is_causal</code>/varlen — deciding which truth ' +
-    'to hand SDPA <i>is</i> most of the design. Plus: <code>enable_gqa=True</code> instead of expanding K/V 2×, and padded query rows ' +
-    'still burn garbage compute (same tradeoff as today, same <code>max_tokens_per_step</code> tuning).'));
+    'accumulation by tile, so the contract is tolerance (<code>atol</code>), not bit-exactness. The mask question is decided ' +
+    '(2026-07-19): our per-row ragged causality (<code>j ≤ start_pos + i</code>) stays an explicit bool mask, which lands on the ' +
+    'memory-efficient backend — accepted, since it is still fused and never materializes S. Flash proper only applies masks it can ' +
+    'compute from index arithmetic (<code>is_causal</code>/varlen) and rejects mask tensors; that lengths-metadata restructure rides ' +
+    'with Phase 4\'s paged pool, which forces a metadata-driven read path anyway. Plus: <code>enable_gqa=True</code> instead of ' +
+    'expanding K/V 2×, and padded query rows still burn garbage compute (same tradeoff as today, same <code>max_tokens_per_step</code> ' +
+    'tuning).'));
   p4.appendChild(para('<b>What the baseline predicts:</b> SDPA claims the slope, not the floor. Expect the longctx cells ' +
-    '(85 tok/s, ITL p99 196 ms) and 4B-code prefill interference to move most, the 0.29 ms/row decode slope to flatten some, and 0.6B ' +
-    'short_chat decode — dominated by the 8.97 ms per-step floor — to barely move at all. That last one is the expected result, not a ' +
-    'failed optimization; the floor belongs to CUDA graphs. Phase 3 re-runs the same bench configs and compares in the panel: the ' +
-    'first before/after that measures an optimization rather than a feature.'));
+    '(85 tok/s, ITL p99 196 ms) and 4B-code prefill interference to move most — and 0.6B short_chat decode to barely move at all: ' +
+    'after the 2026-07-19 dispatch fixes the decode slope at 8–16 rows is already down to ~0.04 ms/row, so short-context decode is ' +
+    'nearly all per-step floor, and the floor belongs to CUDA graphs. That non-result is the expected result, not a failed ' +
+    'optimization. Phase 3 re-runs the same bench configs and compares in the panel: the first before/after that measures an ' +
+    'optimization rather than a feature.'));
 
   /* ---------- transport + step logic ---------- */
   const stepName = (s) => s.t === 'intro' ? 'setup' : s.t === 'load' ? `load Q${s.qi}` : s.t === 'tile' ? `tile (${s.qi},${s.kj})` : `write O${s.qi}`;
@@ -4111,7 +4117,7 @@ function initFlashWalk() {
       q0: 'dead', sq: null, sk: null, svv: null, m: null, l: null, o: null, tr: null, oDone: 2, lines: [
       '<b>Read</b>: Q0 (16 KB) + 9 K tiles (144 KB) + 9 V tiles (144 KB) = 304 KB. <b>Written</b>: 16 KB.',
       'Computed and discarded without ever having an address: nine tiles of S and P — 36 864 scores, exponentials, weights. The einsum path writes and re-reads that intermediate ~6×; here its HBM footprint is zero bytes.',
-      'When all 256 siblings have retired, the output tensor (4, 256, 16, 128) is complete and the kernel returns — to ordinary PyTorch land, where o_proj and the residual stream carry on, none the wiser. The trapezoid, the streaming, the rescales: invisible in the tensor signatures. That invisibility is why an SDPABackend can slot into the AttentionMethod protocol without the scheduler or KV layout knowing anything changed.'] },
+      'When all 256 siblings have retired, the output tensor (4, 256, 16, 128) is complete and the kernel returns — to ordinary PyTorch land, where o_proj and the residual stream carry on, none the wiser. The trapezoid, the streaming, the rescales: invisible in the tensor signatures. That invisibility is why an SDPAAttentionMethod can slot into the AttentionMethod protocol without the scheduler or KV layout knowing anything changed.'] },
   ];
   const setChip = (ref, spec, ghostSub, hl) => {
     if (!spec) { ref.c.className = 'fw-chip ghost'; ref.b.textContent = '—'; ref.s.textContent = ghostSub; return; }
@@ -4219,15 +4225,17 @@ function initFlashWalk() {
     'bandwidth-bound: it spends the cheap resource (FLOPs) to conserve the scarce one (HBM bytes). 304 KB read + 16 KB ' +
     'written per block, against an einsum path that walks the score strip through HBM ~6 times.');
   eRow('exact, not bit-identical', 'atol, never bit-equality',
-    'Streaming reorders the same floating-point sums, and addition isn\'t associative. The SDPABackend equivalence suite ' +
+    'Streaming reorders the same floating-point sums, and addition isn\'t associative. The SDPAAttentionMethod equivalence suite ' +
     'asserts tolerance against the einsum oracle (the step-5 pattern, atol ≈ 1e-5) — a bit-exact expectation would be wrong ' +
     'in principle, not just in practice.');
   eRow('F.scaled_dot_product_attention', 'a dispatcher, not a kernel',
     'Per call, PyTorch routes to one of: <b>flash</b> (the kernel above — wants is_causal/varlen-shaped truth), ' +
     '<b>memory-efficient</b> (tiled, accepts arbitrary masks), or <b>math</b> (materializes scores — the einsum path with ' +
-    'extra steps). Which backend you land on is the whole game: our per-row ragged causality handed over as an explicit bool ' +
-    'mask likely lands memory-efficient; hitting flash means restructuring toward is_causal/varlen. Deciding which truth to ' +
-    'hand it <i>is</i> most of the SDPABackend design, and dispatch rules are torch-version-specific — verify, don\'t assume.');
+    'extra steps). Which backend you land on is the whole game — and the Phase-3 shape is decided (2026-07-19): the ' +
+    'SDPAAttentionMethod keeps the explicit per-row bool mask and accepts memory-efficient — still fused, S never ' +
+    'materialized. Flash only applies masks it can compute from index arithmetic, so the lengths-metadata restructure ' +
+    '(varlen cu_seqlens / FlexAttention) moved to Phase 4, where paged KV forces that interface anyway. Dispatch rules are ' +
+    'torch-version-specific — verify which backend you actually got, don\'t assume.');
   eRow('what it claims here', 'the slope and the stalls — not the floor',
     'SDPA attacks per-token compute: the longctx cells (85 tok/s, engine ITL p99 196 ms, TTFT p50 ≈ 1 s of chunked prefill) ' +
     'are the target, plus 4B-code prefill interference. The ~9–10 ms per-step floor is CPU dispatch and belongs to CUDA ' +

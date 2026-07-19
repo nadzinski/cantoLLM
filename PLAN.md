@@ -378,13 +378,32 @@ The target is worth optimizing because its shape is stable — no major refactor
 invalidate the work (paged KV in Phase 4 _will_ reshape the attention path, but in a
 well-contained way).
 
+**Status (2026-07-19):** In progress. Opened with step profiling
+(`step-profiling.md`): the decode floor is CPU dispatch — ~2700 CUDA API calls
+per step, GPU ~60% idle — and the top two sinks are fixed (ragged KV write
+vectorized to one gather+scatter per tensor via `KVWriteMap`; sampling
+finalize batched to one device→host transfer per step): 0.6B batched
+1145 → 1469 tok/s (+28%), and the marginal per-row cost in the 8–16-row
+window collapsed to ~0.04 ms/row, so SDPA's case now rests on
+prefill/long-context, not decode slope. SDPA design decided: land
+`SDPAAttentionMethod` keeping the explicit per-row bool mask, which routes to
+the memory-efficient fused kernel rather than flash proper — flash only
+applies masks it can compute from index arithmetic and rejects mask tensors.
+Accepted deliberately: still fused, scores never materialized, zero
+scheduler/pool changes. The flash-proper restructure (raggedness as lengths
+metadata — varlen `cu_seqlens` / FlexAttention) moved to Phase 4, where the
+paged pool forces a metadata-driven read path anyway. Open: implement SDPA +
+equivalence tests against the einsum oracle, re-bench vs the Phase 2
+baselines, `torch.compile`, CUDA graphs, the H100 day.
+
 **Core, load-bearing:**
 
-- Add a new `SDPABackend` that delegates to `F.scaled_dot_product_attention` and make it
-  the default on CUDA. EinsumBackend stays as correctness reference and as the Mac/CPU
-  fallback. SDPA handles both the single-request and batched padded paths cleanly — it
-  slots straight into the `AttentionBackend` interface landed in Phase 2, without
-  disturbing the scheduler or KV layout.
+- Add a new `SDPAAttentionMethod` that delegates to
+  `F.scaled_dot_product_attention` and make it the default on CUDA.
+  `EinsumAttentionMethod` stays as correctness reference and as the Mac/CPU
+  fallback. SDPA handles both the single-request and batched padded paths
+  cleanly — it slots straight into the `AttentionMethod` protocol landed in
+  Phase 2, without disturbing the scheduler or KV layout.
 - Re-run the bench harness against the batched+SDPA engine. Compare to Phase 2's
   end-of-phase numbers. This is the first "before vs. after" comparison that actually
   measures an optimization rather than a feature.
@@ -448,10 +467,20 @@ basics that were deferred from Phase 1.
 **Goal:** replace padded contiguous KV with a block-indexed pool + block tables. The
 memory management lesson.
 
+**Status (2026-07-19):** Not started. Scope note: the flash-proper attention
+restructure moved here from Phase 3 (see its Status) — expressing raggedness
+as lengths metadata instead of an explicit mask tensor is the same interface
+change paging requires, so the two land together.
+
 - KV blocks of fixed size (16 tokens is the vLLM default) in a single preallocated pool.
 - Per-request block table mapping logical token positions → block IDs.
-- `PagedBackend` learns to gather K/V from non-contiguous blocks (slots into the Phase 3
-  `AttentionBackend` interface).
+- `PagedAttentionMethod` learns to gather K/V from non-contiguous blocks (slots into the
+  `AttentionMethod` protocol landed in Phase 2).
+- The attention call moves off `F.scaled_dot_product_attention`, which takes no block
+  tables: raggedness and paging get expressed as lengths + tables metadata (flash-attn's
+  varlen / `flash_attn_with_kvcache` entry points, or FlexAttention with the causal bound
+  as index arithmetic). This is also where the flash kernel proper replaces Phase 3's
+  memory-efficient-with-explicit-mask compromise.
 - Block allocator with free-list, refcounts, eviction policy.
 - Preemption support: when out of blocks, evict a low-priority request's cache
   (recompute-on-resume first; swap-to-CPU is a fancier alternative).
