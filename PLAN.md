@@ -395,10 +395,19 @@ metadata — varlen `cu_seqlens` / FlexAttention) moved to Phase 4, where the
 paged pool forces a metadata-driven read path anyway. The attend landed same
 day, author-hand-written (910b7bd on prep e54871a): equivalence green vs the
 padded oracle on CPU + MPS (398 tests), selectable via `--attention sdpa`
-end-to-end. Open: 5090 validation (the CUDA equivalence + dispatcher-tripwire
-tests, `bench/probe_sdpa.py`, the `ab_5090_sdpa.toml` A/B run) and the
-make-it-CUDA-default call from those numbers; then `torch.compile`, CUDA
-graphs, the H100 day.
+end-to-end. 5090 validation ran same day (`sdpa-results.md` is the record):
+the mem-efficient routing assumption was wrong on this stack — efficient
+rejects dense GQA, flash rejects the mask, and the one fused acceptor is
+cuDNN, which the default dispatcher ranks *below math*, so the attend ran
+silently unfused until pinned with `set_priority=True` (tripwire tests now
+assert the fused kernel actually executes). The A/B then found the real
+lesson: cuDNN compiles a ~200 ms plan per distinct problem shape, and CB
+churns shapes every step — SDPA loses end-to-end (longctx 80 → 23–57 tok/s,
+short_chat TTFT 13× worse) despite fused microbenchmark wins. **Padded
+stays the CUDA default.** Open: decide the response (bucket attention
+shapes to a bounded vocabulary + pre-warm — likely load-bearing for CUDA
+graphs too — vs. defer to Phase 4's varlen restructure, which dissolves
+the problem class); then `torch.compile`, CUDA graphs, the H100 day.
 
 **Core, load-bearing:**
 

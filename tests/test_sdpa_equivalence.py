@@ -205,30 +205,104 @@ class TestOnCUDA:
         got = self._cuda_step(sdpa, rows)
         torch.testing.assert_close(got, expected, atol=1e-4, rtol=1e-4)
 
-    def test_memory_efficient_backend_accepts_our_call(self):
-        """The decided design routes to mem-efficient. Pin the dispatcher to
-        it and run a mixed step: if our mask/layout combo can't route there,
-        PyTorch raises ('No available kernel') and the decision needs
-        revisiting — this test is the tripwire."""
-        from torch.nn.attention import SDPBackend, sdpa_kernel
+    # -- dispatcher tripwires --------------------------------------------
+    #
+    # These probe the RAW F.scaled_dot_product_attention call, not the
+    # model: the attend now pins its own backends internally, and nested
+    # sdpa_kernel contexts replace (not intersect) the outer one, so
+    # driving forward_batched under an outer pin would test nothing.
+    # Production geometry and dtype on purpose — cuDNN's support surface
+    # is dtype/shape-dependent (the f32 tiny model is the wrong probe).
 
-        _, sdpa = build_models()
-        rows = [(0, 0, PROMPT_B), (1, 0, PROMPT_C)]
-        with sdpa_kernel([SDPBackend.EFFICIENT_ATTENTION]):
-            self._cuda_step(sdpa, rows)
+    @staticmethod
+    def _raw_call(backend):
+        """Our exact call shape at 0.6B geometry: bf16, GQA 16q/8kv heads,
+        head_dim 128, explicit bool mask (True = attend), enable_gqa."""
+        import torch.nn.functional as F
+        from torch.nn.attention import sdpa_kernel
+
+        device = torch.device("cuda")
+        q = torch.randn(2, 16, 5, 128, dtype=torch.bfloat16, device=device)
+        k = torch.randn(2, 8, 64, 128, dtype=torch.bfloat16, device=device)
+        v = torch.randn(2, 8, 64, 128, dtype=torch.bfloat16, device=device)
+        mask = torch.ones(2, 1, 5, 64, dtype=torch.bool, device=device).tril(30)
+        with sdpa_kernel([backend]):
+            return F.scaled_dot_product_attention(
+                q, k, v, attn_mask=mask, enable_gqa=True
+            )
+
+    def test_cudnn_backend_accepts_our_call(self):
+        """The amended design (see sdpa.py's docstring) rests on cuDNN —
+        the one fused backend that takes both the explicit mask and dense
+        GQA on this stack, and the backend the attend now pins first. If
+        this raises ('No available kernel'), the production pin is falling
+        through to unfused math — this test is the tripwire."""
+        from torch.nn.attention import SDPBackend
+
+        self._raw_call(SDPBackend.CUDNN_ATTENTION)
+
+    def test_cudnn_matches_math_at_production_geometry(self):
+        """The pinned kernel's numerics vs the reference math backend, at
+        the dtype/shape the engine actually runs (the f32 tiny-model
+        equivalence above never exercises the cuDNN kernel). Loose bf16
+        tolerance; catches wrong-mask/wrong-head-mapping classes of bug."""
+        from torch.nn.attention import SDPBackend
+
+        torch.manual_seed(7)
+        got = self._raw_call(SDPBackend.CUDNN_ATTENTION)
+        torch.manual_seed(7)
+        expected = self._raw_call(SDPBackend.MATH)
+        torch.testing.assert_close(got, expected, atol=3e-2, rtol=1e-2)
+
+    def test_attend_runs_fused_on_cuda(self):
+        """The production-path tripwire: profile the real `_attend_batched`
+        at production dtype/geometry and assert a cuDNN SDPA kernel actually
+        ran. This is the check the pinned-backend tests above cannot make —
+        sdpa_kernel only restricts the backend set, and this build's default
+        priority ranks math above cuDNN, so without `set_priority=True` in
+        the attend the call silently runs unfused while every output-level
+        test stays green. Caught twice during 5090 bring-up; hence a test."""
+        from torch.profiler import ProfilerActivity, profile
+
+        device = torch.device("cuda")
+        method = SDPAAttentionMethod()
+        q = torch.randn(4, 1, 8, 2, 128, dtype=torch.bfloat16, device=device)
+        keys = torch.randn(4, 64, 8, 128, dtype=torch.bfloat16, device=device)
+        values = torch.randn(4, 64, 8, 128, dtype=torch.bfloat16, device=device)
+        mask = torch.zeros(4, 1, 64, dtype=torch.bool, device=device)
+        method._attend_batched(q, keys, values, mask)  # warm/dispatch once
+        torch.cuda.synchronize()
+        with profile(activities=[ProfilerActivity.CUDA]) as prof:
+            method._attend_batched(q, keys, values, mask)
+            torch.cuda.synchronize()
+        kernels = [
+            e.key for e in prof.key_averages() if e.self_device_time_total > 0
+        ]
+        assert any("sdpa" in k.lower() or "cudnn" in k.lower() for k in kernels), (
+            f"no fused SDPA kernel in the attend's profile — the pin fell "
+            f"through to the math backend. Kernels seen: {kernels}"
+        )
+
+    def test_memory_efficient_backend_rejects_our_call(self):
+        """Why the original decision was amended: mem-efficient does not
+        honor enable_gqa for dense inputs on this stack (torch 2.10/sm_120)
+        and rejects our head layout. If this ever starts passing, the
+        efficient route is back on the table — not actionable while cuDNN
+        is fused and fast, but worth knowing; note it in PLAN.md Phase 3."""
+        from torch.nn.attention import SDPBackend
+
+        with pytest.raises(RuntimeError):
+            self._raw_call(SDPBackend.EFFICIENT_ATTENTION)
 
     def test_flash_backend_rejects_our_mask(self):
-        """The documented reason for the decision: flash computes masks from
-        index arithmetic and takes no mask tensors. If this ever starts
-        passing under flash-only dispatch, the explicit-mask compromise is
-        obsolete — good news, revisit PLAN.md Phase 3/4."""
-        from torch.nn.attention import SDPBackend, sdpa_kernel
+        """The documented reason for the original decision: flash computes
+        masks from index arithmetic and takes no mask tensors. If this ever
+        starts passing under flash-only dispatch, the explicit-mask
+        compromise is obsolete — good news, revisit PLAN.md Phase 3/4."""
+        from torch.nn.attention import SDPBackend
 
-        _, sdpa = build_models()
-        rows = [(0, 0, PROMPT_B), (1, 0, PROMPT_C)]
-        with sdpa_kernel([SDPBackend.FLASH_ATTENTION]):
-            with pytest.raises(RuntimeError):
-                self._cuda_step(sdpa, rows)
+        with pytest.raises(RuntimeError):
+            self._raw_call(SDPBackend.FLASH_ATTENTION)
 
 
 @pytest.mark.skipif(

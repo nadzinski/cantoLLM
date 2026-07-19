@@ -14,6 +14,15 @@ The flash-proper restructure (raggedness as lengths metadata) rides with
 Phase 4's paged pool. `bench/probe_sdpa.py` verifies which backend the
 dispatcher actually picks on real hardware; don't assume.
 
+Amended on 5090 validation (2026-07-19, torch 2.10.0+cu128, sm_120): the
+memory-efficient kernel rejects dense GQA inputs (it does not honor
+`enable_gqa`; flash does but rejects the mask tensor), so the fused backend
+that actually takes this call is **cuDNN** — and the default dispatcher
+ranks cuDNN below math on this build, silently running the unfused math
+path. Hence the explicit `sdpa_kernel` pin below: cuDNN first, math kept as
+the CPU/MPS fallback so the attend stays runnable (and the equivalence
+suite meaningful) off-CUDA. Same design, corrected routing.
+
 Wrinkles the implementation owns (recorded from the design discussion):
   - layout: SDPA wants (B, num_heads, seq, head_dim); our contract is
     (B, num_new_max, groups, heads_per_group, head_dim) in and out.
@@ -32,6 +41,7 @@ from __future__ import annotations
 
 import torch
 import torch.nn.functional as F
+from torch.nn.attention import SDPBackend, sdpa_kernel
 
 from cantollm.models.attention.padded import PaddedAttentionMethod
 
@@ -48,11 +58,19 @@ class SDPAAttentionMethod(PaddedAttentionMethod):
         keys_sdpa = full_keys.transpose(1, 2)
         values_sdpa = full_values.transpose(1, 2)
         attn_mask = ~mask[:, None, :, :]
-        output = F.scaled_dot_product_attention(
-            queries_sdpa,
-            keys_sdpa,
-            values_sdpa,
-            attn_mask=attn_mask,
-            enable_gqa=True
-        )
+        # cuDNN pinned ahead of math, which stays listed as the CPU/MPS
+        # fallback. set_priority is load-bearing: without it sdpa_kernel
+        # only restricts the backend *set*, and this build's default
+        # priority ranks math above cuDNN — the call would silently run
+        # unfused (see the amendment in the module docstring).
+        with sdpa_kernel(
+            [SDPBackend.CUDNN_ATTENTION, SDPBackend.MATH], set_priority=True
+        ):
+            output = F.scaled_dot_product_attention(
+                queries_sdpa,
+                keys_sdpa,
+                values_sdpa,
+                attn_mask=attn_mask,
+                enable_gqa=True
+            )
         return output.transpose(1, 2).unflatten(2, (queries.shape[2], -1))
