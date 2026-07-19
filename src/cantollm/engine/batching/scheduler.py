@@ -236,13 +236,21 @@ class ContinuousBatchingScheduler:
         meta = build_batch_meta(rows, device=self.pool.k.device)
 
         logits = self.forward_fn(input_ids, meta, self.pool)
-        sampled = []
+
+        # Optimization: we don't pull data back onto CPU until the end, as
+        # item() in the loop was causing the CPU to wait for the GPU, starving
+        # the GPU of future work
+        toks, lps = [], []
         for r, row in enumerate(rows):
             token_tensor, probs = sampler.sample(
                 logits[r], row.sequence.sampling_params
             )
-            token = int(token_tensor.item())
-            sampled.append((token, probs[token].log().item()))
+            toks.append(token_tensor)
+            lps.append(probs[token_tensor].log())
+
+        tokens = torch.stack(toks).cpu().tolist()
+        log_probs = torch.stack(lps).cpu().tolist()
+        sampled = list(zip(tokens, log_probs))
 
         still_active = []
         for row, (token, logprob) in zip(rows, sampled):
