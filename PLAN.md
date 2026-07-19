@@ -392,9 +392,13 @@ applies masks it can compute from index arithmetic and rejects mask tensors.
 Accepted deliberately: still fused, scores never materialized, zero
 scheduler/pool changes. The flash-proper restructure (raggedness as lengths
 metadata — varlen `cu_seqlens` / FlexAttention) moved to Phase 4, where the
-paged pool forces a metadata-driven read path anyway. Open: implement SDPA +
-equivalence tests against the einsum oracle, re-bench vs the Phase 2
-baselines, `torch.compile`, CUDA graphs, the H100 day.
+paged pool forces a metadata-driven read path anyway. The attend landed same
+day, author-hand-written (910b7bd on prep e54871a): equivalence green vs the
+padded oracle on CPU + MPS (398 tests), selectable via `--attention sdpa`
+end-to-end. Open: 5090 validation (the CUDA equivalence + dispatcher-tripwire
+tests, `bench/probe_sdpa.py`, the `ab_5090_sdpa.toml` A/B run) and the
+make-it-CUDA-default call from those numbers; then `torch.compile`, CUDA
+graphs, the H100 day.
 
 **Core, load-bearing:**
 

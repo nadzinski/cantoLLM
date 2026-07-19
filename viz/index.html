@@ -618,7 +618,8 @@
       Why Phase 3 swaps the einsum attention core for <code>F.scaled_dot_product_attention</code>: what
       materializing the score tensor costs (anchored to this repo's own 5090 baseline), how FlashAttention
       streams the same math through on-chip SRAM without the tensor ever existing, and what the fused CUDA
-      kernel actually does. Static design content, no trace needed — revisit when the <code>SDPAAttentionMethod</code> lands.
+      kernel actually does. Static design content, no trace needed. The <code>SDPAAttentionMethod</code> landed 2026-07-19
+      (author-hand-written); revisit with the 5090 A/B numbers.
     </p>
     <div id="fl-body"></div>
   </section>
@@ -956,7 +957,7 @@ function initRoadmap() {
       ] },
     { id: '3', title: 'CUDA beachhead', hw: '5090 · 1 H100 day', status: 'active',
       goal: 'First real perf-tuning pass, against a target whose shape is finally stable.',
-      statusLine: 'Status (2026-07-19): In progress. Step profiling (step-profiling.md) found the decode floor: CPU dispatch — ~2700 CUDA API calls/step, GPU ~60% idle. Top two sinks fixed (ragged KV write vectorized via KVWriteMap; sampling finalize batched to one transfer/step): 0.6B batched 1145 → 1469 tok/s (+28%), per-row cost at 8–16 rows down to ~0.04 ms/row. SDPA design decided: SDPAAttentionMethod keeps the explicit per-row bool mask → memory-efficient backend, accepted (still fused, scores never materialized); flash-proper via lengths metadata moved to Phase 4. Open: SDPA implementation + equivalence tests vs the einsum oracle, re-bench, torch.compile, CUDA graphs, the H100 day.',
+      statusLine: 'Status (2026-07-19): In progress. Step profiling (step-profiling.md) found the decode floor: CPU dispatch — ~2700 CUDA API calls/step, GPU ~60% idle. Top two sinks fixed (ragged KV write vectorized via KVWriteMap; sampling finalize batched to one transfer/step): 0.6B batched 1145 → 1469 tok/s (+28%), per-row cost at 8–16 rows down to ~0.04 ms/row. SDPA design decided: SDPAAttentionMethod keeps the explicit per-row bool mask → memory-efficient backend, accepted (still fused, scores never materialized); flash-proper via lengths metadata moved to Phase 4. The attend landed same day, author-hand-written (910b7bd on prep e54871a): equivalence green vs the padded oracle on CPU + MPS, selectable via --attention sdpa end-to-end. Open: 5090 validation (CUDA equivalence + dispatcher-tripwire tests, bench/probe_sdpa.py, the ab_5090_sdpa.toml A/B run) and the make-it-CUDA-default call from those numbers; then torch.compile, CUDA graphs, the H100 day.',
       items: [
         '<code>SDPAAttentionMethod</code> (F.scaled_dot_product_attention) becomes the CUDA default; einsum stays the correctness reference and Mac fallback',
         '<code>torch.compile</code> on the batched forward — dynamic shapes will fight back; compile per batch-size bucket; budget a day of <code>torch._dynamo.explain()</code>',
