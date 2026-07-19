@@ -957,9 +957,9 @@ function initRoadmap() {
       ] },
     { id: '3', title: 'CUDA beachhead', hw: '5090 · 1 H100 day', status: 'active',
       goal: 'First real perf-tuning pass, against a target whose shape is finally stable.',
-      statusLine: 'Status (2026-07-19): In progress. Step profiling (step-profiling.md) found the decode floor: CPU dispatch — ~2700 CUDA API calls/step, GPU ~60% idle. Top two sinks fixed (ragged KV write vectorized via KVWriteMap; sampling finalize batched to one transfer/step): 0.6B batched 1145 → 1469 tok/s (+28%), per-row cost at 8–16 rows down to ~0.04 ms/row. SDPA design decided: SDPAAttentionMethod keeps the explicit per-row bool mask → memory-efficient backend, accepted (still fused, scores never materialized); flash-proper via lengths metadata moved to Phase 4. The attend landed same day, author-hand-written (910b7bd on prep e54871a): equivalence green vs the padded oracle on CPU + MPS, selectable via --attention sdpa end-to-end. Open: 5090 validation (CUDA equivalence + dispatcher-tripwire tests, bench/probe_sdpa.py, the ab_5090_sdpa.toml A/B run) and the make-it-CUDA-default call from those numbers; then torch.compile, CUDA graphs, the H100 day.',
+      statusLine: 'Status (2026-07-19): In progress. Step profiling (step-profiling.md) found the decode floor: CPU dispatch — ~2700 CUDA API calls/step, GPU ~60% idle. Top two sinks fixed (ragged KV write vectorized via KVWriteMap; sampling finalize batched to one transfer/step): 0.6B batched 1145 → 1469 tok/s (+28%). SDPA landed (author-hand-written attend, 910b7bd) and was validated on the 5090 same day — sdpa-results.md is the record: the mem-efficient routing assumption was wrong (efficient rejects dense GQA, flash rejects the mask; the one fused acceptor is cuDNN, which default priority ranks below math — the attend ran silently unfused until pinned with set_priority=True; tripwire tests now assert the fused kernel executes). The A/B then found the real lesson: cuDNN compiles a ~200 ms plan per distinct problem shape and CB churns shapes every step — SDPA loses end-to-end (longctx 80 → 23–57 tok/s, short_chat TTFT 13× worse) despite fused microbenchmark wins. Padded stays the CUDA default. Open: the response (bucket attention shapes + pre-warm — likely load-bearing for CUDA graphs too — vs defer to Phase 4 varlen); then torch.compile, CUDA graphs, the H100 day.',
       items: [
-        '<code>SDPAAttentionMethod</code> (F.scaled_dot_product_attention) becomes the CUDA default; einsum stays the correctness reference and Mac fallback',
+        '<code>SDPAAttentionMethod</code> (F.scaled_dot_product_attention) landed and validated — but cuDNN&#39;s per-shape ~200 ms plan compiles lose the A/B under CB&#39;s shape churn, so padded <i>stays</i> the CUDA default; the shape-bucketing / Phase-4-varlen decision is the open response',
         '<code>torch.compile</code> on the batched forward — dynamic shapes will fight back; compile per batch-size bucket; budget a day of <code>torch._dynamo.explain()</code>',
         'CUDA graphs for steady-state decode, captured per batch-size bucket (1, 4, 16, 32) with eager fallback — “this is exactly how vLLM does it; the implementation detail <i>is</i> the lesson”',
         'First true before/after bench vs Phase 2’s numbers',
@@ -1058,7 +1058,7 @@ function initRoadmap() {
   });
   // "you are here" flag
   mk('text', { x: xActive, y: LY + 68, style: 'font:700 11px var(--sans);letter-spacing:.06em;fill:#8a5a00;text-anchor:middle' }, '▲ YOU ARE HERE');
-  mk('text', { x: xActive, y: LY + 84, style: 'font:10.5px var(--sans);fill:var(--muted);text-anchor:middle' }, 'baseline in hand — SDPA, then compile + CUDA graphs');
+  mk('text', { x: xActive, y: LY + 84, style: 'font:10.5px var(--sans);fill:var(--muted);text-anchor:middle' }, 'SDPA validated (padded stays default) — shape bucketing?, compile, CUDA graphs');
 
   const diagPanel = el('section', 'panel');
   diagPanel.appendChild(el('h2', null, 'The line — phases 0 → 10, from PLAN.md'));
