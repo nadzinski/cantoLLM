@@ -400,7 +400,7 @@
   .queue-empty { color: var(--muted); font-style: italic; }
 
   /* ---- flashattention ---- */
-  .fa-svg { display: block; width: 100%; max-width: 620px; height: auto; }
+  .fa-svg { display: block; width: 100%; max-width: 740px; height: auto; }
   .fa-svg .fa-tile { fill: var(--plane); stroke: var(--grid); }
   .fa-svg .fa-tile.cur { fill: color-mix(in srgb, var(--sA) 55%, var(--surface)); stroke: var(--sA); stroke-width: 1.6; }
   .fa-svg .fa-tile.done { fill: color-mix(in srgb, var(--sA) 13%, var(--surface)); stroke: color-mix(in srgb, var(--sA) 35%, var(--grid)); }
@@ -414,12 +414,49 @@
   .fa-svg .fa-io.done { fill: color-mix(in srgb, var(--sB) 50%, var(--surface)); stroke: var(--sB); }
   .fa-svg .fa-io.out.done { fill: var(--ink); stroke: var(--ink); }
   .fa-svg .fa-io.cur { fill: color-mix(in srgb, var(--sC) 70%, var(--surface)); stroke: var(--sC); }
+  .fa-svg .fa-zcap { font: 9.5px var(--mono); fill: var(--muted); text-anchor: middle; }
   .fa-state-title { font: 600 12.5px var(--mono); margin: 2px 0 8px; }
   .fa-state .fa-line { font-size: 12.5px; color: var(--ink2); padding: 4px 0; border-bottom: 1px dashed var(--grid); }
   .fa-state .fa-line:last-child { border-bottom: 0; }
   .fa-ctrs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .fa-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 11.5px; color: var(--ink2); align-items: center; }
   .fa-legend .swatch { width: 11px; height: 11px; border-radius: 2px; display: inline-block; vertical-align: -1px; margin-right: 5px; }
+
+  /* ---- flash walkthrough ---- */
+  .fw-map-svg { display: block; width: 100%; max-width: 430px; height: auto; }
+  .fw-board { display: flex; flex-direction: column; gap: 8px; }
+  .fw-zone { border: 1px solid var(--axis); border-radius: 8px; padding: 8px 10px; background: var(--surface); }
+  .fw-zone-name { font: 650 10px var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .fw-zone-name small { text-transform: none; letter-spacing: 0; font: 10.5px var(--sans); color: var(--muted); font-weight: 400; }
+  .fw-zone-name .fw-ctrs { margin-left: auto; display: flex; gap: 6px; }
+  .fw-zone-name .fw-ctrs .statchip { padding: 2px 8px; font-size: 11px; }
+  .fw-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .fw-chip { border: 1px solid var(--grid); background: var(--plane); border-radius: 6px; padding: 4px 9px; font: 600 11px var(--mono); color: var(--ink); }
+  .fw-chip small { display: block; font: 10px var(--sans); color: var(--muted); font-weight: 400; }
+  .fw-chip.cur { border-color: var(--sA); background: color-mix(in srgb, var(--sA) 14%, var(--surface)); }
+  .fw-chip.ghost { border-style: dashed; background: none; color: var(--muted); }
+  .fw-chip.dead { opacity: 0.45; }
+  .fw-poolgrp { display: inline-flex; gap: 5px; align-items: center; font: 600 10px var(--mono); color: var(--muted); }
+  .fw-cells { display: inline-flex; gap: 2px; }
+  .fw-cell { width: 21px; height: 21px; border: 1px solid var(--grid); border-radius: 3px; background: var(--plane); font: 8.5px var(--mono); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; }
+  .fw-cell.cur { border-color: var(--sA); background: color-mix(in srgb, var(--sA) 30%, var(--surface)); color: var(--ink); }
+  .fw-cell.done { background: color-mix(in srgb, var(--sB) 16%, var(--surface)); border-color: color-mix(in srgb, var(--sB) 40%, var(--grid)); }
+  .fw-cell.skip { border-style: dashed; background: none; }
+  .fw-toy-tape { display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap; }
+  .fw-tile-group { border: 1px dashed var(--axis); border-radius: 8px; padding: 6px 9px; display: flex; gap: 5px; align-items: center; }
+  .fw-tile-group.active { border-style: solid; border-color: var(--sA); background: color-mix(in srgb, var(--sA) 7%, var(--surface)); }
+  .fw-tile-group.spent { opacity: 0.55; }
+  .fw-tile-group .lbl { font: 10px var(--sans); color: var(--muted); margin-right: 3px; }
+  .fw-score { width: 30px; height: 30px; border: 1px solid var(--axis); border-radius: 5px; background: var(--surface); font: 600 13px var(--mono); display: inline-flex; align-items: center; justify-content: center; }
+  .fw-score.max { border-color: var(--sC); background: color-mix(in srgb, var(--sC) 22%, var(--surface)); }
+  .fw-truth { font: 11.5px var(--mono); color: var(--ink2); border: 1px solid var(--grid); border-radius: 6px; padding: 7px 10px; margin-top: 10px; line-height: 1.6; }
+  .fw-truth b { color: var(--ink); }
+  .fw-good { color: var(--good-text); font-weight: 650; }
+  .fw-org { border: 1px solid var(--axis); border-radius: 8px; padding: 8px 10px; margin-top: 8px; background: var(--surface); }
+  .fw-org .fw-org-t { font: 650 11.5px var(--mono); margin-bottom: 2px; }
+  .fw-org .fw-org-d { font: 11.5px var(--sans); color: var(--ink2); margin-bottom: 6px; }
+  .fw-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: 11.5px; color: var(--ink2); align-items: center; }
+  .fw-legend .swatch { width: 11px; height: 11px; border-radius: 2px; display: inline-block; vertical-align: -1px; margin-right: 5px; }
 
   .tooltip {
     position: fixed; z-index: 10; pointer-events: none;
@@ -455,6 +492,7 @@
       <a href="#/batching" data-route="batching">Continuous batching</a>
       <a href="#/wiring" data-route="wiring">CB wiring</a>
       <a href="#/flash" data-route="flash">FlashAttention</a>
+      <a href="#/flashwalk" data-route="flashwalk">Flash walkthrough</a>
     </nav>
   </header>
 
@@ -585,6 +623,18 @@
     <div id="fl-body"></div>
   </section>
 
+  <!-- ================= FLASH WALKTHROUGH ================= -->
+  <section id="view-flashwalk" data-view hidden>
+    <p class="view-sub">
+      FlashAttention rebuilt from the inside out: the cast of tensors one thread block owns, the
+      online-softmax algebra locked in with a five-number toy you can check by hand, the block's whole
+      life as a steppable state board (HBM / SRAM / registers), and where the parallelism actually
+      comes from. Shapes throughout are one real chunk-step on Qwen3-0.6B: 256 new tokens against
+      512 cached, one query head of one batch row. Static design content, no trace needed.
+    </p>
+    <div id="fw-body"></div>
+  </section>
+
   <footer id="foot"></footer>
 </div>
 
@@ -707,6 +757,7 @@ const VIEW_INIT = {
   'batching': initBatching,
   'wiring': initWiring,
   'flash': initFlash,
+  'flashwalk': initFlashWalk,
 };
 
 function route() {
@@ -3404,7 +3455,7 @@ function initFlash() {
   p1.appendChild(anat1);
 
   /* ---------- panel 2: the tile animation ---------- */
-  const QB = 4, KB = 8, START_BLKS = 4;   // 256 new (4×64) against 256 cached; history = 512 = 8 KV blocks
+  const QB = 4, KB = 12, START_BLKS = 8;   // 256 new (4×64) against 512 cached; history = 768 = 12 KV blocks
   const TILE = 46, PITCH = 51, GX = 78, GY = 64;
 
   const steps = [{ t: 'intro' }];
@@ -3417,7 +3468,7 @@ function initFlash() {
 
   const NS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('viewBox', '0 0 524 272');
+  svg.setAttribute('viewBox', '0 0 738 296');
   svg.setAttribute('class', 'fa-svg');
   const mk = (tag, attrs, text, parent) => {
     const n = document.createElementNS(NS, tag);
@@ -3431,18 +3482,23 @@ function initFlash() {
   const cachedEnd = GX + START_BLKS * PITCH - 5, newStart = GX + START_BLKS * PITCH;
   mk('path', { d: `M ${GX} 40 v -6 H ${cachedEnd} v 6`, class: 'fa-brk' });
   mk('path', { d: `M ${newStart} 40 v -6 H ${GX + KB * PITCH - 5} v 6`, class: 'fa-brk' });
-  mk('text', { x: (GX + cachedEnd) / 2, y: 26, class: 'fa-lbl' }, 'cached · start_pos = 256');
-  mk('text', { x: (newStart + GX + KB * PITCH - 5) / 2, y: 26, class: 'fa-lbl' }, 'new chunk · 256');
+  mk('text', { x: (GX + cachedEnd) / 2, y: 26, class: 'fa-lbl' }, 'in KV cache: start_pos = 512');
+  mk('text', { x: (newStart + GX + KB * PITCH - 5) / 2, y: 26, class: 'fa-lbl' }, 'new chunk: 256');
   for (let c = 0; c < KB; c++) mk('text', { x: GX + c * PITCH + TILE / 2, y: 58, class: 'fa-lbl' }, `K${c}`);
   mk('text', { x: 60, y: 58, class: 'fa-lbl' }, 'Q in');
-  mk('text', { x: 499, y: 58, class: 'fa-lbl' }, 'O out');
+  mk('text', { x: 703, y: 58, class: 'fa-lbl' }, 'O out');
+
+  // axis titles: the grid is the score matrix S = Q·Kᵀ — rows follow Q, columns follow the K/V history
+  const gridMidX = GX + (KB * PITCH - 5) / 2, gridMidY = GY + (QB * PITCH - 5) / 2;
+  mk('text', { x: gridMidX, y: 288, class: 'fa-lbl' }, 'K/V · history position j (512 cached + 256 new = 12 tiles × 64)');
+  mk('text', { x: 14, y: gridMidY, class: 'fa-lbl', transform: `rotate(-90 14 ${gridMidY})` }, 'Q · new-token index i (4 tiles × 64)');
 
   const tiles = [], qStrips = [], oStrips = [];
   for (let qi = 0; qi < QB; qi++) {
     const y = GY + qi * PITCH;
     mk('text', { x: 44, y: y + TILE / 2 + 4, class: 'fa-rlbl' }, `Q${qi}`);
     qStrips.push(mk('rect', { x: 50, y, width: 20, height: TILE, rx: 3, class: 'fa-io' }));
-    oStrips.push(mk('rect', { x: 489, y, width: 20, height: TILE, rx: 3, class: 'fa-io out' }));
+    oStrips.push(mk('rect', { x: 693, y, width: 20, height: TILE, rx: 3, class: 'fa-io out' }));
     tiles.push([]);
     const lim = START_BLKS + qi;
     for (let kj = 0; kj < KB; kj++) {
@@ -3474,17 +3530,103 @@ function initFlash() {
 
   const p2 = el('section', 'panel');
   p2.appendChild(el('h2', null, 'How flash streams it — the same trapezoid, tile by tile'));
-  p2.appendChild(para('One (batch row · head) slice of that same chunk-step, tiled 64×64: <b>4 query blocks × up to 8 KV blocks</b>. ' +
-    'Each query block is owned by one CUDA thread block for its whole life. The strips are the only HBM traffic; the grid in the middle ' +
-    'is compute that never gets an address. Scrub, or play.'));
+  p2.appendChild(para('The panel above prices the score tensor for the whole batch — <code>(B4, G8, H2, new, hist)</code>. This ' +
+    'animation zooms all the way in to <b>one query head of one batch row</b>, because that is exactly the slice one Flash thread ' +
+    'block family owns: a single 256 × 768 sheet of scores. The other 63 slices (4 batch rows × 16 heads) are being processed the ' +
+    'same way at the same time by their own thread blocks — picture 64 copies of this diagram running in parallel. (Under GQA, pairs ' +
+    'of query heads read the same cached K/V, but each query head still has its own score sheet.)'));
+  p2.appendChild(para('<b>The grid is that score sheet</b> — it inherits its axes from the matrix product S = Q·Kᵀ. A matmul\'s ' +
+    'result has one <b>row per row of Q</b> and one <b>column per row of K</b>, so the y-axis is the query tokens and the x-axis is ' +
+    'the key positions, and each axis is as long as the tensor behind it: 256 <i>new</i> tokens tall (queries only come from the new ' +
+    'chunk), 768 K/V positions wide (keys come from everything seen so far — 512 cached + 256 new; the cache side keeps growing as ' +
+    'the context does, the query side never exceeds the chunk). Cell (i, j) holds “how strongly ' +
+    'does new token i attend to position j”. Flash tiles the sheet 64 × 64 — 4 tile-rows × 12 tile-columns — and each tile-row is ' +
+    'owned by one CUDA thread block for its whole life, marching left → right through the K/V tiles. The strips at the edges are the ' +
+    'only HBM traffic; the grid between them is compute that never gets an address. Scrub, or play.'));
   const cols = el('div', 'cols-2');
   const colL = el('div'), colR = el('div', 'fa-state');
-  colL.append(svg, ctrs, legend);
+  const cap = para('Reading it: <b>y-axis = Q</b> (new-token index i, top → bottom) · <b>x-axis = K/V</b> (history position j, ' +
+    'left → right) · each cell = a 64 × 64 tile of scores. One query head of one batch row; 64 sibling sheets run concurrently.');
+  cap.style.margin = '6px 0 0';
+  colL.append(svg, cap, ctrs, legend);
   const stTitle = el('div', 'fa-state-title');
   const stBody = el('div');
   colR.append(stTitle, stBody);
   cols.append(colL, colR);
   p2.appendChild(cols);
+
+  /* ---------- panel 2b: zoom one tile deep ---------- */
+  const p2b = el('section', 'panel');
+  p2b.appendChild(el('h2', null, 'Zoom: one tile deep — Q0, K0, K8, O0'));
+  p2b.appendChild(para('The grid above treats tiles as featureless squares; here is what four of them actually contain. Each bar is ' +
+    '<b>one token\'s 128-dim vector</b> in this head\'s space — 128 bf16 numbers, drawn as a bar because the columns won\'t fit. ' +
+    'Vectors are what these matrices hold; dot products are what the kernel does with them.'));
+
+  const zsvg = document.createElementNS(NS, 'svg');
+  zsvg.setAttribute('viewBox', '0 0 740 244');
+  zsvg.setAttribute('class', 'fa-svg');
+  const zmk = (tag, attrs, text) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (text !== undefined && text !== null) n.textContent = text;
+    zsvg.appendChild(n);
+    return n;
+  };
+  const MW = 76, MTOP = 56, BAR_YS = [62, 78, 94, 110, 140, 156, 172], BAR_H = 10;
+  const zmat = (x, name, sub1, sub2, hl) => {
+    zmk('rect', { x, y: MTOP, width: MW, height: 130, rx: 4, fill: 'none', stroke: 'var(--axis)' });
+    zmk('text', { x: x + MW / 2, y: 48, class: 'fa-lbl' }, name);
+    BAR_YS.forEach((y, i) => {
+      const isHl = hl && hl.idx === i;
+      zmk('rect', { x: x + 6, y, width: MW - 12, height: BAR_H, rx: 2,
+        fill: isHl ? hl.fill : 'var(--plane)', stroke: isHl ? hl.stroke : 'var(--grid)' });
+      if (isHl && hl.label) zmk('text', { x: x + MW + 5, y: y + BAR_H - 2, class: 'fa-zcap', 'text-anchor': 'start' }, hl.label);
+    });
+    zmk('text', { x: x + MW / 2, y: 134, class: 'fa-zcap' }, '⋮');
+    zmk('text', { x: x + MW / 2, y: 206, class: 'fa-zcap' }, sub1);
+    zmk('text', { x: x + MW / 2, y: 218, class: 'fa-zcap' }, sub2);
+  };
+  zmat(24, 'Q0 (64 × 128)', 'made this step', 'never cached',
+    { idx: 2, fill: 'color-mix(in srgb, var(--sB) 50%, var(--surface))', stroke: 'var(--sB)', label: 'q_t' });
+  zmat(136, 'K0 (64 × 128)', 'from the KV pool', 'written steps ago',
+    { idx: 5, fill: 'color-mix(in srgb, var(--sC) 70%, var(--surface))', stroke: 'var(--sC)', label: 'k_j' });
+  zmat(248, 'K8 (64 × 128)', 'from the KV pool', 'written this step', null);
+  // the S tile the Q/K rows produce — dashed: it never gets an HBM address
+  zmk('rect', { x: 386, y: 76, width: 96, height: 96, rx: 4, fill: 'none', stroke: 'var(--axis)', 'stroke-dasharray': '4 3' });
+  zmk('rect', { x: 386 + 5 * 12, y: 76 + 2 * 12, width: 12, height: 12,
+    fill: 'color-mix(in srgb, var(--sA) 55%, var(--surface))', stroke: 'var(--sA)' });
+  zmk('text', { x: 434, y: 48, class: 'fa-lbl' }, 'S tile (64 × 64)');
+  zmk('text', { x: 434, y: 206, class: 'fa-zcap' }, 'registers only');
+  zmk('text', { x: 434, y: 218, class: 'fa-zcap' }, 'never in HBM');
+  zmk('line', { x1: 486, y1: 124, x2: 546, y2: 124, stroke: 'var(--axis)' });
+  zmk('polygon', { points: '546,120 554,124 546,128', fill: 'var(--axis)' });
+  zmk('text', { x: 516, y: 116, class: 'fa-zcap' }, '× V, Σ');
+  zmat(560, 'O0 (64 × 128)', 'the only HBM write', '16 KB, once',
+    { idx: 2, fill: 'var(--ink)', stroke: 'var(--ink)', label: 'o_t' });
+  const zfx = zmk('text', { x: 370, y: 238, class: 'fa-lbl' });
+  const zseg = (t, fill) => {
+    const s = document.createElementNS(NS, 'tspan');
+    if (fill) s.setAttribute('fill', fill);
+    s.textContent = t;
+    zfx.appendChild(s);
+  };
+  zseg('S[t, j] = ');
+  zseg('q_t', 'var(--sB)');
+  zseg(' · ');
+  zseg('k_j', 'var(--sC)');
+  zseg(' / √128 — two 128-dim vectors in, one score out');
+  p2b.appendChild(zsvg);
+
+  p2b.appendChild(para('The 128 dims are <b>consumed by the dot product</b>: a score takes one Q row and one K row and contracts ' +
+    'them to a single number. That is why the score sheet has token × token axes and no 128-axis anywhere — the head dim exists in ' +
+    'the inputs and the output, but not in S. Softmax then turns each S row into weights, and row t of O0 is the weighted sum of V ' +
+    'rows (V tiles: same shape and provenance as K, minus RoPE — position belongs to the lookup, not the payload). O0 accumulates ' +
+    'in fp32 registers while all twelve K/V tiles stream past, is divided by ℓ once in the epilogue, and lands in HBM as the strip ' +
+    'the diagram above writes.'));
+  p2b.appendChild(para('K8 earns its place in the lineup: same shape, same pool, but its 64 rows are <i>the same tokens</i> as ' +
+    'Q0\'s rows — the chunk meeting itself. K8\'s rows were scattered into the pool moments earlier in this very step, and the ' +
+    '(Q0, K8) tile is the grid\'s first boundary tile: the causal rule <code>j ≤ start_pos + i</code> cuts straight through it, ' +
+    'the in-register mask doing locally what the skipped tiles to its right do wholesale.'));
 
   /* ---------- panel 3: anatomy of the fused kernel ---------- */
   const p3 = el('section', 'panel');
@@ -3533,7 +3675,7 @@ function initFlash() {
     '<code>is_causal</code> and no explicit mask), the <b>memory-efficient</b> backend (xFormers-style tiling; accepts arbitrary masks), ' +
     'or the <b>math</b> fallback — which materializes scores exactly like the einsum path. Which backend you actually get is the whole ' +
     'game, and the dispatch rules are torch-version-specific: verify against the pinned torch, don\'t assume.'));
-  p4.appendChild(para('The seam is already shaped for it: <code>SDPABackend</code> slots into the <code>AttentionMethod</code> protocol ' +
+  p4.appendChild(para('The attachment point is already shaped for it: <code>SDPABackend</code> slots into the <code>AttentionMethod</code> protocol ' +
     'next to the einsum and padded methods, touching neither the scheduler nor the KV layout. The einsum path stays as the correctness ' +
     'oracle and Mac/CPU fallback — and the step-5 equivalence-suite pattern carries over with one change: flash reorders floating-point ' +
     'accumulation by tile, so the contract is tolerance (<code>atol</code>), not bit-exactness. Design questions the hand-written ' +
@@ -3558,7 +3700,7 @@ function initFlash() {
   });
   activeTransports['flash'] = transport;
 
-  body.append(p1, transport.root, p2, p3, p4);
+  body.append(p1, transport.root, p2, p2b, p3, p4);
 
   const line = (html) => { const d = el('div', 'fa-line'); d.innerHTML = html; return d; };
 
@@ -3588,11 +3730,13 @@ function initFlash() {
     const s = steps[i];
     stBody.innerHTML = '';
     if (s.t === 'intro') {
-      stTitle.textContent = 'the setup — one (batch row · head) of a real chunk-step';
+      stTitle.textContent = 'the setup — one query head of one batch row';
       stBody.append(
-        line('A prefill chunk: <b>256 new tokens</b> entering attention against <b>256 already cached</b> — one (row, head) slice of the ' +
-          'padded worst case from the panel above. Score strip: 256 × 512.'),
-        line('Flash tiles it 64 × 64. Each of the 4 query blocks is owned by one CUDA thread block, start to finish.'),
+        line('A prefill chunk: <b>256 new tokens</b> entering attention against <b>512 already cached</b>. Shown: the score sheet ' +
+          'for <b>one query head of one batch row</b> — rows are the new (query) tokens, columns are K/V history positions. The ' +
+          'other 63 (batch row · head) sheets are computed in parallel by their own thread blocks.'),
+        line('Flash tiles the sheet 64 × 64: 4 query tile-rows × up to 12 K/V tile-columns. Each tile-row is owned by one CUDA ' +
+          'thread block, start to finish.'),
         line('Causality — <code>j ≤ start_pos + i</code>, exactly <code>build_batched_mask</code>\'s rule — kills the top-right corner: ' +
           'those tiles are <b>never launched</b>.'),
         line('Press ▶ and watch what reaches HBM (the strips) vs. what only ever lives on-chip (the grid).'));
@@ -3620,11 +3764,482 @@ function initFlash() {
         line('<b>O</b> ← O / ℓ — the softmax denominator, applied once at the end instead of inside every tile.'),
         line(`O block ${s.qi} (64 × 128, <b>16 KB</b>) is written to HBM — this row\'s only score-shaped side effect. Its full ` +
           `64 × ${(START_BLKS + s.qi + 1) * 64} score strip was computed in full and never stored.`),
-        line('Scale check: this toy history is 512; grow it to the longctx run\'s 8192 and the discarded strip per (head · row) is the ' +
-          '268 MB-per-layer tensor from the first panel.'));
+        line('Scale check: this toy history is 768; grow it to the longctx run\'s 8192 — same picture, 128 tiles wide — and the ' +
+          'discarded strip per (head · row) is the 268 MB-per-layer tensor from the first panel.'));
     }
   }
   transport.set(0);
+}
+
+/* =============== flash walkthrough view =============== */
+
+function initFlashWalk() {
+  const body = $('fw-body');
+  const para = (html) => { const p = el('p', 'panel-note'); p.style.fontSize = '12.5px'; p.innerHTML = html; return p; };
+  const NS = 'http://www.w3.org/2000/svg';
+  const sv = (parent, tag, attrs, text) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (text !== undefined && text !== null) n.textContent = text;
+    parent.appendChild(n);
+    return n;
+  };
+  const line = (html) => { const d = el('div', 'fa-line'); d.innerHTML = html; return d; };
+
+  /* ---------- panel A: the cast + the sheet ---------- */
+  const pA = el('section', 'panel');
+  pA.appendChild(el('h2', null, 'The cast — five tensors, one score sheet'));
+  pA.appendChild(para('Everything on this page is one <b>(query head · batch row)</b> slice of a chunk-step: 256 new tokens ' +
+    'entering attention against 512 already cached. One thread block owns one query tile-row of the sheet for its whole life; ' +
+    '64 sibling sheets (4 batch rows × 16 heads) run in parallel on their own blocks, never communicating.'));
+  const aCols = el('div', 'cols-2');
+  const aL = el('div');
+  const cast = el('div', 'anat');
+  const castRow = (op, sub, html) => {
+    const r = el('div', 'anat-row');
+    const left = el('div', 'anat-op');
+    left.innerHTML = op + (sub ? ` <small>${sub}</small>` : '');
+    const right = el('div', 'panel-note');
+    right.style.margin = '0';
+    right.innerHTML = html;
+    r.append(left, right);
+    cast.appendChild(r);
+  };
+  castRow('Q0 · (64 × 128) · 16 KB', 'queries',
+    'Row t = token t\'s 128-dim “what am I looking for” vector, this head\'s lens. Made this step ' +
+    '(<code>q_proj</code> + q-norm + RoPE at position 512+t). Used once, then discarded forever — queries are never cached.');
+  castRow('K0–K11, V0–V11 · (64 × 128) each', 'the history',
+    '768 attendable positions: 512 cached + 256 written this very step (then read straight back — the kernel can\'t tell). ' +
+    'K stored post-RoPE; V unrotated — position belongs to the lookup, not the payload. GQA: 8 KV heads serve 16 query ' +
+    'heads, so every K/V column feeds two sheets.');
+  castRow('S tile · (64 × 64) · fp32', 'scores',
+    '<code>S[t, j] = q_t · k_j / √128</code> — the 128 dims are consumed by the dot product, so S has token × token axes. ' +
+    'Born on tensor cores, lives in registers, dies in registers. <b>Never has an HBM address.</b>');
+  castRow('m, ℓ · 64 scalars each', 'running state',
+    '<b>m</b>: best row max so far — the <i>unit of account</i>. Not part of the math (softmax is shift-invariant); pure ' +
+    'overflow protection. <b>ℓ</b>: the softmax denominator, accumulated as tiles stream — very much part of the math. ' +
+    'O and ℓ are the fraction kept as parts; m is the unit they\'re currently expressed in.');
+  castRow('O · (64 × 128) · fp32 → bf16', 'accumulator',
+    'Numerator-so-far: each value vector weighted by its unnormalized weight, summed. Becomes real output only at the ' +
+    'epilogue\'s O/ℓ. The block\'s one and only HBM write: 16 KB.');
+  aL.appendChild(cast);
+
+  const aR = el('div');
+  const mapSvg = document.createElementNS(NS, 'svg');
+  mapSvg.setAttribute('viewBox', '0 0 430 224');
+  mapSvg.setAttribute('class', 'fa-svg fw-map-svg');
+  {
+    const X0 = 70, Y0 = 46, T = 24, P = 27, KBn = 12, QBn = 4, ST = 8;
+    const cEnd = X0 + ST * P - 3, nStart = X0 + ST * P;
+    sv(mapSvg, 'path', { d: `M ${X0} 30 v -5 H ${cEnd} v 5`, class: 'fa-brk' });
+    sv(mapSvg, 'path', { d: `M ${nStart} 30 v -5 H ${X0 + KBn * P - 3} v 5`, class: 'fa-brk' });
+    sv(mapSvg, 'text', { x: (X0 + cEnd) / 2, y: 18, class: 'fa-lbl' }, 'in KV cache: 512');
+    sv(mapSvg, 'text', { x: (nStart + X0 + KBn * P - 3) / 2, y: 18, class: 'fa-lbl' }, 'new: 256');
+    for (let qi = 0; qi < QBn; qi++) {
+      const y = Y0 + qi * P;
+      const lim = ST + qi;
+      for (let kj = 0; kj < KBn; kj++) {
+        const x = X0 + kj * P;
+        if (kj > lim) { sv(mapSvg, 'rect', { x, y, width: T, height: T, rx: 2, class: 'fa-tile skip' }); continue; }
+        sv(mapSvg, 'rect', { x, y, width: T, height: T, rx: 2, class: 'fa-tile done' });
+        if (kj === lim) {
+          sv(mapSvg, 'path', { d: `M ${x} ${y} L ${x + T} ${y} L ${x + T} ${y + T} Z`, class: 'fa-cut' });
+          sv(mapSvg, 'line', { x1: x, y1: y, x2: x + T, y2: y + T, class: 'fa-diag' });
+        }
+      }
+    }
+    // the walkthrough follows row 0
+    sv(mapSvg, 'rect', { x: X0 - 3, y: Y0 - 3, width: 9 * P + 3, height: T + 6, rx: 4,
+      fill: 'none', stroke: 'var(--sA)', 'stroke-width': 1.6 });
+    sv(mapSvg, 'text', { x: X0, y: Y0 - 8, class: 'fa-lbl', style: 'fill: var(--sA); text-anchor: start' },
+      '↓ the walkthrough below follows this row');
+    const midX = X0 + (KBn * P - 3) / 2, midY = Y0 + (QBn * P - 3) / 2;
+    sv(mapSvg, 'text', { x: midX, y: Y0 + QBn * P + 14, class: 'fa-lbl' }, 'K/V · history position j (12 tiles × 64)');
+    sv(mapSvg, 'text', { x: 14, y: midY, class: 'fa-lbl', transform: `rotate(-90 14 ${midY})` }, 'Q · new tokens i');
+  }
+  aR.appendChild(mapSvg);
+  const aLeg = el('div', 'fw-legend');
+  const legItem = (style, label) => {
+    const s = el('span');
+    const sw = el('span', 'swatch'); sw.style.cssText = style;
+    s.append(sw, document.createTextNode(label));
+    aLeg.appendChild(s);
+  };
+  legItem('background: color-mix(in srgb, var(--sA) 13%, var(--surface)); border: 1px solid var(--sA);',
+    'interior tile — fully visible, zero causality checks');
+  legItem('background: linear-gradient(135deg, color-mix(in srgb, var(--sA) 13%, var(--surface)) 45%, var(--surface) 45%); border: 1px solid var(--axis);',
+    'boundary tile — mask as an if, in registers');
+  legItem('background: none; border: 1px dashed var(--axis);', 'never launched');
+  aR.appendChild(aLeg);
+  aR.appendChild(para('The three-tier causality economy: interior tiles run unchecked, one boundary tile per row pays a ' +
+    'per-element predicate, everything past it is never scheduled. The outlined row is the block the walkthrough below follows: ' +
+    'nine tiles (K0–K8), then the epilogue.'));
+  aCols.append(aL, aR);
+  pA.appendChild(aCols);
+
+  /* ---------- panel B: the five-number toy ---------- */
+  const pB = el('section', 'panel');
+  pB.appendChild(el('h2', null, 'The algebra, locked in — online softmax with five numbers'));
+  pB.appendChild(para('Scores <code>[2, 1, 3, 0, 5]</code>, arriving as two tiles. Hard rule: a processed tile may never be ' +
+    'revisited; the only carried state is <b>m</b>, <b>ℓ</b>, and one spectator <b>w₁</b> — the unnormalized weight of the ' +
+    'score “2”, standing in for O. The trap is built in: tile one will believe the max is 3; tile two reveals a 5.'));
+
+  const toyCols = el('div', 'cols-2');
+  const toyL = el('div');
+  const tape = el('div', 'fw-toy-tape');
+  const mkGroup = (label, scores) => {
+    const g = el('div', 'fw-tile-group');
+    g.appendChild(el('span', 'lbl', label));
+    const chips = scores.map(s => { const c = el('span', 'fw-score', String(s)); g.appendChild(c); return c; });
+    return { g, chips };
+  };
+  const gA = mkGroup('tile one', [2, 1, 3]);
+  const gB = mkGroup('tile two', [0, 5]);
+  tape.append(gA.g, gB.g);
+  toyL.appendChild(tape);
+  const toyState = el('div', 'fw-chips');
+  toyState.style.marginTop = '10px';
+  const stateChip = (label) => {
+    const c = el('span', 'statchip');
+    const b = el('b');
+    c.append(document.createTextNode(label + ' '), b);
+    toyState.appendChild(c);
+    return { c, b };
+  };
+  const tM = stateChip('m ='), tL = stateChip('ℓ ='), tW = stateChip('w₁ ='), tC = stateChip('c =');
+  toyL.appendChild(toyState);
+  const truth = el('div', 'fw-truth');
+  truth.innerHTML = 'ground truth, all at once (shift by the true max, 5):<br>' +
+    'e<sup>−3</sup>=0.0498 · e<sup>−4</sup>=0.0183 · e<sup>−2</sup>=0.1353 · e<sup>−5</sup>=0.0067 · e<sup>0</sup>=1.0000<br>' +
+    '→ <b>ℓ = 1.2101</b> → weights <b>[0.0411, 0.0151, 0.1118, 0.0056, 0.8264]</b>';
+  toyL.appendChild(truth);
+  const toyR = el('div', 'fa-state');
+  const toyTitle = el('div', 'fa-state-title');
+  const toyBody = el('div');
+  toyR.append(toyTitle, toyBody);
+  toyCols.append(toyL, toyR);
+
+  const TOY = [
+    { t: 'the setup', m: '−∞', l: '0', w: '—', c: null, truth: false, a: 0, b: 0, maxA: false, maxB: false, lines: [
+      'Five scores, two tiles, no looking back. Between tiles we carry two scalars of real state (m, ℓ) plus the spectator.',
+      'w₁ is the toy\'s O: in the kernel each exponential is spent into the value-accumulator the moment it exists, and only its effect survives. Watching one number stand in for that is enough.'] },
+    { t: 'ground truth — the checksum', m: '−∞', l: '0', w: '—', c: null, truth: true, a: 0, b: 0, maxA: false, maxB: false, lines: [
+      'Computed the ordinary way with everything visible at once. The streaming version must reproduce these books exactly.',
+      'The shift by the max is pure numerical stability — it cancels in the ratio (softmax is shift-invariant); it just keeps every exp() ≤ 1. The 5 rightly takes 83% of the budget.'] },
+    { t: 'tile one: [2, 1, 3]', m: '3', l: '1.5032', w: '0.3679', c: null, truth: true, a: 1, b: 0, maxA: true, maxB: false, lines: [
+      'Tile max 3, so m: −∞ → 3. The rescale rule fires here too — it multiplies empty books, a no-op. No branch, no special case: tile one\'s free pass is algebra, not an if.',
+      'e^(2−3) = 0.3679, e^(1−3) = 0.1353, e^(3−3) = 1.0000 → ℓ = 1.5032. Spectator: w₁ = 0.3679.',
+      'The invariant worth keeping: this is already a <i>correct, finished</i> softmax of the prefix — w₁/ℓ = 0.2447 = softmax([2,1,3])₁ — merely denominated in m = 3 units.'] },
+    { t: 'tile two arrives — the trap', m: '5 ↑', l: '1.5032 (stale units)', w: '0.3679 (stale units)', c: 'e^(3−5) = 0.1353', truth: true, a: 2, b: 1, maxA: false, maxB: true, lines: [
+      'Tile two\'s max is 5 > 3. Every number banked so far has the old max baked into its exponent — all of it is off by the <i>same</i> factor.',
+      'Sums are only meaningful when every term shares a reference: before adding anything new, convert the old books. Conversion rate: c = e^(m−m′) = 0.1353.'] },
+    { t: 'convert the books — both of them', m: '5', l: '× c → 0.2034', w: '× c → 0.0498', c: '0.1353', truth: true, a: 2, b: 1, maxA: false, maxB: true, lines: [
+      'ℓ ← c·ℓ and w₁ ← c·w₁ — numerator and denominator together, or the ratio lies: converting only ℓ would overweight the old tokens by e².',
+      'Look at w₁: 0.0498 = e^(2−5) <b>exactly</b> — e^(2−3)·e^(3−5), the intermediate reference cancelling. The score “2” was repriced without ever being revisited. That identity is the entire algebraic content of FlashAttention.'] },
+    { t: 'add tile two', m: '5', l: '0.2034 + 1.0067 = 1.2101 ✓', w: '0.0498', c: '—', truth: true, a: 2, b: 2, maxA: false, maxB: true, lines: [
+      'New terms are born in m = 5 units: e^(0−5) = 0.0067, e^(5−5) = 1.0000.',
+      'ℓ = 0.2034 + 1.0067 = <b>1.2101</b> — the ground-truth denominator, to the digit, having never seen more than three numbers at once.'] },
+    { t: 'epilogue: one division', m: '5 (dropped)', l: '1.2101', w: '÷ ℓ → 0.0411 ✓', c: '—', truth: true, a: 2, b: 2, maxA: false, maxB: true, lines: [
+      'w₁ / ℓ = 0.0498 / 1.2101 = <b>0.0411</b> — matches ground truth to every digit. Any other weight would come out the same way had we kept its spectator.',
+      'Never a wrong answer being repaired — always a right answer being re-expressed in a new unit. That is why streaming softmax is exact, not approximate.',
+      'One caveat carried to the real kernel: float addition isn\'t associative, so the streamed and all-at-once results agree to rounding, not bit-for-bit — the reason SDPA equivalence tests assert atol, never bit-equality.'] },
+  ];
+  const tToy = makeTransport({
+    max: TOY.length - 1,
+    labelFn: (i) => `step ${i} / ${TOY.length - 1} — ${TOY[i].t}`,
+    onSet: (i) => {
+      const s = TOY[i];
+      tM.b.textContent = s.m; tL.b.textContent = s.l; tW.b.textContent = s.w;
+      tC.c.style.display = s.c ? '' : 'none'; tC.b.textContent = s.c || '';
+      tL.b.className = /✓/.test(s.l) ? 'fw-good' : '';
+      tW.b.className = /✓/.test(s.w) ? 'fw-good' : '';
+      truth.style.display = s.truth ? '' : 'none';
+      gA.g.className = 'fw-tile-group' + (s.a === 1 ? ' active' : s.a === 2 ? ' spent' : '');
+      gB.g.className = 'fw-tile-group' + (s.b === 1 ? ' active' : s.b === 2 ? ' spent' : '');
+      gA.chips[2].className = 'fw-score' + (s.maxA ? ' max' : '');
+      gB.chips[1].className = 'fw-score' + (s.maxB ? ' max' : '');
+      toyTitle.textContent = s.t;
+      toyBody.innerHTML = '';
+      s.lines.forEach(h => toyBody.appendChild(line(h)));
+    },
+    playMs: 2600,
+  });
+  pB.append(tToy.root, toyCols);
+
+  /* ---------- panel C: one block's life ---------- */
+  const pC = el('section', 'panel');
+  pC.appendChild(el('h2', null, 'One block\'s life — prologue to epilogue, on the state board'));
+  pC.appendChild(para('The outlined row from the sheet above, lived step by step. The board shows what exists where: HBM is far ' +
+    'and slow (every byte crossing it is counted top right); SRAM is the block\'s shared workbench; registers are where all ' +
+    'arithmetic actually lands. Watch what <i>never</i> appears in HBM: S and P.'));
+
+  const wCols = el('div', 'cols-2');
+  const wL = el('div');
+  const boardEl = el('div', 'fw-board');
+  const mkChip = (title, sub, cls) => {
+    const c = el('div', 'fw-chip' + (cls ? ' ' + cls : ''));
+    const b = el('b', null, title);
+    const s = el('small', null, sub || '');
+    c.append(b, s);
+    return { c, b, s };
+  };
+  // HBM zone
+  const zH = el('div', 'fw-zone');
+  const zHname = el('div', 'fw-zone-name');
+  zHname.innerHTML = 'HBM <small>· far, slow — the only persistent home</small>';
+  const ctrs = el('span', 'fw-ctrs');
+  const cRead = el('span', 'statchip'), cWrite = el('span', 'statchip');
+  ctrs.append(cRead, cWrite);
+  zHname.appendChild(ctrs);
+  const zHchips = el('div', 'fw-chips');
+  const hQ0 = mkChip('Q0', '16 KB');
+  const kGrp = el('span', 'fw-poolgrp'); kGrp.append(document.createTextNode('K'));
+  const kCellsEl = el('span', 'fw-cells');
+  const kCells = [];
+  for (let i = 0; i < 12; i++) { const c = el('span', 'fw-cell' + (i > 8 ? ' skip' : ''), String(i)); kCells.push(c); kCellsEl.appendChild(c); }
+  kGrp.appendChild(kCellsEl);
+  const vGrp = el('span', 'fw-poolgrp'); vGrp.append(document.createTextNode('V'));
+  const vCellsEl = el('span', 'fw-cells');
+  const vCells = [];
+  for (let i = 0; i < 12; i++) { const c = el('span', 'fw-cell' + (i > 8 ? ' skip' : ''), String(i)); vCells.push(c); vCellsEl.appendChild(c); }
+  vGrp.appendChild(vCellsEl);
+  const hO = mkChip('O0', 'unwritten', 'ghost');
+  zHchips.append(hQ0.c, kGrp, vGrp, hO.c);
+  zH.append(zHname, zHchips);
+  // SRAM zone
+  const zS = el('div', 'fw-zone');
+  const zSname = el('div', 'fw-zone-name');
+  zSname.innerHTML = 'SRAM <small>· the block\'s shared workbench — ~48 KB in use, staged whole before compute</small>';
+  const zSchips = el('div', 'fw-chips');
+  const sQ0 = mkChip('—', 'Q slot', 'ghost');
+  const sK = mkChip('—', 'K slot', 'ghost');
+  const sV = mkChip('—', 'V slot', 'ghost');
+  zSchips.append(sQ0.c, sK.c, sV.c);
+  zS.append(zSname, zSchips);
+  // registers zone
+  const zR = el('div', 'fw-zone');
+  const zRname = el('div', 'fw-zone-name');
+  zRname.innerHTML = 'Registers <small>· fp32, spread across the block\'s 128 threads — where all arithmetic lands</small>';
+  const zRchips = el('div', 'fw-chips');
+  const rM = mkChip('—', 'm · unit of account', 'ghost');
+  const rL = mkChip('—', 'ℓ · denominator', 'ghost');
+  const rO = mkChip('—', 'O · accumulator', 'ghost');
+  const rT = mkChip('—', 'transient · S / P', 'ghost');
+  zRchips.append(rM.c, rL.c, rO.c, rT.c);
+  zR.append(zRname, zRchips);
+  boardEl.append(zH, zS, zR);
+  wL.appendChild(boardEl);
+  const wLeg = el('div', 'fw-legend');
+  const wLegItem = (style, label) => {
+    const s = el('span');
+    const sw = el('span', 'swatch'); sw.style.cssText = style;
+    s.append(sw, document.createTextNode(label));
+    wLeg.appendChild(s);
+  };
+  wLegItem('background: color-mix(in srgb, var(--sA) 30%, var(--surface)); border: 1px solid var(--sA);', 'active this step');
+  wLegItem('background: color-mix(in srgb, var(--sB) 16%, var(--surface)); border: 1px solid var(--sB);', 'already read');
+  wLegItem('background: none; border: 1px dashed var(--axis);', 'never touched');
+  wL.appendChild(wLeg);
+
+  const wR = el('div', 'fa-state');
+  const wTitle = el('div', 'fa-state-title');
+  const wBody = el('div');
+  wR.append(wTitle, wBody);
+  wCols.append(wL, wR);
+
+  const W = [
+    { t: 'setup — seated, nothing on-chip', read: 0, wr: 0, kCur: -1, kDone: 0, vCur: -1, vDone: 0,
+      q0: '', sq: null, sk: null, svv: null, m: null, l: null, o: null, tr: null, oDone: 0, lines: [
+      'The block for (Q tile 0 · this head · this batch row) has been seated on an SM — one of 256 independent siblings spread over the 5090\'s 170 SMs, one or two per seat, none of them ever communicating.',
+      'Everything is in HBM: Q0 (written by the q_proj GEMM moments ago), the KV pool rows, and a reserved, empty slot for O0.',
+      'K9–K11 are dashed for a reason: every one of their positions is in this row\'s future. The block will never issue a single read for them.'] },
+    { t: 'prologue — accumulators, then Q0 in', read: 16, wr: 0, kCur: -1, kDone: 0, vCur: -1, vDone: 0,
+      q0: 'cur', sq: ['Q0', '16 KB · stays for life'], sk: null, svv: null,
+      m: ['−∞', 'm · unit of account'], l: ['0', 'ℓ · denominator'], o: ['0', 'O · accumulator'], tr: null, oDone: 0, hl: ['m', 'l', 'o'], lines: [
+      'Registers first: O = 0 (64 × 128 <b>fp32</b> — HBM holds bf16, accumulation doesn\'t), ℓ = 0, m = −∞, spread across the threads — each thread personally owns a few dozen of O\'s 8 192 values for the block\'s whole life.',
+      'Then Q0, HBM → SRAM as one bulk copy: threads grab adjacent 16-byte chunks, so the memory controller sees a few coalesced requests instead of 8 192 scattered ones. The whole tile is staged before any compute touches it.',
+      'From here Q0 is read only from SRAM, against every K tile in turn — HBM never hears about it again.'] },
+    { t: 'K0 in — the only dead wait', read: 32, wr: 0, kCur: 0, kDone: 0, vCur: -1, vDone: 0,
+      q0: 'dead', sq: ['Q0', '16 KB · stays for life'], sk: ['K0', 'cached positions 0–63'], svv: null,
+      m: ['−∞', 'm · unit of account'], l: ['0', 'ℓ · denominator'], o: ['0', 'O · accumulator'], tr: null, oDone: 0, lines: [
+      'Same cooperative load for K0 — 64 rows that earlier steps\' KV writes scattered into the pool.',
+      '__syncthreads(): every warp parks until the copy completes. The matmul needs all of K0, not most of it.',
+      'This is the loop\'s only dead wait. From the next tile on, the upcoming K/V copy is issued asynchronously underneath the current tile\'s math (double-buffering); tile one has nothing to hide behind — it just pays.'] },
+    { t: 'S = Q0·K0ᵀ / √128 — scores born in registers', read: 32, wr: 0, kCur: 0, kDone: 0, vCur: -1, vDone: 0,
+      q0: 'dead', sq: ['Q0', '16 KB · stays for life'], sk: ['K0', 'cached positions 0–63'], svv: null,
+      m: ['−∞', 'm · unit of account'], l: ['0', 'ℓ · denominator'], o: ['0', 'O · accumulator'], tr: ['S = Q0·K0ᵀ/√128', 'fp32 · 4 096 scores'], oDone: 0, hl: ['tr'], lines: [
+      'The 4 warps carve the 64 × 64 output into fragments and drive tensor-core instructions over them: bf16 operands from SRAM, fp32 accumulation, results landing directly in the issuing threads\' registers. S never even visits shared memory.',
+      'No masking on this tile — K0 is positions 0–63, every query sits at 512+. Interior tiles run entirely unchecked.',
+      'The arithmetic is ~1M FLOPs — a few hundred nanoseconds. The K0 <i>load</i> dragged 16 KB across a memory bus. That imbalance — bytes dear, FLOPs free — is the entire design.'] },
+    { t: 'online softmax — m, P, ℓ', read: 32, wr: 0, kCur: 0, kDone: 0, vCur: -1, vDone: 0,
+      q0: 'dead', sq: ['Q0', '16 KB · stays for life'], sk: ['K0', 'spent'], svv: null,
+      m: ['m₁ = rowmax(S)', 'm · unit of account'], l: ['rowsum(P)', 'ℓ · denominator'], o: ['0', 'O · accumulator'], tr: ['P = e^(S−m₁)', 'overwrote S, in place'], oDone: 0, hl: ['m', 'l', 'tr'], lines: [
+      'Row max via warp shuffles — register-to-register swaps among the lanes holding each row\'s fragments — then m′ = max(−∞, rowmax): the free pass, exactly as in the toy.',
+      'The rescale still runs — c = e^(−∞ − m′) multiplying empty books. Straight-line code; the algebra makes it a no-op rather than a branch.',
+      'P = e^(S−m′) overwrites S in place: 4 096 weights in (0, 1], one exact 1.0 per row. ℓ banks each row\'s sum. The toy\'s tile one, 64 rows at once.'] },
+    { t: 'V0 in — P spent into O, P dies', read: 48, wr: 0, kCur: 0, kDone: 0, vCur: 0, vDone: 0,
+      q0: 'dead', sq: ['Q0', '16 KB · stays for life'], sk: ['K0', 'spent'], svv: ['V0', 'values 0–63'],
+      m: ['m₁', 'm · unit of account'], l: ['Σ₁', 'ℓ · denominator'], o: ['P·V0', 'O · accumulator'], tr: null, oDone: 0, hl: ['o'], lines: [
+      'V0 arrives only now — values were pointless before scores existed. Second tensor-core matmul: O ← c·O + P·V0 — each of K0\'s value vectors weighted by its unnormalized weight, summed in. P is downcast to bf16 to feed the tensor cores; O stays fp32.',
+      'P dies the instant the matmul retires. The 4 096 weights survive only as their two summaries: value-mass in O, total weight in ℓ.',
+      'Tile audit: three reads (Q0, K0, V0), <b>zero writes</b>. The einsum path would have crossed HBM with these scores ~six times by now.'] },
+    { t: 'tile K1 — the rescale, on real books', read: 80, wr: 0, kCur: 1, kDone: 1, vCur: 1, vDone: 1,
+      q0: 'dead', sq: ['Q0', '16 KB · stays for life'], sk: ['K1', 'positions 64–127'], svv: ['V1', 'values 64–127'],
+      m: ['m₂ ↑ max rose', 'm · unit of account'], l: ['c·ℓ + Σ₂', 'ℓ · denominator'], o: ['c·O + P′·V1', 'O · accumulator'], tr: null, oDone: 0, hl: ['m', 'l', 'o'], lines: [
+      'K1 lands in K0\'s bytes (prefetched under tile one\'s math). S′ is made, row maxes taken — and somewhere in 64–127 a token out-scores everything before: m rises for those rows.',
+      'c = e^(m₁−m₂), per row — genuinely < 1 where the max rose, exactly 1.0 where it stood. Same straight-line code either way.',
+      '<b>Both books convert before anything is added</b>: ℓ ← c·ℓ and O ← c·O, every O row scaled by its own row\'s c. K0\'s data is long gone; its <i>contribution</i> just got repriced — the toy\'s 0.3679 → 0.0498 move, at (64 × 128) scale. Then the familiar back half in the new currency.'] },
+    { t: 'steady state — K2 … K7, the loop with no cases', read: 272, wr: 0, kCur: -1, kDone: 8, vCur: -1, vDone: 8,
+      q0: 'dead', sq: ['Q0', '16 KB · stays for life'], sk: ['K2 … K7', 'streamed through'], svv: ['V2 … V7', 'streamed through'],
+      m: ['best of 0–511', 'm · unit of account'], l: ['accumulating', 'ℓ · denominator'], o: ['accumulating', 'O · accumulator'], tr: null, oDone: 0, lines: [
+      'Six more tiles of exactly that: max, maybe-rescale, exp, sum, spend. The kernel is one loop with no special cases anywhere in it — first tile, rescale tile, quiet tile, all the same instructions.',
+      'Each next K/V pair streams in underneath the current tile\'s arithmetic; HBM latency is hidden and the tensor cores never starve.'] },
+    { t: 'boundary tile K8 — causality as an if', read: 304, wr: 0, kCur: 8, kDone: 8, vCur: 8, vDone: 8,
+      q0: 'dead', sq: ['Q0', '16 KB · stays for life'], sk: ['K8', 'positions 512–575 — the chunk itself'], svv: ['V8', 'values 512–575'],
+      m: ['final', 'm · unit of account'], l: ['final Σ', 'ℓ · denominator'], o: ['complete blend', 'O · accumulator'], tr: ['mask: j > t → −∞', 'a predicate, not a tensor'], oDone: 0, hl: ['tr'], lines: [
+      'K8 is the chunk itself — the very tokens whose queries fill Q0, scattered into the pool moments ago this step. The causal rule collapses to j ≤ t: lower triangle, diagonal included.',
+      'Compute first, ask permission after: the full tile is computed (fixed-shape fragments — steering around entries costs more than discarding them), then each thread applies <code>if (j &gt; t) s = −∞</code> to its own registers. The mask is control flow, not data — no tensor, no HBM.',
+      '−∞ rides the ordinary machinery: row max is taken after masking (a forbidden score can never hijack m), e^(−∞) = 0 adds nothing to ℓ and weighs nothing in O.',
+      'The economy in full: K0–K7 ran no checks, K8 pays a predicate, K9–K11 were never launched. One boundary tile per row, however long the history grows.'] },
+    { t: 'epilogue — divide, downcast, write, die', read: 304, wr: 16, kCur: -1, kDone: 9, vCur: -1, vDone: 9,
+      q0: 'dead', sq: ['Q0', 'released'], sk: ['—', 'released'], svv: ['—', 'released'],
+      m: ['dropped', 'served its purpose'], l: ['spent', 'divided into O'], o: ['O/ℓ → bf16', 'the real output at last'], tr: null, oDone: 1, hl: ['o'], lines: [
+      'Each row of O divided by its own ℓ: numerator-in-m-units becomes the genuine softmax-weighted average. m simply evaporates — the unit of account appears nowhere in the result.',
+      'One downcast, fp32 → bf16 — a single rounding at the very end instead of one per tile — and 16 KB goes to HBM: the block\'s first and only write.',
+      'The block retires; its SRAM and registers are surrendered; the SM seats whoever is waiting.'] },
+    { t: 'the ledger', read: 304, wr: 16, kCur: -1, kDone: 9, vCur: -1, vDone: 9,
+      q0: 'dead', sq: null, sk: null, svv: null, m: null, l: null, o: null, tr: null, oDone: 2, lines: [
+      '<b>Read</b>: Q0 (16 KB) + 9 K tiles (144 KB) + 9 V tiles (144 KB) = 304 KB. <b>Written</b>: 16 KB.',
+      'Computed and discarded without ever having an address: nine tiles of S and P — 36 864 scores, exponentials, weights. The einsum path writes and re-reads that intermediate ~6×; here its HBM footprint is zero bytes.',
+      'When all 256 siblings have retired, the output tensor (4, 256, 16, 128) is complete and the kernel returns — to ordinary PyTorch land, where o_proj and the residual stream carry on, none the wiser. The trapezoid, the streaming, the rescales: invisible in the tensor signatures. That invisibility is why an SDPABackend can slot into the AttentionMethod protocol without the scheduler or KV layout knowing anything changed.'] },
+  ];
+  const setChip = (ref, spec, ghostSub, hl) => {
+    if (!spec) { ref.c.className = 'fw-chip ghost'; ref.b.textContent = '—'; ref.s.textContent = ghostSub; return; }
+    ref.c.className = 'fw-chip' + (hl ? ' cur' : '');
+    ref.b.textContent = spec[0]; ref.s.textContent = spec[1];
+  };
+  const tWalk = makeTransport({
+    max: W.length - 1,
+    labelFn: (i) => `step ${i} / ${W.length - 1} — ${W[i].t}`,
+    onSet: (i) => {
+      const s = W[i], hl = s.hl || [];
+      cRead.innerHTML = `read <b>${s.read} KB</b>`;
+      cWrite.innerHTML = `written <b>${s.wr} KB</b>`;
+      cRead.style.borderColor = i === W.length - 1 ? 'var(--sB)' : '';
+      cWrite.style.borderColor = (s.wr > 0) ? 'var(--sB)' : '';
+      hQ0.c.className = 'fw-chip' + (s.q0 === 'cur' ? ' cur' : s.q0 === 'dead' ? ' dead' : '');
+      hQ0.s.textContent = s.q0 === 'dead' ? 'read once · dead to us' : '16 KB';
+      kCells.forEach((c, j) => { if (j > 8) return; c.className = 'fw-cell' + (j === s.kCur ? ' cur' : j < s.kDone ? ' done' : ''); });
+      vCells.forEach((c, j) => { if (j > 8) return; c.className = 'fw-cell' + (j === s.vCur ? ' cur' : j < s.vDone ? ' done' : ''); });
+      hO.c.className = 'fw-chip' + (s.oDone === 1 ? ' cur' : s.oDone === 2 ? '' : ' ghost');
+      hO.s.textContent = s.oDone ? '16 KB · written' : 'unwritten';
+      setChip(sQ0, s.sq, 'Q slot', s.q0 === 'cur');
+      setChip(sK, s.sk, 'K slot', s.kCur >= 0);
+      setChip(sV, s.svv, 'V slot', s.vCur >= 0);
+      setChip(rM, s.m && [s.m[0], s.m[1]], 'm · unit of account', hl.includes('m'));
+      setChip(rL, s.l && [s.l[0], s.l[1]], 'ℓ · denominator', hl.includes('l'));
+      setChip(rO, s.o && [s.o[0], s.o[1]], 'O · accumulator', hl.includes('o'));
+      setChip(rT, s.tr && [s.tr[0], s.tr[1]], 'transient · S / P', hl.includes('tr'));
+      wTitle.textContent = s.t;
+      wBody.innerHTML = '';
+      s.lines.forEach(h => wBody.appendChild(line(h)));
+    },
+    playMs: 3200,
+  });
+  activeTransports['flashwalk'] = tWalk;
+  pC.append(tWalk.root, wCols);
+
+  /* ---------- panel D: where the parallelism comes from ---------- */
+  const pD = el('section', 'panel');
+  pD.appendChild(el('h2', null, 'Where the parallelism comes from — and the one axis that stays serial'));
+  const dCols = el('div', 'cols-2');
+  const dL = el('div');
+  dL.appendChild(para('The hierarchy, outside-in. Only one level has a shared workbench and the ability to synchronize — ' +
+    'which is exactly why whole rows are assigned to it:'));
+  const orgBox = (t, d, inner) => {
+    const b = el('div', 'fw-org');
+    b.appendChild(el('div', 'fw-org-t', t));
+    const dd = el('div', 'fw-org-d'); dd.innerHTML = d; b.appendChild(dd);
+    if (inner) b.appendChild(inner);
+    return b;
+  };
+  dL.appendChild(orgBox('grid — 256 blocks', '4 Q tiles × 16 heads × 4 batch rows. Fully independent: no shared memory, no sync, no communication, ever. The GPU sprinkles them over 170 SM seats, 1–2 resident each, extras queue; a block never migrates.',
+    orgBox('thread block — 128 threads', 'Owns one Q tile-row start to finish. The only level with a shared SRAM workbench and __syncthreads() — every score and both accumulators of a row live inside one block, so the row-wise softmax never crosses a block boundary.',
+      orgBox('warp — 32 lanes, lockstep', 'The unit the SM schedules. Four per block, each working its own fragments of the current tile; row reductions (max, sum) happen with register-swap shuffles inside the warp.',
+        orgBox('tensor core', 'Entire fragment-matmuls as single instructions — bf16 in, fp32 accumulate. Arithmetic is the cheap resource; the whole kernel is arranged so these never wait on HBM.')))));
+  const dR = el('div');
+  dR.appendChild(para('<b>The serial axis is deliberate.</b> Within a block, the K sweep is sequential — the scan <i>is</i> the ' +
+    'softmax, with m/ℓ/O as its running state. There is no cross-SM max to coordinate because a row never leaves its block. ' +
+    'Serial-per-row costs nothing while there are hundreds of independent rows: the GPU-health check is one multiplication, ' +
+    '<code>Q tiles × heads × batch</code> vs the SM count. Prefill here: 4·16·4 = 256 on 170 SMs — full. Decode at batch 1: ' +
+    '1·16·1 = <b>16 blocks</b> — ~90% of the machine idle by construction.'));
+  const dSvg = document.createElementNS(NS, 'svg');
+  dSvg.setAttribute('viewBox', '0 0 430 150');
+  dSvg.setAttribute('class', 'fa-svg fw-map-svg');
+  {
+    sv(dSvg, 'text', { x: 8, y: 16, class: 'fa-lbl', style: 'text-anchor: start' }, 'Flash-Decoding: one query row, history split across blocks');
+    const segW = 118, y = 28;
+    ['sA', 'sB', 'sC'].forEach((col, i) => {
+      sv(dSvg, 'rect', { x: 12 + i * (segW + 6), y, width: segW, height: 18, rx: 3,
+        fill: `color-mix(in srgb, var(--${col}) 18%, var(--surface))`, stroke: `var(--${col})` });
+      sv(dSvg, 'text', { x: 12 + i * (segW + 6) + segW / 2, y: y + 13, class: 'fa-lbl' }, `KV slice ${i}`);
+      sv(dSvg, 'line', { x1: 12 + i * (segW + 6) + segW / 2, y1: y + 18, x2: 12 + i * (segW + 6) + segW / 2, y2: y + 34, stroke: 'var(--axis)' });
+      sv(dSvg, 'rect', { x: 12 + i * (segW + 6) + segW / 2 - 42, y: y + 34, width: 84, height: 20, rx: 4, fill: 'var(--plane)', stroke: 'var(--axis)' });
+      sv(dSvg, 'text', { x: 12 + i * (segW + 6) + segW / 2, y: y + 48, class: 'fa-lbl' }, `(m, ℓ, O)${i}`);
+      sv(dSvg, 'line', { x1: 12 + i * (segW + 6) + segW / 2, y1: y + 54, x2: 215, y2: y + 74, stroke: 'var(--axis)' });
+    });
+    sv(dSvg, 'rect', { x: 95, y: 102, width: 240, height: 22, rx: 4, fill: 'var(--plane)', stroke: 'var(--ink)' });
+    sv(dSvg, 'text', { x: 215, y: 117, class: 'fa-lbl' }, 'merge: max, rescale both books, add');
+    sv(dSvg, 'text', { x: 215, y: 142, class: 'fa-lbl' }, 'softmax-in-progress is a mergeable object');
+  }
+  dR.appendChild(dSvg);
+  dR.appendChild(para('When decode starves the grid, split-KV manufactures parallelism along the one serial axis: each block ' +
+    'sweeps a slice of the history and emits its partial (m, ℓ, O); a small second kernel merges them — m* = max, convert both ' +
+    'books by e^(m−m*), add. It\'s associative, any order. The same identity that lets tiles stream lets partials merge; the toy ' +
+    'was secretly also the proof for this.'));
+  dCols.append(dL, dR);
+  pD.appendChild(dCols);
+
+  /* ---------- panel E: what it buys, and where it lands here ---------- */
+  const pE = el('section', 'panel');
+  pE.appendChild(el('h2', null, 'What it buys — and where it lands in cantoLLM'));
+  const eAnat = el('div', 'anat');
+  const eRow = (op, sub, html) => {
+    const r = el('div', 'anat-row');
+    const left = el('div', 'anat-op');
+    left.innerHTML = op + (sub ? ` <small>${sub}</small>` : '');
+    const right = el('div', 'panel-note');
+    right.style.margin = '0';
+    right.innerHTML = html;
+    r.append(left, right);
+    eAnat.appendChild(r);
+  };
+  eRow('the honest ledger', 'more FLOPs, fewer bytes',
+    'Every rescale is arithmetic the unfused path never does — and Flash wins anyway, because attention at these shapes is ' +
+    'bandwidth-bound: it spends the cheap resource (FLOPs) to conserve the scarce one (HBM bytes). 304 KB read + 16 KB ' +
+    'written per block, against an einsum path that walks the score strip through HBM ~6 times.');
+  eRow('exact, not bit-identical', 'atol, never bit-equality',
+    'Streaming reorders the same floating-point sums, and addition isn\'t associative. The SDPABackend equivalence suite ' +
+    'asserts tolerance against the einsum oracle (the step-5 pattern, atol ≈ 1e-5) — a bit-exact expectation would be wrong ' +
+    'in principle, not just in practice.');
+  eRow('F.scaled_dot_product_attention', 'a dispatcher, not a kernel',
+    'Per call, PyTorch routes to one of: <b>flash</b> (the kernel above — wants is_causal/varlen-shaped truth), ' +
+    '<b>memory-efficient</b> (tiled, accepts arbitrary masks), or <b>math</b> (materializes scores — the einsum path with ' +
+    'extra steps). Which backend you land on is the whole game: our per-row ragged causality handed over as an explicit bool ' +
+    'mask likely lands memory-efficient; hitting flash means restructuring toward is_causal/varlen. Deciding which truth to ' +
+    'hand it <i>is</i> most of the SDPABackend design, and dispatch rules are torch-version-specific — verify, don\'t assume.');
+  eRow('what it claims here', 'the slope and the stalls — not the floor',
+    'SDPA attacks per-token compute: the longctx cells (85 tok/s, engine ITL p99 196 ms, TTFT p50 ≈ 1 s of chunked prefill) ' +
+    'are the target, plus 4B-code prefill interference. The ~9–10 ms per-step floor is CPU dispatch and belongs to CUDA ' +
+    'graphs — and after the 2026-07-19 KV-scatter + batched-finalize fixes, the decode slope in the 8–16-row window is ' +
+    'already down to ~0.04 ms/row: for short-context decode the floor is now nearly the whole story. SDPA\'s case rests on ' +
+    'prefill and long context. Expect 0.6B short_chat to barely move when it lands — that is the predicted result, not a ' +
+    'failed optimization.');
+  pE.appendChild(eAnat);
+
+  body.append(pA, pB, pC, pD, pE);
+  tToy.set(0);
+  tWalk.set(0);
 }
 
 /* =============== boot =============== */

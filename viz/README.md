@@ -71,8 +71,18 @@ detail lives behind the zoom targets):
   algorithm, an anatomy of the fused kernel (launch geometry, SRAM residency,
   the running-max rescale, the single output write), and how
   `F.scaled_dot_product_attention`'s backend dispatch + the planned
-  `SDPABackend` fit the `AttentionMethod` seam. Static design content, no
-  trace needed; revisit when the SDPA backend lands.
+  `SDPABackend` fit the `AttentionMethod` attachment point. Static design
+  content, no trace needed; revisit when the SDPA backend lands.
+- **Flash walkthrough** — FlashAttention rebuilt bottom-up (companion to the
+  FlashAttention tab, written from a full step-by-step walkthrough): the cast
+  of tensors one thread block owns (shapes + provenance + the three-tier
+  causality economy), a steppable five-number toy of the online softmax with
+  ground-truth checksums, the block's whole life as a steppable HBM/SRAM/
+  registers state board with byte counters (prologue → tiles → rescale →
+  boundary tile → epilogue → ledger), the parallelism org chart
+  (grid/block/warp/tensor core, the deliberately-serial K scan, Flash-Decoding
+  split-KV merge), and what SDPA claims in cantoLLM's bench numbers. Static
+  design content, no trace needed.
 
 ## Regenerating the traces
 
