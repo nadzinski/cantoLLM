@@ -37,7 +37,8 @@ them). Scheduler bookkeeping (`_plan_step`, `_build_input_ids`,
 
 ## The three concrete sinks, ranked (16 rows)
 
-1. **Ragged KV writes: ~3.9 ms/step (~25%).**
+1. **Ragged KV writes: ~3.9 ms/step (~25%).** *(fixed 2026-07-19,
+   `9d0782e` — see addendum)*
    `PaddedAttentionMethod.forward_batched` writes each row's K/V with a
    Python slice-assign per row per layer: 16 × 28 × (K+V) = 896 tiny
    copies/step. Top CPU consumer in the profile (`aten::copy_`, ~4.8
@@ -46,7 +47,8 @@ them). Scheduler bookkeeping (`_plan_step`, `_build_input_ids`,
    vectorized indexed write per layer (`layer_k[slots_tensor, pos] = ...`
    for the uniform-width decode case) costs 0.81 ms — **~3 ms/step
    available in one loop**.
-2. **Per-row sampling syncs: ~1.2 ms/step, linear in rows.** The finalize
+2. **Per-row sampling syncs: ~1.2 ms/step, linear in rows.** *(fixed
+   2026-07-19, `02e30e0` — see addendum)* The finalize
    loop calls `.item()` on the sampled token and `.log().item()` on its
    logprob per row → 32 `cudaStreamSynchronize`/step (~31 µs each;
    profiler count matches). A batched argmax + one host transfer for the
@@ -72,3 +74,48 @@ them). Scheduler bookkeeping (`_plan_step`, `_build_input_ids`,
 
 Numbers: 0.6B bf16, padded einsum path, torch 2.10.0+cu128, driver 580,
 git e958a4b.
+
+## Addendum (2026-07-19): sinks 1 and 2 fixed — measured
+
+Two fixes landed the next morning: `9d0782e` (the ragged KV write as a
+per-step `KVWriteMap` — one gather + scatter per tensor, index tensors
+built once per step on the pool device, shared by all layers) and
+`02e30e0` (finalize collects sampled tokens/logprobs as 0-dim GPU tensors
+and transfers once per step — 32 pipeline drains down to 2).
+
+Probe re-runs (same script, total ms/step):
+
+| rows | pre-fixes | +KV vectorize | +batched finalize |
+|-----:|----------:|--------------:|------------------:|
+| 1    | 9.33      | 9.11          | 9.13 |
+| 8    | 12.17     | 9.90          | 9.92 |
+| 16   | 15.77     | 13.53         | 13.38 |
+| 48   | 48.09     | 38.62         | 38.34 |
+
+CPU dispatch (`fwd_call`) went from climbing 9.0→12.6 ms across 1→16 rows
+to flat ~9.1 ms; `aten::copy_` calls dropped by exactly the 896/step loop
+and the ~960/step `cudaMemcpyAsync` vanished (CUDA API calls ~2700 →
+~1900/step). Fix 2 looks small *in the probe* by construction: the
+probe's post-forward synchronize drains the pipeline before finalize
+runs, hiding the serialized per-row round-trips it removed — the probe
+understates it; trust the engine numbers below.
+
+Real-engine check (`bench/history/*recheck-step-opts`, same cells as the
+baseline's 16-slot variant, zero validity warnings):
+
+| cell (16 slots, short_chat) | baseline | `02e30e0` | Δ |
+|---|---:|---:|---:|
+| c=8 aggregate tok/s   | 692  | 776  | +12% |
+| c=16 aggregate tok/s  | 1145 | **1469** | **+28%** |
+| c=8 step p50          | 11.4 ms | 10.13 ms | −11% |
+| c=16 step p50         | 13.6 ms | 10.48 ms | −23% |
+| c=16 engine ITL p50   | 13.6 ms | 10.53 ms | −23% |
+
+Step time is now nearly flat 8→16 rows (10.1 → 10.5 ms): the per-row
+dispatch cost in that range is essentially gone, and the real-engine win
+exceeds the probe's because the un-instrumented loop lets dispatch and
+GPU execution overlap once the mid-loop syncs are gone. Remaining from
+the ranked list: the ~10 ms per-layer launch flood (CUDA graphs) and the
+compute slope / long-context story (SDPA, compile). The Phase 3
+before/after protocol is unchanged — these fixes simply move the "before"
+that SDPA and graphs will be measured against.
