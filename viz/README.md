@@ -72,8 +72,9 @@ detail lives behind the zoom targets):
   the running-max rescale, the single output write), and how
   `F.scaled_dot_product_attention`'s backend dispatch + the planned
   `SDPAAttentionMethod` fit the `AttentionMethod` attachment point. Static design
-  content, no trace needed; the SDPA method landed 2026-07-19 — revisit with
-  the 5090 A/B numbers.
+  content, no trace needed; the SDPA method landed 2026-07-19 and, with the
+  bounded shape vocabulary fixing cuDNN's per-shape plan compiles, is the CUDA
+  serve default (long context 1.6–2.2× over einsum).
 - **Flash walkthrough** — FlashAttention rebuilt bottom-up (companion to the
   FlashAttention tab, written from a full step-by-step walkthrough): the cast
   of tensors one thread block owns (shapes + provenance + the three-tier

@@ -619,7 +619,8 @@
       materializing the score tensor costs (anchored to this repo's own 5090 baseline), how FlashAttention
       streams the same math through on-chip SRAM without the tensor ever existing, and what the fused CUDA
       kernel actually does. Static design content, no trace needed. The <code>SDPAAttentionMethod</code> landed 2026-07-19
-      (author-hand-written); revisit with the 5090 A/B numbers.
+      (author-hand-written) and — after a cuDNN plan-churn detour fixed by the bounded shape vocabulary — is the
+      CUDA serve default, winning long context 1.6–2.2×.
     </p>
     <div id="fl-body"></div>
   </section>
@@ -957,9 +958,9 @@ function initRoadmap() {
       ] },
     { id: '3', title: 'CUDA beachhead', hw: '5090 · 1 H100 day', status: 'active',
       goal: 'First real perf-tuning pass, against a target whose shape is finally stable.',
-      statusLine: 'Status (2026-07-19): In progress. Step profiling (step-profiling.md) found the decode floor: CPU dispatch — ~2700 CUDA API calls/step, GPU ~60% idle. Top two sinks fixed (ragged KV write vectorized via KVWriteMap; sampling finalize batched to one transfer/step): 0.6B batched 1145 → 1469 tok/s (+28%). SDPA landed (author-hand-written attend, 910b7bd) and was validated on the 5090 same day — sdpa-results.md is the record: the mem-efficient routing assumption was wrong (efficient rejects dense GQA, flash rejects the mask; the one fused acceptor is cuDNN, which default priority ranks below math — the attend ran silently unfused until pinned with set_priority=True; tripwire tests now assert the fused kernel executes). The A/B then found the real lesson: cuDNN compiles a ~200 ms plan per distinct problem shape and CB churns shapes every step — SDPA loses end-to-end (longctx 80 → 23–57 tok/s, short_chat TTFT 13× worse) despite fused microbenchmark wins. Padded stays the CUDA default. Open: the response (bucket attention shapes + pre-warm — likely load-bearing for CUDA graphs too — vs defer to Phase 4 varlen); then torch.compile, CUDA graphs, the H100 day.',
+      statusLine: 'Status (2026-07-19): In progress. Step profiling (step-profiling.md) found the decode floor: CPU dispatch — ~2700 CUDA API calls/step, GPU ~60% idle. Top two sinks fixed (ragged KV write vectorized via KVWriteMap; sampling finalize batched to one transfer/step): 0.6B batched 1145 → 1469 tok/s (+28%). SDPA landed (author-hand-written attend, 910b7bd) and was validated on the 5090 same day — sdpa-results.md is the record: the mem-efficient routing assumption was wrong (efficient rejects dense GQA, flash rejects the mask; the one fused acceptor is cuDNN, which default priority ranks below math — the attend ran silently unfused until pinned with set_priority=True; tripwire tests now assert the fused kernel executes). The A/B then found the real lesson: cuDNN compiles a ~200 ms plan per distinct problem shape and CB churns shapes every step — SDPA lost end-to-end despite fused microbenchmark wins. The response landed same day (PR #1, merged): a bounded step-shape vocabulary — chunk widths quantized in the water-fill, kv-span/batch padding at one boundary (shaping.py, filler rows num_new == 0), 477-shape warm-up behind Ready. Second A/B (shape-buckets-results.md): plan churn eliminated (zero steps > 100 ms vs 23.9%), warm cuDNN wins long_context 1.6–2.2× (179 vs 80 tok/s at c=4), padded+buckets is repeat-noise; bill = 102 s warm-up. sdpa + shape buckets + warm-up is now the CUDA serve default (per-piece opt-outs; Mac/CPU stays padded). Open: torch.compile; CUDA graphs (the vocabulary is their groundwork — known wrinkle: KV-scatter length still varies within a shape); the H100 day.',
       items: [
-        '<code>SDPAAttentionMethod</code> (F.scaled_dot_product_attention) landed and validated — but cuDNN&#39;s per-shape ~200 ms plan compiles lose the A/B under CB&#39;s shape churn, so padded <i>stays</i> the CUDA default; the shape-bucketing / Phase-4-varlen decision is the open response',
+        '<code>SDPAAttentionMethod</code> (F.scaled_dot_product_attention, cuDNN-pinned) is the CUDA default, riding the bounded step-shape vocabulary (quantized chunk widths, kv/batch buckets, warm-up behind Ready) that killed cuDNN&#39;s per-shape plan-compile churn; einsum stays the correctness oracle and Mac/CPU fallback',
         '<code>torch.compile</code> on the batched forward — dynamic shapes will fight back; compile per batch-size bucket; budget a day of <code>torch._dynamo.explain()</code>',
         'CUDA graphs for steady-state decode, captured per batch-size bucket (1, 4, 16, 32) with eager fallback — “this is exactly how vLLM does it; the implementation detail <i>is</i> the lesson”',
         'First true before/after bench vs Phase 2’s numbers',
@@ -1058,7 +1059,7 @@ function initRoadmap() {
   });
   // "you are here" flag
   mk('text', { x: xActive, y: LY + 68, style: 'font:700 11px var(--sans);letter-spacing:.06em;fill:#8a5a00;text-anchor:middle' }, '▲ YOU ARE HERE');
-  mk('text', { x: xActive, y: LY + 84, style: 'font:10.5px var(--sans);fill:var(--muted);text-anchor:middle' }, 'SDPA validated (padded stays default) — shape bucketing?, compile, CUDA graphs');
+  mk('text', { x: xActive, y: LY + 84, style: 'font:10.5px var(--sans);fill:var(--muted);text-anchor:middle' }, 'SDPA + shape buckets = CUDA default (longctx 2.2×) — compile, CUDA graphs next');
 
   const diagPanel = el('section', 'panel');
   diagPanel.appendChild(el('h2', null, 'The line — phases 0 → 10, from PLAN.md'));
@@ -3682,19 +3683,20 @@ function initFlash() {
   p4.appendChild(para('The attachment point is already shaped for it: <code>SDPAAttentionMethod</code> slots into the <code>AttentionMethod</code> protocol ' +
     'next to the einsum and padded methods, touching neither the scheduler nor the KV layout. The einsum path stays as the correctness ' +
     'oracle and Mac/CPU fallback — and the step-5 equivalence-suite pattern carries over with one change: flash reorders floating-point ' +
-    'accumulation by tile, so the contract is tolerance (<code>atol</code>), not bit-exactness. The mask question is decided ' +
-    '(2026-07-19): our per-row ragged causality (<code>j ≤ start_pos + i</code>) stays an explicit bool mask, which lands on the ' +
-    'memory-efficient backend — accepted, since it is still fused and never materializes S. Flash proper only applies masks it can ' +
-    'compute from index arithmetic (<code>is_causal</code>/varlen) and rejects mask tensors; that lengths-metadata restructure rides ' +
-    'with Phase 4\'s paged pool, which forces a metadata-driven read path anyway. Plus: <code>enable_gqa=True</code> instead of ' +
-    'expanding K/V 2×, and padded query rows still burn garbage compute (same tradeoff as today, same <code>max_tokens_per_step</code> ' +
-    'tuning).'));
-  p4.appendChild(para('<b>What the baseline predicts:</b> SDPA claims the slope, not the floor. Expect the longctx cells ' +
-    '(85 tok/s, ITL p99 196 ms) and 4B-code prefill interference to move most — and 0.6B short_chat decode to barely move at all: ' +
-    'after the 2026-07-19 dispatch fixes the decode slope at 8–16 rows is already down to ~0.04 ms/row, so short-context decode is ' +
-    'nearly all per-step floor, and the floor belongs to CUDA graphs. That non-result is the expected result, not a failed ' +
-    'optimization. Phase 3 re-runs the same bench configs and compares in the panel: the first before/after that measures an ' +
-    'optimization rather than a feature.'));
+    'accumulation by tile, so the contract is tolerance (<code>atol</code>), not bit-exactness. The mask design held, the routing ' +
+    'assumption did not (sdpa-results.md): the memory-efficient backend rejects dense GQA, flash rejects the mask tensor, and the one ' +
+    'fused backend taking both is <b>cuDNN</b> — which the default dispatcher ranked below math, so the attend ran silently unfused ' +
+    'until pinned (<code>sdpa_kernel([CUDNN, MATH], set_priority=True)</code>; a tripwire test now profiles a real forward and asserts ' +
+    'the fused kernel executed). Flash proper only applies masks it can compute from index arithmetic (<code>is_causal</code>/varlen); ' +
+    'that lengths-metadata restructure rides with Phase 4\'s paged pool, which forces a metadata-driven read path anyway. Plus: ' +
+    '<code>enable_gqa=True</code> instead of expanding K/V 2×, and padded query rows still burn garbage compute (same tradeoff as ' +
+    'today, same <code>max_tokens_per_step</code> tuning).'));
+  p4.appendChild(para('<b>What the A/Bs measured (2026-07-19, shape-buckets-results.md):</b> the prediction held with one detour. ' +
+    'Warm cuDNN wins long context 1.6–2.2× (92.9 / 146 / 179 tok/s at c=1/2/4 vs padded\'s 86 / 92 / 80) with TTFT 2–5× better — but ' +
+    'only after a bounded step-shape vocabulary (quantized chunk widths, 256-token KV spans, batch padding, a 102 s warm-up sweep) ' +
+    'killed cuDNN\'s ~200 ms per-shape plan compiles, which continuous batching\'s ever-growing KV span triggered nearly every step. ' +
+    'short_chat moved -1% (396 vs 400 tok/s) — the expected non-result: short-context decode is per-step floor, and the floor belongs ' +
+    'to CUDA graphs. sdpa + shape buckets + warm-up is now the CUDA serve default.'));
 
   /* ---------- transport + step logic ---------- */
   const stepName = (s) => s.t === 'intro' ? 'setup' : s.t === 'load' ? `load Q${s.qi}` : s.t === 'tile' ? `tile (${s.qi},${s.kj})` : `write O${s.qi}`;
@@ -4231,19 +4233,20 @@ function initFlashWalk() {
     'in principle, not just in practice.');
   eRow('F.scaled_dot_product_attention', 'a dispatcher, not a kernel',
     'Per call, PyTorch routes to one of: <b>flash</b> (the kernel above — wants is_causal/varlen-shaped truth), ' +
-    '<b>memory-efficient</b> (tiled, accepts arbitrary masks), or <b>math</b> (materializes scores — the einsum path with ' +
-    'extra steps). Which backend you land on is the whole game — and the Phase-3 shape is decided (2026-07-19): the ' +
-    'SDPAAttentionMethod keeps the explicit per-row bool mask and accepts memory-efficient — still fused, S never ' +
-    'materialized. Flash only applies masks it can compute from index arithmetic, so the lengths-metadata restructure ' +
-    '(varlen cu_seqlens / FlexAttention) moved to Phase 4, where paged KV forces that interface anyway. Dispatch rules are ' +
-    'torch-version-specific — verify which backend you actually got, don\'t assume.');
-  eRow('what it claims here', 'the slope and the stalls — not the floor',
-    'SDPA attacks per-token compute: the longctx cells (85 tok/s, engine ITL p99 196 ms, TTFT p50 ≈ 1 s of chunked prefill) ' +
-    'are the target, plus 4B-code prefill interference. The ~9–10 ms per-step floor is CPU dispatch and belongs to CUDA ' +
-    'graphs — and after the 2026-07-19 KV-scatter + batched-finalize fixes, the decode slope in the 8–16-row window is ' +
-    'already down to ~0.04 ms/row: for short-context decode the floor is now nearly the whole story. SDPA\'s case rests on ' +
-    'prefill and long context. Expect 0.6B short_chat to barely move when it lands — that is the predicted result, not a ' +
-    'failed optimization.');
+    '<b>memory-efficient</b> (tiled, accepts arbitrary masks — but not dense GQA), <b>cuDNN</b> (takes mask + GQA both), or ' +
+    '<b>math</b> (materializes scores — the einsum path with extra steps). Which backend you land on is the whole game, and ' +
+    'the 5090 proved it twice (sdpa-results.md): the one fused acceptor of our call is cuDNN, which default priority ranked ' +
+    'below math — the attend ran silently unfused until pinned with sdpa_kernel([CUDNN, MATH], set_priority=True), and a ' +
+    'tripwire test now asserts the fused kernel actually executes. Flash only applies masks it can compute from index ' +
+    'arithmetic, so the lengths-metadata restructure (varlen cu_seqlens / FlexAttention) moved to Phase 4, where paged KV ' +
+    'forces that interface anyway.');
+  eRow('what it delivered here', 'the slope and the stalls — not the floor',
+    'Measured 2026-07-19 (shape-buckets-results.md): warm cuDNN wins long context 1.6–2.2× (179 vs 80 tok/s at c=4, TTFT ' +
+    '2–5× better) — after the bounded step-shape vocabulary + 102 s warm-up killed cuDNN\'s ~200 ms per-shape plan ' +
+    'compiles, which continuous batching\'s ever-growing KV span otherwise triggers nearly every step (23.9% of steps ' +
+    'stalled > 100 ms; zero after). short_chat moved −1%: short-context decode is per-step CPU-dispatch floor, and the ' +
+    'floor belongs to CUDA graphs — the next Phase-3 item, for which the shape vocabulary is the groundwork. ' +
+    'sdpa + shape buckets + warm-up is now the CUDA serve default.');
   pE.appendChild(eAnat);
 
   body.append(pA, pB, pC, pD, pE);
