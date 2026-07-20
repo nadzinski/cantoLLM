@@ -83,10 +83,22 @@ def cmd_serve(args):
                 "batched speculation is out of scope)"
             )
         spec = qwen3_spec(args.model)
+        if args.warmup_shapes and not args.shape_buckets:
+            sys.exit("error: --warmup-shapes requires --shape-buckets "
+                     "(an unbounded shape vocabulary cannot be enumerated)")
+        bucket_kwargs = {}
+        if args.shape_buckets:
+            from cantollm.engine.batching import default_shape_buckets
+
+            bucket_kwargs = default_shape_buckets(
+                args.max_batch, args.max_tokens_per_step
+            )
+            bucket_kwargs["warmup_shapes"] = args.warmup_shapes
         config = BatchingConfig(
             max_batch=args.max_batch,
             max_seq_len=args.batch_max_seq_len,
             max_tokens_per_step=args.max_tokens_per_step,
+            **bucket_kwargs,
         )
         if args.in_process:
             runtime = build_runtime(spec, device, attention=args.attention)
@@ -289,6 +301,17 @@ def parse_args():
                               help="Batched engine: attention method (default: padded "
                                    "einsum; sdpa = F.scaled_dot_product_attention, "
                                    "Phase 3). The sequential engine always uses einsum")
+    serve_parser.add_argument("--shape-buckets", action="store_true",
+                              help="Batched engine: bound the step-shape vocabulary "
+                                   "(quantized prefill chunk widths, 256-token KV "
+                                   "spans, power-of-two batch padding) so shape-keyed "
+                                   "kernel caches (cuDNN SDPA plans, CUDA graphs) "
+                                   "never compile on a live request")
+    serve_parser.add_argument("--warmup-shapes", action="store_true",
+                              help="Batched engine: with --shape-buckets, run one "
+                                   "dummy forward per vocabulary shape at startup "
+                                   "(behind readiness) so every shape is warm before "
+                                   "traffic")
     serve_parser.add_argument("--in-process", action="store_true",
                               help="Batched engine: run the scheduler inside the API "
                                    "process (debugging aid; default is a dedicated "

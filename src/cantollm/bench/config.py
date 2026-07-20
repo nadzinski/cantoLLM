@@ -214,6 +214,10 @@ def serve_argv(variant: ServerVariant, extra: list[str] | None = None) -> list[s
             argv += [f"--{key.replace('_', '-')}", str(cfg[key])]
     if cfg.get("in_process"):
         argv.append("--in-process")
+    if cfg.get("shape_buckets"):
+        argv.append("--shape-buckets")
+    if cfg.get("warmup_shapes"):
+        argv.append("--warmup-shapes")
     return argv + list(extra or [])
 
 

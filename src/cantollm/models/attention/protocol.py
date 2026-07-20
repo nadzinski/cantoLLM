@@ -64,7 +64,10 @@ class BatchMeta:
     """(B,) long — each row's first new token position."""
 
     num_new: torch.Tensor
-    """(B,) long — real (unpadded) new tokens per row; always >= 1."""
+    """(B,) long — real (unpadded) new tokens per row; >= 1 for real rows.
+    0 marks a filler row (batch padded up to a shape bucket): it writes no
+    KV (`kv_write_map` skips it by construction), reads slot 0's history
+    under the causal mask, and its output row is garbage nobody gathers."""
 
     positions: torch.Tensor
     """(B, num_new_max) long — start_pos[b] + arange; pad columns unused."""
@@ -73,7 +76,9 @@ class BatchMeta:
     """Padded width of this step's input_ids."""
 
     max_history_len: int
-    """max(start_pos + num_new) over rows — the KV span attention reads."""
+    """The KV span attention reads: >= max(start_pos + num_new) over rows.
+    May exceed it when the span is rounded up to a shape bucket (never past
+    the slot capacity) — the causal mask fences the over-read."""
 
     device: torch.device | None = None
     """Where `kv_write_map`'s index tensors are created (None = CPU).

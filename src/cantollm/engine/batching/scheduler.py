@@ -75,18 +75,62 @@ def water_fill(budget: int, caps: list[int]) -> list[int]:
     return allocations
 
 
+def round_up_to(value: int, menu: list[int] | tuple[int, ...]) -> int:
+    """Smallest menu entry >= value (menu ascending; caller guarantees one
+    exists — config validation pins the menus' tops)."""
+    for entry in menu:
+        if entry >= value:
+            return entry
+    raise ValueError(f"{value} exceeds the menu top {menu[-1]}")
+
+
+FILLER_SPEC = (0, 0, 0)
+"""A filler row's (slot, start_pos, num_new): reads slot 0's history under
+the causal mask, writes nothing (kv_write_map skips num_new == 0 rows by
+construction), and its output row is garbage nobody gathers. Appended after
+the real rows, so real row indices are stable."""
+
+
 def build_batch_meta(
-    rows: list[Row], device: torch.device | None = None
+    rows: list[Row],
+    device: torch.device | None = None,
+    *,
+    pad_to_rows: int | None = None,
+    pad_to_width: int | None = None,
+    kv_bucket: int | None = None,
+    kv_cap: int | None = None,
 ) -> BatchMeta:
     """Per-step geometry from planned rows (see BatchMeta's docstrings).
 
     `device` is where `meta.kv_write_map`'s index tensors land — pass the
     KV pool's device so the per-step upload happens once, not per layer.
+
+    The keyword knobs implement the bounded shape vocabulary and default to
+    exact v1 geometry:
+      pad_to_rows:  pad the batch to this many rows with FILLER_SPEC rows.
+      pad_to_width: force num_new_max (>= the widest real row; the extra
+        columns are pad columns, same machinery as narrow rows today).
+      kv_bucket / kv_cap: round max_history_len up to a kv_bucket multiple,
+        capped at kv_cap (the slot capacity) — the mask fences the
+        over-read, the model validates the cap.
     """
     specs = [row.slot_meta for row in rows]
+    if pad_to_rows is not None and pad_to_rows > len(specs):
+        specs = specs + [FILLER_SPEC] * (pad_to_rows - len(specs))
     start_pos = torch.tensor([s[1] for s in specs])
     num_new = torch.tensor([s[2] for s in specs])
     num_new_max = int(num_new.max())
+    if pad_to_width is not None:
+        if pad_to_width < num_new_max:
+            raise ValueError(
+                f"pad_to_width={pad_to_width} is narrower than the widest "
+                f"row ({num_new_max})"
+            )
+        num_new_max = pad_to_width
+    max_history_len = int((start_pos + num_new).max())
+    if kv_bucket is not None:
+        rounded = -(-max_history_len // kv_bucket) * kv_bucket
+        max_history_len = min(rounded, kv_cap) if kv_cap is not None else rounded
     return BatchMeta(
         rows=specs,
         slots=torch.tensor([s[0] for s in specs]),
@@ -94,7 +138,7 @@ def build_batch_meta(
         num_new=num_new,
         positions=start_pos[:, None] + torch.arange(num_new_max)[None, :],
         num_new_max=num_new_max,
-        max_history_len=int((start_pos + num_new).max()),
+        max_history_len=max_history_len,
         device=device,
     )
 
@@ -232,8 +276,18 @@ class ContinuousBatchingScheduler:
             # active sequences means no forward pass this step.
             return events
 
-        input_ids = self._build_input_ids(rows)
-        meta = build_batch_meta(rows, device=self.pool.k.device)
+        step_rows, step_width = self._step_shape(rows)
+        input_ids = self._build_input_ids(
+            rows, pad_to_rows=step_rows, pad_to_width=step_width
+        )
+        meta = build_batch_meta(
+            rows,
+            device=self.pool.k.device,
+            pad_to_rows=step_rows,
+            pad_to_width=step_width,
+            kv_bucket=self.config.kv_bucket,
+            kv_cap=self.config.max_seq_len,
+        )
 
         logits = self.forward_fn(input_ids, meta, self.pool)
 
@@ -297,21 +351,70 @@ class ContinuousBatchingScheduler:
 
     def _plan_step(self) -> list[Row]:
         """Water-fill the token budget: decode rows request 1, prefilling
-        rows request their remaining prompt."""
+        rows request their remaining prompt. With a `prefill_widths` menu,
+        mid-prompt chunks are then quantized down to menu widths."""
         requested = [
             seq.remaining_prompt if seq.is_prefilling() else 1
             for seq in self.active
         ]
         allocated = water_fill(self.config.max_tokens_per_step, requested)
+        if self.config.prefill_widths is not None:
+            allocated = [
+                self._quantize_chunk(seq, n)
+                for seq, n in zip(self.active, allocated)
+            ]
         return [
             Row(sequence=seq, num_new=n, start_pos=seq.position)
             for seq, n in zip(self.active, allocated)
         ]
 
-    def _build_input_ids(self, rows: list[Row]) -> torch.Tensor:
-        """(B, num_new_max) int64, left-aligned, zero-padded."""
+    def _quantize_chunk(self, seq: CBSequence, allocated: int) -> int:
+        """Snap a mid-prompt chunk down to the largest menu width that fits.
+
+        Exemptions keep this a pure narrowing: decode rows (1 token), the
+        final chunk of a prompt (takes exactly what remains — the step
+        width rounds up over it), and tight-budget allocations below the
+        smallest menu width (rare; the width padding still bounds the
+        step's shape). Freed budget is not redistributed — a menu-width
+        chunk next step picks up the slack.
+        """
+        if not seq.is_prefilling() or allocated <= 1:
+            return allocated
+        if allocated >= seq.remaining_prompt:
+            return allocated  # final chunk: exact, padded by the step width
+        menu = self.config.prefill_widths
+        fitting = [w for w in menu if w <= allocated]
+        return fitting[-1] if fitting else allocated
+
+    def _step_shape(self, rows: list[Row]) -> tuple[int | None, int | None]:
+        """(pad_to_rows, pad_to_width) for this step under the config's
+        bucket knobs — (None, None) means exact v1 geometry."""
+        pad_rows = None
+        if self.config.batch_buckets is not None:
+            pad_rows = round_up_to(len(rows), self.config.batch_buckets)
+        pad_width = None
+        if self.config.prefill_widths is not None:
+            width = max(row.num_new for row in rows)
+            pad_width = (
+                1 if width == 1
+                else round_up_to(width, self.config.prefill_widths)
+            )
+        return pad_rows, pad_width
+
+    def _build_input_ids(
+        self,
+        rows: list[Row],
+        pad_to_rows: int | None = None,
+        pad_to_width: int | None = None,
+    ) -> torch.Tensor:
+        """(B, num_new_max) int64, left-aligned, zero-padded. Filler rows
+        (batch padding) and forced widths are all-zero padding the model
+        treats like today's pad columns."""
         width = max(row.num_new for row in rows)
-        input_ids = torch.zeros((len(rows), width), dtype=torch.int64)
+        if pad_to_width is not None:
+            width = pad_to_width
+        num_rows = len(rows) if pad_to_rows is None else pad_to_rows
+        input_ids = torch.zeros((num_rows, width), dtype=torch.int64)
         for i, row in enumerate(rows):
             input_ids[i, : row.num_new] = torch.tensor(row.input_tokens, dtype=torch.int64)
         return input_ids
