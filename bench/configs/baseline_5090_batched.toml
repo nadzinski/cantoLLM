@@ -9,6 +9,10 @@ name = "baseline-5090-batched"
 [server]
 model = "0.6B"
 engine = "batched"
+# Pinned 2026-07-19: CUDA serve defaults became sdpa + shape buckets;
+# this config predates that and re-runs must reproduce what it measured.
+attention = "padded"
+shape_buckets = false
 device = "cuda"
 port = 8377
 health_timeout_s = 900
