@@ -267,6 +267,9 @@ class ContinuousBatchingScheduler:
         """
         events = self.pending_events
         self.pending_events = []
+        # Cleared up front so a no-forward step (pending flush only) never
+        # reports the previous step's shape.
+        self.last_forward_shape = None
 
         self._promote_queued()
 
@@ -287,6 +290,12 @@ class ContinuousBatchingScheduler:
             pad_to_width=step_width,
             kv_bucket=self.config.kv_bucket,
             kv_cap=self.config.max_seq_len,
+        )
+
+        # The forward's actual problem shape (post-bucketing), for the
+        # stats collector — StepStats.rows counts real sequences only.
+        self.last_forward_shape = (
+            len(meta.rows), meta.num_new_max, meta.max_history_len
         )
 
         logits = self.forward_fn(input_ids, meta, self.pool)

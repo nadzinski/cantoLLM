@@ -56,6 +56,9 @@ class StepStats:
     kv_tokens: int        # sum of active sequences' positions after the step
     prefill_tokens: int   # prompt tokens consumed by this step's forward
     decode_tokens: int    # decode tokens consumed by this step's forward
+    fwd_rows: int | None = None    # forward's batch dim (incl. filler rows)
+    fwd_width: int | None = None   # forward's num_new_max (incl. pad columns)
+    fwd_kv_len: int | None = None  # forward's max_history_len (post-bucketing)
 
 
 @dataclass(frozen=True)
@@ -138,6 +141,10 @@ class StepStatsCollector:
                 prefill += prompt_len - pre_pos
 
         max_batch = scheduler.config.max_batch
+        # (B, num_new_max, max_history_len) of the forward this step ran —
+        # the shape the kernel saw, which bucketing changes and `rows`
+        # (real sequences) cannot reconstruct. None when no forward ran.
+        fwd_shape = getattr(scheduler, "last_forward_shape", None) or (None,) * 3
         stats = StepStats(
             seq=self._seq,
             t_wall=time.time(),
@@ -149,6 +156,9 @@ class StepStatsCollector:
             kv_tokens=kv_tokens,
             prefill_tokens=prefill,
             decode_tokens=decode,
+            fwd_rows=fwd_shape[0],
+            fwd_width=fwd_shape[1],
+            fwd_kv_len=fwd_shape[2],
         )
         self._seq += 1
         return stats
