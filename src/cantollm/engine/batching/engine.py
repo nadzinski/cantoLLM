@@ -68,9 +68,17 @@ def scheduler_from_runtime(
     and by the engine-process factory after the split."""
     from cantollm.engine.batching.scheduler import ContinuousBatchingScheduler
 
+    pool = runtime.new_kv_pool(config)
+    if config.warmup_shapes:
+        # Behind Ready in the process split (the factory runs before the
+        # Ready handshake) and before from_runtime returns in-process: no
+        # request can reach a shape the kernel hasn't already seen.
+        from cantollm.engine.batching.warmup import warmup_shape_vocabulary
+
+        warmup_shape_vocabulary(runtime.forward_batched, pool, config)
     return ContinuousBatchingScheduler(
         forward_fn=runtime.forward_batched,
-        pool=runtime.new_kv_pool(config),
+        pool=pool,
         allocator=SlotAllocator(config.max_batch),
         config=config,
     )

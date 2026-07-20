@@ -22,6 +22,10 @@ health_timeout_s = 900
 max_batch = 4
 batch_max_seq_len = 10240
 max_tokens_per_step = 512
+# Pinned 2026-07-19: both arms of this A/B were measured WITHOUT shape
+# buckets (that was the point — it exposed the plan churn); re-runs must
+# reproduce that, not the new CUDA default.
+shape_buckets = false
 
 [server.matrix]
 attention = ["padded", "sdpa"]

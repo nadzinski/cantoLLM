@@ -1,0 +1,58 @@
+# Phase-3 A/B, round 2: does a bounded shape vocabulary fix cuDNN-SDPA?
+# sdpa-results.md (2026-07-19) found the fused path loses end-to-end because
+# cuDNN compiles a ~200 ms plan per distinct problem shape and continuous
+# batching churns shapes every step. This run bounds the vocabulary
+# (quantized prefill widths, 256-token KV spans, batch padding) and warms
+# every shape behind readiness, then re-runs the exact geometry and points
+# of ab_5090_sdpa.toml. Four-way comparison: this run's two arms against
+# that run's two arms (bench/history/2026-07-19*_ab-5090-sdpa).
+#
+# Predictions on record: sdpa+buckets loses the ~200-300 ms p99 stall tail
+# (the plan-churn signature) and its short_chat TTFT returns to ~0.03 s;
+# whether warm cuDNN then actually beats padded on longctx is the open
+# question this run answers. padded+buckets measures pure bucketing overhead
+# (pad columns + over-read spans + filler rows) — predicted small.
+schema_version = 1
+name = "ab-5090-shape-buckets"
+
+[server]
+model = "0.6B"
+engine = "batched"
+device = "cuda"
+port = 8377
+health_timeout_s = 900
+max_batch = 4
+batch_max_seq_len = 10240
+max_tokens_per_step = 512
+shape_buckets = true
+warmup_shapes = true
+
+[server.matrix]
+attention = ["padded", "sdpa"]
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 4
+repeats = 3
+seed = 0
+
+[[points]]
+workload = "long_context"
+mode = "closed"
+concurrency = [1, 2, 4]
+requests_per_level = 16
+
+[[points]]
+workload = "long_context"
+mode = "closed"
+concurrency = [4]
+requests_per_level = 32
+
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [4]
+requests_per_level = 32

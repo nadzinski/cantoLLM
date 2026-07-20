@@ -198,15 +198,18 @@ class TestForwardBatchedPlumbing:
         expected = model.output_layer(model.output_RMSNorm(hidden))
         assert torch.equal(logits, expected)
 
-    def test_zero_width_row_rejected(self):
+    def test_negative_width_row_rejected(self):
+        """num_new == 0 is legal (a filler row — batch padded to a shape
+        bucket; its wrapped last-token gather is garbage nobody reads), so
+        the guard now sits at negative widths."""
         model = Qwen3(qwen3_config=TINY_ARCH, attention_method=PaddedAttentionMethod())
         meta = make_meta([(0, 0, 3), (1, 5, 1)])
         broken = BatchMeta(
             rows=meta.rows, slots=meta.slots, start_pos=meta.start_pos,
-            num_new=torch.tensor([3, 0]), positions=meta.positions,
+            num_new=torch.tensor([3, -1]), positions=meta.positions,
             num_new_max=meta.num_new_max, max_history_len=meta.max_history_len,
         )
-        with pytest.raises(ValueError, match="num_new >= 1"):
+        with pytest.raises(ValueError, match="num_new must be >= 0"):
             model.forward_batched(
                 torch.zeros(2, 3, dtype=torch.int64), broken, self.make_pool()
             )

@@ -28,6 +28,7 @@ import torch
 
 from cantollm.engine.batching.allocator import SlotAllocator
 from cantollm.engine.batching.config import BatchingConfig
+from cantollm.engine.batching.shaping import shape_step
 from cantollm.engine.batching.types import BatchedForwardFn, CBSequence
 from cantollm.engine import sampler
 from cantollm.engine.types import InferenceRequest, TokenEvent
@@ -223,6 +224,9 @@ class ContinuousBatchingScheduler:
         """
         events = self.pending_events
         self.pending_events = []
+        # Cleared up front so a no-forward step (pending flush only) never
+        # reports the previous step's shape.
+        self.last_forward_shape = None
 
         self._promote_queued()
 
@@ -234,6 +238,16 @@ class ContinuousBatchingScheduler:
 
         input_ids = self._build_input_ids(rows)
         meta = build_batch_meta(rows, device=self.pool.k.device)
+        # Pad the planned geometry into the bounded shape vocabulary (an
+        # exact no-op without the bucket knobs) — see shaping.py for why
+        # kernels care about step shapes.
+        input_ids, meta = shape_step(input_ids, meta, self.config)
+
+        # The forward's actual problem shape (post-bucketing), for the
+        # stats collector — StepStats.rows counts real sequences only.
+        self.last_forward_shape = (
+            len(meta.rows), meta.num_new_max, meta.max_history_len
+        )
 
         logits = self.forward_fn(input_ids, meta, self.pool)
 
@@ -297,16 +311,40 @@ class ContinuousBatchingScheduler:
 
     def _plan_step(self) -> list[Row]:
         """Water-fill the token budget: decode rows request 1, prefilling
-        rows request their remaining prompt."""
+        rows request their remaining prompt. With a `prefill_widths` menu,
+        mid-prompt chunks are then quantized down to menu widths."""
         requested = [
             seq.remaining_prompt if seq.is_prefilling() else 1
             for seq in self.active
         ]
         allocated = water_fill(self.config.max_tokens_per_step, requested)
+        if self.config.prefill_widths is not None:
+            allocated = [
+                self._quantize_chunk(seq, n)
+                for seq, n in zip(self.active, allocated)
+            ]
         return [
             Row(sequence=seq, num_new=n, start_pos=seq.position)
             for seq, n in zip(self.active, allocated)
         ]
+
+    def _quantize_chunk(self, seq: CBSequence, allocated: int) -> int:
+        """Snap a mid-prompt chunk down to the largest menu width that fits.
+
+        Exemptions keep this a pure narrowing: decode rows (1 token), the
+        final chunk of a prompt (takes exactly what remains — the step
+        width rounds up over it), and tight-budget allocations below the
+        smallest menu width (rare; the width padding still bounds the
+        step's shape). Freed budget is not redistributed — a menu-width
+        chunk next step picks up the slack.
+        """
+        if not seq.is_prefilling() or allocated <= 1:
+            return allocated
+        if allocated >= seq.remaining_prompt:
+            return allocated  # final chunk: exact, padded by the step width
+        menu = self.config.prefill_widths
+        fitting = [w for w in menu if w <= allocated]
+        return fitting[-1] if fitting else allocated
 
     def _build_input_ids(self, rows: list[Row]) -> torch.Tensor:
         """(B, num_new_max) int64, left-aligned, zero-padded."""

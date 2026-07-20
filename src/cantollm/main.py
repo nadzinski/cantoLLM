@@ -83,13 +83,41 @@ def cmd_serve(args):
                 "batched speculation is out of scope)"
             )
         spec = qwen3_spec(args.model)
+        # CUDA defaults are the measured winner (shape-buckets-results.md):
+        # sdpa attention + bounded shape vocabulary + warm-up. Everywhere
+        # else: padded, exact v1 geometry. Explicit flags override.
+        on_cuda = device.type == "cuda"
+        attention = args.attention or ("sdpa" if on_cuda else "padded")
+        shape_buckets = (
+            args.shape_buckets if args.shape_buckets is not None else on_cuda
+        )
+        warmup_shapes = (
+            args.warmup_shapes if args.warmup_shapes is not None
+            else shape_buckets and on_cuda
+        )
+        if warmup_shapes and not shape_buckets:
+            sys.exit("error: --warmup-shapes requires shape buckets "
+                     "(an unbounded shape vocabulary cannot be enumerated)")
+        if attention == "sdpa" and not shape_buckets:
+            print("warning: sdpa without --shape-buckets recompiles a cuDNN "
+                  "plan per step shape — expect stall tails "
+                  "(shape-buckets-results.md)")
+        bucket_kwargs = {}
+        if shape_buckets:
+            from cantollm.engine.batching import default_shape_buckets
+
+            bucket_kwargs = default_shape_buckets(
+                args.max_batch, args.max_tokens_per_step
+            )
+            bucket_kwargs["warmup_shapes"] = warmup_shapes
         config = BatchingConfig(
             max_batch=args.max_batch,
             max_seq_len=args.batch_max_seq_len,
             max_tokens_per_step=args.max_tokens_per_step,
+            **bucket_kwargs,
         )
         if args.in_process:
-            runtime = build_runtime(spec, device, attention=args.attention)
+            runtime = build_runtime(spec, device, attention=attention)
             engine = ContinuousBatchingEngine.from_runtime(runtime, config)
             api_runtime = runtime
             where = "in-process"
@@ -102,7 +130,7 @@ def cmd_serve(args):
                     "size": args.model,
                     "device": str(device),
                     "config": config,
-                    "attention": args.attention,
+                    "attention": attention,
                 },
             )
             api_runtime = build_tokenizer_runtime(spec)
@@ -116,7 +144,8 @@ def cmd_serve(args):
             f"continuous batching, {where} (max_batch={config.max_batch}, "
             f"slot={config.max_seq_len} tok, "
             f"budget={config.max_tokens_per_step} tok/step, "
-            f"attention={args.attention})"
+            f"attention={attention}, shape_buckets={'on' if shape_buckets else 'off'}, "
+            f"warmup={'on' if warmup_shapes else 'off'})"
         )
     else:
         if args.speculative:
@@ -285,10 +314,26 @@ def parse_args():
                               help="Batched engine: total new tokens per forward pass; "
                                    "bounds the prefill chunk width (default: 256)")
     serve_parser.add_argument("--attention", choices=("padded", "sdpa"),
-                              default="padded",
-                              help="Batched engine: attention method (default: padded "
-                                   "einsum; sdpa = F.scaled_dot_product_attention, "
-                                   "Phase 3). The sequential engine always uses einsum")
+                              default=None,
+                              help="Batched engine: attention method (default: sdpa "
+                                   "on CUDA, padded einsum elsewhere; sdpa = "
+                                   "F.scaled_dot_product_attention via cuDNN). The "
+                                   "sequential engine always uses einsum")
+    serve_parser.add_argument("--shape-buckets", default=None,
+                              action=argparse.BooleanOptionalAction,
+                              help="Batched engine: bound the step-shape vocabulary "
+                                   "(quantized prefill chunk widths, 256-token KV "
+                                   "spans, power-of-two batch padding) so shape-keyed "
+                                   "kernel caches (cuDNN SDPA plans, CUDA graphs) "
+                                   "never compile on a live request (default: on for "
+                                   "CUDA; --no-shape-buckets for exact v1 geometry)")
+    serve_parser.add_argument("--warmup-shapes", default=None,
+                              action=argparse.BooleanOptionalAction,
+                              help="Batched engine: with shape buckets, run one dummy "
+                                   "forward per vocabulary shape at startup (behind "
+                                   "readiness) so every shape is warm before traffic "
+                                   "(default: on when shape buckets are on for CUDA; "
+                                   "--no-warmup-shapes for faster dev starts)")
     serve_parser.add_argument("--in-process", action="store_true",
                               help="Batched engine: run the scheduler inside the API "
                                    "process (debugging aid; default is a dedicated "

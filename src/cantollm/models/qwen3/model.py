@@ -360,7 +360,9 @@ class Qwen3(nn.Module):
             )
 
         # Per-row gather of the last REAL token's hidden state (pad columns
-        # carry garbage; num_new >= 1 is validated above, so -1 can't wrap).
+        # carry garbage). Filler rows (num_new == 0, batch padded to a shape
+        # bucket) wrap to index -1 — a pad column whose garbage the
+        # scheduler never reads; real rows have num_new >= 1.
         row_idx = torch.arange(x.shape[0], device=x.device)
         last_hidden = x[row_idx, meta.num_new.to(x.device) - 1]
 
@@ -372,18 +374,20 @@ class Qwen3(nn.Module):
             raise ValueError(
                 f"pool has {pool.num_layers} layers but model has {num_blocks} blocks"
             )
-        if (meta.num_new < 1).any():
-            raise ValueError(
-                "every row must carry at least one real token (num_new >= 1); "
-                "a zero-width row's last-token gather would silently wrap to a "
-                "pad column"
-            )
+        if (meta.num_new < 0).any():
+            raise ValueError("num_new must be >= 0 (0 marks a filler row)")
         derived_history = int((meta.start_pos + meta.num_new).max())
-        if meta.max_history_len != derived_history:
+        if meta.max_history_len < derived_history:
             raise ValueError(
                 f"meta.max_history_len={meta.max_history_len} but rows imply "
                 f"{derived_history}; the mask and KV gather would silently "
-                "truncate or over-read history"
+                "truncate history"
+            )
+        if meta.max_history_len > pool.max_seq_len:
+            raise ValueError(
+                f"meta.max_history_len={meta.max_history_len} exceeds the "
+                f"slot capacity ({pool.max_seq_len}); the KV gather would "
+                "read out of bounds"
             )
 
     def forward(self, tokens, start_pos: int, kv_cache=None):

@@ -1,5 +1,5 @@
 from cantollm.engine.batching.allocator import SlotAllocator
-from cantollm.engine.batching.config import BatchingConfig
+from cantollm.engine.batching.config import BatchingConfig, default_shape_buckets
 from cantollm.engine.batching.engine import ContinuousBatchingEngine
 from cantollm.engine.batching.process import (
     EngineProcessClient,
@@ -15,4 +15,5 @@ __all__ = [
     "SchedulerLike",
     "SlotAllocator",
     "build_qwen3_batched_scheduler",
+    "default_shape_buckets",
 ]
