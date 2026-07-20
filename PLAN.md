@@ -115,7 +115,7 @@ single-special-token shortcut is gated on `not chat_wrapped`.
   `logprobs` / timing fields. Today the adapter _guesses_ `stop_reason` from
   `counts.total >= max_tokens`; the engine knows whether it actually stopped from EOS, a
   stop token, `max_tokens`, or an abort, and that information should survive the boundary.
-  `request_id` is harmless today and load-bearing once a scheduler multiplexes per-request
+  `request_id` is harmless today and essential once a scheduler multiplexes per-request
   queues.
 - Stop flattening `Message.content` in `api_types.py::Message._flatten_content` — pass
   structured `list[ContentBlockInput]` blocks through. The API will still tokenize (see
@@ -403,13 +403,24 @@ silently unfused until pinned with `set_priority=True` (tripwire tests now
 assert the fused kernel actually executes). The A/B then found the real
 lesson: cuDNN compiles a ~200 ms plan per distinct problem shape, and CB
 churns shapes every step — SDPA loses end-to-end (longctx 80 → 23–57 tok/s,
-short_chat TTFT 13× worse) despite fused microbenchmark wins. **Padded
-stays the CUDA default.** Open: decide the response (bucket attention
-shapes to a bounded vocabulary + pre-warm — likely load-bearing for CUDA
-graphs too — vs. defer to Phase 4's varlen restructure, which dissolves
-the problem class); then `torch.compile`, CUDA graphs, the H100 day.
+short_chat TTFT 13× worse) despite fused microbenchmark wins. The response
+landed the same day (PR #1, merged): a bounded step-shape vocabulary —
+chunk widths quantized in the water-fill, kv-span/batch padding at one
+boundary (`shaping.py::shape_step`, filler-row convention `num_new == 0`),
+and a 477-shape warm-up sweep behind Ready. Second A/B
+(`shape-buckets-results.md` is the record): plan churn eliminated outright
+(zero steps > 100 ms vs 23.9%), warm cuDNN wins long_context 1.6–2.2×
+(179 vs 80 tok/s at c=4), padded+buckets is repeat-noise; the bill is
+102 s of warm-up at server start. **sdpa + shape buckets + warm-up is now
+the CUDA default** (`--attention padded` / `--no-shape-buckets` /
+`--no-warmup-shapes` opt out; Mac/CPU stays padded, exact v1 geometry;
+pre-existing bench configs pinned to what they measured). Open:
+`torch.compile`; CUDA graphs — the shape vocabulary is their groundwork,
+with one known wrinkle: the KV-scatter index length still varies within a
+shape, so capture will want write-map padding or piecewise (body-only)
+graphs; the H100 day.
 
-**Core, load-bearing:**
+**Core:**
 
 - Add a new `SDPAAttentionMethod` that delegates to
   `F.scaled_dot_product_attention` and make it the default on CUDA.
