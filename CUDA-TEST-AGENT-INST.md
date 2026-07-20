@@ -14,8 +14,8 @@ shapes to a fixed vocabulary and pre-warms it:
 
 - **Prefill chunk widths** quantize to a menu inside the water-fill
   (mid-prompt chunks are menu-sized real tokens; the step width rounds up
-  into {1} ∪ menu). `ContinuousBatchingScheduler._quantize_chunk` /
-  `_step_shape`.
+  into {1} ∪ menu). `ContinuousBatchingScheduler._quantize_chunk`; the
+  geometry padding lives at one boundary, `shaping.py::shape_step`.
 - **KV spans** (`max_history_len`) round up to 256-token buckets, capped at
   the slot capacity — the causal mask fences the over-read.
 - **Batch sizes** pad to power-of-two buckets with filler rows

@@ -19,7 +19,8 @@ import torch
 
 from cantollm.engine.batching import BatchingConfig, default_shape_buckets
 from cantollm.engine.batching.engine import scheduler_from_runtime
-from cantollm.engine.batching.scheduler import build_batch_meta, round_up_to
+from cantollm.engine.batching.scheduler import build_batch_meta
+from cantollm.engine.batching.shaping import round_up_to, shape_step
 from cantollm.engine.batching.warmup import warmup_shape_vocabulary
 from cantollm.engine.types import InferenceRequest, SamplingParams
 from cantollm.runtime import build_runtime
@@ -124,46 +125,65 @@ class TestConfig:
             round_up_to(9, (4, 8))
 
 
-class TestBatchMetaShaping:
+class TestShapeStep:
     ROWS_FIXTURE = [(2, 10, 3), (0, 0, 1)]  # (slot, start, num_new)
 
-    def _rows(self):
+    def _planned(self, rows_fixture=None):
         from cantollm.engine.batching.scheduler import Row
         from cantollm.engine.batching.types import CBSequence
 
         rows = []
-        for slot, start, num_new in self.ROWS_FIXTURE:
+        for slot, start, num_new in rows_fixture or self.ROWS_FIXTURE:
             seq = CBSequence(
-                request_id=f"s{slot}", prompt_token_ids=list(range(20)),
+                request_id=f"s{slot}", prompt_token_ids=list(range(70)),
                 sampling_params=GREEDY, max_tokens=4, stop_token_ids=set(),
             )
             seq.slot_idx = slot
             seq.position = start
             rows.append(Row(sequence=seq, num_new=num_new, start_pos=start))
-        return rows
+        meta = build_batch_meta(rows)
+        input_ids = torch.ones(
+            (len(rows), meta.num_new_max), dtype=torch.int64
+        )
+        return input_ids, meta
+
+    def _config(self, **overrides):
+        return BatchingConfig(**{**BASE, **BUCKETS, **overrides})
+
+    def test_no_knobs_is_identity(self):
+        input_ids, meta = self._planned()
+        out_ids, out_meta = shape_step(input_ids, meta, BatchingConfig(**BASE))
+        assert out_ids is input_ids and out_meta is meta
 
     def test_filler_rows_and_width(self):
-        meta = build_batch_meta(self._rows(), pad_to_rows=3, pad_to_width=4)
-        assert meta.rows[2] == (0, 0, 0)
-        assert meta.num_new_max == 4
-        assert meta.positions.shape == (3, 4)
+        input_ids, meta = self._planned()
+        out_ids, out = shape_step(
+            input_ids, meta, self._config(batch_buckets=(1, 3))
+        )
+        assert out.rows[2] == (0, 0, 0)  # padded 2 -> batch bucket 3
+        assert out.num_new_max == 4      # widest row 3 -> menu width 4
+        assert out.positions.shape == (3, 4)
+        assert out_ids.shape == (3, 4)
+        assert (out_ids[2] == 0).all() and (out_ids[0, :3] == 1).all()
         # fillers contribute no KV writes
-        m = meta.kv_write_map
+        m = out.kv_write_map
         assert len(m.row) == 3 + 1  # only the real tokens
         assert (m.row < 2).all()
 
     def test_kv_rounding_and_cap(self):
-        meta = build_batch_meta(self._rows(), kv_bucket=16, kv_cap=64)
-        assert meta.max_history_len == 16  # derived 13 -> bucket 16
-        wide = self._rows()
-        wide[0].sequence.position = 60
-        wide[0] = type(wide[0])(sequence=wide[0].sequence, num_new=3, start_pos=60)
-        meta = build_batch_meta(wide, kv_bucket=16, kv_cap=64)
-        assert meta.max_history_len == 64  # derived 63 -> 64, capped at slot
+        _, meta = self._planned()
+        _, out = shape_step(torch.ones(2, 3, dtype=torch.int64), meta, self._config())
+        assert out.max_history_len == 16  # derived 13 -> bucket 16
+        input_ids, meta = self._planned([(2, 60, 3), (0, 0, 1)])
+        _, out = shape_step(input_ids, meta, self._config())
+        assert out.max_history_len == 64  # derived 63 -> 64, capped at slot
 
-    def test_width_narrower_than_rows_rejected(self):
-        with pytest.raises(ValueError, match="narrower"):
-            build_batch_meta(self._rows(), pad_to_width=2)
+    def test_on_vocabulary_geometry_is_identity(self):
+        """Steady-state decode at a bucket batch size sits on a vocabulary
+        point already — shaping must not rebuild anything."""
+        input_ids, meta = self._planned([(0, 15, 1), (1, 31, 1), (2, 15, 1)])
+        out_ids, out_meta = shape_step(input_ids, meta, self._config())
+        assert out_ids is input_ids and out_meta is meta
 
 
 class TestOutputEquivalence:
