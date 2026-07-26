@@ -85,16 +85,18 @@ detail lives behind the zoom targets):
   (grid/block/warp/tensor core, the deliberately-serial K scan, Flash-Decoding
   split-KV merge), and what SDPA claims in cantoLLM's bench numbers. Static
   design content, no trace needed.
-- **CUDA graphs**: Phase 3's next lever, taught from measured numbers. What
-  every kernel launch costs and why the decode floor is CPU dispatch
-  (step-profiling.md's ~1900-call flood), the capture/instantiate/replay
-  lifecycle as a steppable CPU/GPU/graph state board, real captured graph
-  topologies and eager-vs-replay timings (from `viz/capture_cudagraphs.py`,
-  below), the rules capture imposes (recorded rule-breakers with real error
-  text), and the decode step's graph boundary in cantoLLM (the KV-scatter
-  wrinkle, buckets as the capture vocabulary, the bills). Ends with the
-  toy-session exercise list. Static explainer plus committed capture
-  artifacts, no trace files needed.
+- **CUDA graphs**: a 12-section mini-chapter, textbook-style, built entirely
+  from a real L4 capture session (`viz/capture_cudagraphs.py`; committed
+  record under `viz/captures/`). Arc: a motivating puzzle (five 1-µs kernels
+  that cost 31 µs, with a to-scale CPU/GPU timeline), the anatomy of one
+  launch, the record-once-replay-as-one idea, the lifecycle on a steppable
+  state board, real clickable graph dumps (the chain, then a tale of two
+  fork-joins showing where edges come from), the size-sweep crossover, the
+  rules derived from "replay consults no CPU" with recorded violations, a
+  110-kernel model at 15.4x, and only then the engine's 9 ms floor and the
+  cantoLLM design space (KV-scatter wrinkle, buckets as capture vocabulary,
+  the bills). Ends with the toy-session exercise list. Sections lean on each
+  other; read in order.
 
 ## Regenerating the traces
 
