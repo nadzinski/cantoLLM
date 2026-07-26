@@ -1,0 +1,27 @@
+#cloud-config
+# Base GPU DLAMI already ships the NVIDIA driver; this only adds tooling.
+# No package_upgrade: keeps first boot fast.
+package_update: true
+
+packages:
+  - git
+  - curl
+  - unzip
+  - jq
+  - tmux
+  - htop
+  - rsync
+
+runcmd:
+  # Install uv for the ubuntu user (the repo's env is uv-managed)
+  - su - ubuntu -c "curl -LsSf https://astral.sh/uv/install.sh | sh"
+  - su - ubuntu -c "echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.bashrc"
+  - su - ubuntu -c "echo 'export TERM=xterm-256color' >> ~/.bashrc"
+
+  # rsync target for sync.sh
+  - mkdir -p /home/ubuntu/cantoLLM
+  - chown ubuntu:ubuntu /home/ubuntu/cantoLLM
+
+  # Breadcrumb so we know provisioning finished
+  - touch /home/ubuntu/.cantollm-ready
+  - chown ubuntu:ubuntu /home/ubuntu/.cantollm-ready

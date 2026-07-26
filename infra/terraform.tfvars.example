@@ -1,0 +1,5 @@
+ssh_public_key = "ssh-ed25519 AAAA...your-key... you"
+
+# ssh_cidr is set automatically by up.sh (your current public IP as a /32).
+# Set it here only if you run terraform directly:
+# ssh_cidr = "203.0.113.42/32"
