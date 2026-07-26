@@ -203,6 +203,7 @@
   .flow-svg .stepnum { font: 700 11px var(--mono); fill: var(--plane); }
 
   /* ---- roadmap metro line ---- */
+  .rm-svg { min-width: 1000px; }
   .rm-svg .stop { cursor: pointer; }
   .rm-svg .stop circle.face { fill: var(--surface); stroke: var(--axis); stroke-width: 2; }
   .rm-svg .stop.done circle.face { fill: color-mix(in srgb, var(--sB) 70%, var(--surface)); stroke: var(--sB); }
@@ -927,7 +928,7 @@ function initRoadmap() {
         '<b>Benchmark harness spec</b> (the deliverable is the document): prompt sets, concurrency ramps, TTFT p50/p90/p99, ITL, aggregate tok/s, KV utilization, finish-reason distribution — some metrics only become instrumentable as later phases land the contracts',
         'fable-review flag: this spec has been “Open” since Phase 0 but Phase 2’s exit bench depends on it — time-box it before the scheduler finishes',
       ] },
-    { id: '1a', title: 'engine seams', hw: 'Mac', status: 'done',
+    { id: '1a', title: 'engine boundaries', hw: 'Mac', status: 'done',
       statusLine: 'Status (2026-04-19): Complete.',
       goal: 'Land the architectural hygiene continuous batching will need — stay single-process, but shape every interface so the Phase 2 process split is an afternoon’s work, not a rewrite.',
       items: [
@@ -952,7 +953,7 @@ function initRoadmap() {
         'Engine shell: one command queue, per-request async queues, disconnect→abort, batch-wide failure policy — IPC-shaped on purpose; the split reused the loop (<code>drive_scheduler</code>) and the multiplexing (<code>EventMultiplexer</code>) verbatim',
         'Three-layer admission: API 400 (both dialects) · scheduler re-validation · pool write bounds',
         'Process split landed: mp spawn + two queues (commands in, one event batch per step out — never per token), Ready/EngineFailed/Stopped wire protocol, liveness both directions, <code>TokenizerRuntime</code> so the API process never loads weights; uvloop + httptools pinned',
-        'Batched speculation explicitly disabled — ragged accept counts stay a Phase-10 research detour',
+        'Batched speculation explicitly disabled — ragged accept counts now get their own phase: the Phase 9 capstone',
         'Bench (5090 baseline, spec’d): 1145 vs 165 tok/s aggregate (~7×) on 0.6B; the TTFT trade appeared (1.5 s queue wait at c=16 on 8 slots) and doubling slots dissolved it (50 ms) — and a ~11.4 ms step time nearly independent of row count says small-model decode is per-step-overhead-bound (a Phase 3 CUDA-graphs lead)',
         '→ See the <a href="#/batching">Continuous batching</a> and <a href="#/wiring">CB wiring</a> tabs',
       ] },
@@ -972,53 +973,81 @@ function initRoadmap() {
         'Admission control (429 + Retry-After) · <code>/ready</code> vs <code>/health</code> with warm-up · graceful shutdown with a 30s drain · model reload via registry swap',
         'Exit criterion: 50 concurrent clients run clean; kill -9 the engine → API serves 503 → restart → recovery. Auth stays a sidecar non-goal',
       ] },
-    { id: '4', title: 'paged KV', hw: '5090', status: 'future',
-      goal: 'Replace padded contiguous KV with a block-indexed pool + block tables. The memory-management lesson.',
-      statusLine: 'Status (2026-07-19): Not started. Scope note: the flash-proper attention restructure moved here from Phase 3 — expressing raggedness as lengths metadata instead of an explicit mask tensor is the same interface change paging requires, so the two land together.',
+    { id: '4', title: 'paged KV + overlap', hw: '5090', status: 'future',
+      goal: 'Replace padded contiguous KV with a block-indexed pool + block tables — the memory-management lesson — and overlap scheduling with execution so the CPU plans step N+1 while the GPU runs step N.',
+      statusLine: 'Status (2026-07-22): Not started. Scope notes: the flash-proper attention restructure moved here from Phase 3 — lengths metadata instead of an explicit mask is the same interface change paging requires. The 2026-07-19 roadmap review added async/overlap scheduling here (deliberately not Phase 3: reshape the scheduler loop once, on the paged engine), plus preemption victim-selection policies and per-request priorities, judged by a new goodput-under-joint-SLO bench metric.',
       items: [
         '16-token blocks in one preallocated pool; per-request block tables mapping logical position → block id',
-        'Allocator with free-list, refcounts, eviction; preemption via recompute-on-resume (swap-to-CPU as the fancy alternative)',
+        'Allocator with free-list, refcounts, eviction; preemption via recompute-on-resume (swap-to-CPU as the fancy alternative) — plus victim-selection policies (LIFO / priority-weighted / cost-aware) and per-request priorities on both API dialects',
         '<code>PagedAttentionMethod</code> slots into the same AttentionMethod protocol — and inherits Phase 2’s runtime-owned-pool + handle shape (see the Weights tab for why: KV = the whole checkpoint at ~13k tokens)',
         'The attention call moves off F.scaled_dot_product_attention, which takes no block tables: raggedness + paging expressed as lengths-and-tables metadata (flash-attn varlen / flash_attn_with_kvcache, or FlexAttention with the causal bound as index arithmetic) — where flash proper replaces Phase 3’s explicit-mask compromise',
-        'Bench: KV utilization and max concurrency climb materially',
+        'Async/overlap scheduling: plan step N+1 while N executes — sampled ids stay GPU-resident as a “future”, D2H copies move to a side stream. Attacks Phase 3’s CPU-dispatch floor from the scheduling side (vLLM’s async scheduler: ~75 lines over base, default since v0.14)',
+        'Bench: KV utilization and max concurrency climb materially; new goodput-under-joint-SLO metric (TTFT + ITL SLO pair) — the number preemption and priority policies actually move',
       ] },
     { id: '5', title: 'prefix cache + routing', hw: '5090', status: 'future',
       goal: 'Reuse prefixes across requests — the natural stack on top of paging — then learn the distributed half.',
+      statusLine: 'Status (2026-07-22): Not started. The 2026-07-19 roadmap review added the LPM-vs-FCFS queue-policy comparison and a prefix-heavy bench workload set; CPU-tier KV offload was considered here and pushed to the bonus track (Phase 12) instead.',
       items: [
         'Block-content hashing (position + prev-block hash), <code>block_hash → block_id</code> lookup, longest-cached-prefix skips prefill, refcounted so in-use blocks survive eviction',
+        'Queue policy: LPM (longest-prefix-match-first, SGLang’s policy) vs FCFS — measure the hit-rate win against the fairness/TTFT cost',
         'Cache-aware routing experiment: 2 API + 2 engine processes cohabiting the 5090, consistent hashing on session id — measure hit rate with vs without sticky routing',
+        'Bench: a prefix-heavy workload set joins the harness — hit rates are meaningless on the existing prefix-light sets',
       ] },
     { id: '6', title: 'Gemma 4', hw: '5090', status: 'future',
       goal: 'Prove the abstractions with a genuinely different family: architecture, tokenizer, weight layout.',
+      statusLine: 'Status (2026-07-22): Not started. Verified against the actual Gemma 4 release (2026-04-02) in the roadmap review: 5:1 SWA:global hybrid attention, p-RoPE, tied embeddings, officially shipped MTP drafter heads (consumed in Phase 9), and a 26B-A4B MoE variant with a shared expert. New prereq: a hybrid per-layer-type KV allocator.',
       items: [
-        'Refactors first: per-layer config (sliding window alternates with global attention), weight-loader abstraction, tokenizer interface (SentencePiece — Qwen3Tokenizer becomes one implementation), tied embeddings',
-        'Sliding-window attention as a new attention-method variant',
+        'Refactors first: per-layer config (SWA and global attention interleave 5:1), weight-loader abstraction, tokenizer interface (SentencePiece — Qwen3Tokenizer becomes one implementation), tied embeddings',
+        'Hybrid KV allocator: a fixed ring buffer for SWA layers, the Phase 4 paged pool for global layers — first time the cache abstraction serves two layouts in one model',
+        'Sliding-window attention as a new attention-method variant; keep the weight loader able to load the MTP drafter heads (they idle until Phase 9)',
       ] },
     { id: '7', title: 'MoE: Qwen3-30B-A3B', hw: '5090 INT4 · H100 bf16', status: 'future',
       goal: 'MoE architecture on a single GPU first — teeing up parallelism.',
+      statusLine: 'Status (2026-07-22): Not started. Reaffirmed as the MoE anchor in the 2026-07-19 roadmap review.',
       items: [
         '<b>Prereq: INT8 weight-only quant</b>, built on the dense models first (debug the quant path on models whose quality you know), then INT4 so A3B fits the 5090 (~15 GB)',
         'Router / top-k gating, expert layers, token dispatch (group by expert → run → scatter back), load-imbalance metrics (tokens per expert per step)',
       ] },
-    { id: '8', title: 'multi-GPU TP/EP', hw: 'cloud-primary · $60–100', status: 'future',
+    { id: '8', title: 'arch frontier', hw: '5090', status: 'future',
+      goal: 'The attention-architecture lesson beyond classic GQA — two models, each breaking an assumption the engine’s attention path and cache have baked in.',
+      statusLine: 'Status (2026-07-22): Not started. New phase from the 2026-07-19 roadmap review.',
+      items: [
+        'MLA via DeepSeek-V2-Lite: cache the compressed KV latent (+ decoupled RoPE key path), not per-head K/V — a materially different cache entry for the paged pool; INT4 ~9 GB fits the 5090, and it’s a second MoE with shared experts for free',
+        'Hybrid gated DeltaNet via Qwen3.5-9B: linear-attention layers keep a fixed-size recurrent state instead of a growing KV, interleaved with full attention — Phase 6’s per-layer-type allocator generalizes (checked at review time: Qwen3.6 ships no small models and is architecturally identical to 3.5; Qwen3.8 was rumor — don’t wait)',
+      ] },
+    { id: '9', title: 'spec decoding', hw: '5090', status: 'future',
+      goal: 'Promote the Phase 2 punt into a full phase — the draft/verify stack end to end, finishing at the research-grade batched problem.',
+      statusLine: 'Status (2026-07-22): Not started. New phase from the 2026-07-19 roadmap review; absorbs the bonus-track “batched speculative decoding” item (the Phase 2 punt).',
+      items: [
+        'ngram / prompt-lookup drafting + a proper rejection sampler first — engine machinery with no draft model at all; the single-request <code>SpeculativeBackend</code> (see the <a href="#/speculative">Speculative</a> tab) is the starting point',
+        'MTP drafting with shipped heads: Gemma 4’s official drafters and Qwen3.5’s, loaded through Phase 6’s weight-loader abstraction',
+        'Capstone: batched ragged verification — divergent accept counts across the batch, exactly why Phase 2 disabled batched speculation',
+        'Bench both sides: speculation buys latency and can cost throughput',
+      ] },
+    { id: '10', title: 'multi-GPU TP/EP', hw: 'cloud-primary · $60–100', status: 'future',
       goal: 'The big cloud session — non-optional: understanding collectives and sharding is half of what a modern engine does.',
+      statusLine: 'Status (2026-07-22): Not started. The 2026-07-19 roadmap review kept the core TP/EP weekend as-is and added optional extensions to decide after it lands; cloud budget flexible to ~$500 across them.',
       items: [
         'Local first: TP/EP shapes with PyTorch distributed on <code>gloo</code>/CPU — zero perf signal, pure correctness; expect real debugging in the cloud on top',
         '4–8×H100: tensor parallelism on the dense models (all-reduce per layer), expert parallelism on A3B; benchmark vs single-GPU',
-        'One focused weekend, 2–3 sessions — the bulk of the ~$150 total cloud budget',
+        'One focused weekend, 2–3 sessions — the bulk of the ~$150 core cloud budget',
+        'Optional extensions, decided after the core weekend: a DP-attention + EP day · real P/D disaggregation on a 2–4 GPU box · H100 kernel/compare days (FA3/FA4, NVLink, HBM bandwidth — the only things Hopper+ has that the 5090 can’t show)',
       ] },
-    { id: '9', title: 'quantization, deeper', hw: '5090 · H100 for FP8', status: 'future',
+    { id: '11', title: 'quantization, deeper', hw: '5090 (FP8/FP4 native)', status: 'future',
       goal: 'INT8 weight-only landed as Phase 7’s prereq; this is where quant gets serious.',
+      statusLine: 'Status (2026-07-22): Not started. Order set in the roadmap review: the INT8 arc first, then FP8 W8A8 + FP8 KV, then FP4 (NVFP4/MXFP4 via serving GPT-OSS-20B). Corrected: the old “FP8 requires Hopper+” note was wrong — the 5090 (sm_120) has native FP8 and FP4 tensor cores, so the whole matrix runs locally.',
       items: [
         'FP8/INT8 KV cache with per-block scales — doubles effective KV capacity; scale factors interact with paged blocks',
+        'FP8 W8A8 on the 5090’s native FP8 tensor cores (the per-tensor vs per-block scaling trade is the lesson) · FP4 with GPT-OSS-20B, which ships in MXFP4, as the forcing function',
         'AWQ — activation-aware, a conceptual step past uniform per-channel scaling',
-        'Quality evals (needle-in-haystack, reasoning) across the full matrix: bf16 / INT8-w / INT4 / INT8-w+INT8-KV / FP8-KV-on-Hopper',
+        'Quality evals (needle-in-haystack, reasoning) across the full matrix: bf16 / INT8-w / INT4 / INT8-w+INT8-KV / FP8-KV / FP4',
       ] },
-    { id: '10', title: 'bonus track', hw: 'varies', status: 'future',
+    { id: '12', title: 'bonus track', hw: 'varies', status: 'future',
       goal: 'Pick by interest — all self-contained after Phase 5.',
+      statusLine: 'Status (2026-07-22): Scope shuffle in the 2026-07-19 roadmap review: batched speculative decoding moved out (promoted to Phase 9’s capstone); CPU-tier KV offload moved in from the Phase 5 discussion.',
       items: [
-        'Guided decoding (FSM logit masking via xgrammar/outlines) · multi-LoRA serving · disaggregated prefill/decode (meaningful even single-node) · vision/multimodal (the biggest lift)',
-        'Batched speculative decoding — revisiting the Phase 2 punt; ragged accept counts across sequences is a genuinely interesting research problem (see the <a href="#/speculative">Speculative</a> tab for the batch-1 version)',
+        'Guided decoding (FSM logit masking via xgrammar/outlines; stretch: jump decoding — grammar-forced token runs without forward passes, still unimplemented in vLLM as of the review) · multi-LoRA serving · disaggregated prefill/decode (meaningful even single-node; the multi-GPU version is Phase 10’s extension) · vision/multimodal (the biggest lift)',
+        'CPU-tier KV offload — spill cold prefix-cache blocks to pinned host memory, stream back on hit; a capacity tier under Phase 5’s cache',
       ] },
   ];
   const ACTIVE_IDX = PHASES.findIndex(p => p.status === 'active');
@@ -1026,7 +1055,7 @@ function initRoadmap() {
   /* --- metro line SVG --- */
   const NS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('viewBox', '0 0 1100 250');
+  svg.setAttribute('viewBox', '0 0 1240 250');
   svg.setAttribute('class', 'anat-svg rm-svg');
   const mk = (tag, attrs, text, parent) => {
     const n = document.createElementNS(NS, tag);
@@ -1035,7 +1064,7 @@ function initRoadmap() {
     (parent || svg).appendChild(n);
     return n;
   };
-  const X0 = 60, X1 = 1050, LY = 130;
+  const X0 = 60, X1 = 1190, LY = 130;
   const xAt = (i) => X0 + (X1 - X0) * i / (PHASES.length - 1);
   // line: solid where done, dashed into the future
   const xActive = xAt(ACTIVE_IDX);
@@ -1062,7 +1091,7 @@ function initRoadmap() {
   mk('text', { x: xActive, y: LY + 84, style: 'font:10.5px var(--sans);fill:var(--muted);text-anchor:middle' }, 'SDPA + shape buckets = CUDA default (longctx 2.2×) — compile, CUDA graphs next');
 
   const diagPanel = el('section', 'panel');
-  diagPanel.appendChild(el('h2', null, 'The line — phases 0 → 10, from PLAN.md'));
+  diagPanel.appendChild(el('h2', null, 'The line — phases 0 → 12, from PLAN.md'));
   const scroll = el('div', 'kv-scroll');
   scroll.appendChild(svg);
   diagPanel.appendChild(scroll);
@@ -1105,7 +1134,7 @@ function initRoadmap() {
   });
   commitPanel.appendChild(chipsRow);
   const budget = el('p', 'panel-note');
-  budget.innerHTML = 'Hardware cadence: Mac (phases 0–1b) → 5090-primary (2–7, 9) → <b>cloud-primary Phase 8</b>. Total cloud budget ≈ <b>$150</b>, front-loaded on the multi-GPU weekend.';
+  budget.innerHTML = 'Hardware cadence: Mac (phases 0–1b) → 5090-primary (2–9, 11) → <b>cloud-primary Phase 10</b>. Total cloud budget ≈ <b>$150</b> for the core path, front-loaded on the multi-GPU weekend — flexible to ≈ <b>$500</b> if Phase 10’s optional extensions earn their keep.';
   commitPanel.appendChild(budget);
 
   body.append(diagPanel, transport.root, cardPanel, commitPanel);
@@ -1785,7 +1814,7 @@ function initSplit() {
     'the engine process and never move; only ids, floats, and small dataclasses travel. And on the wider spectrum this is the simple end — pickle over pipes ' +
     'here, ZMQ (same fundamentals, cross-host framing; vLLM’s choice) one step up, and <b>shared memory</b> at the far end: don’t serialize at all, place the ' +
     'data in a region both processes map and send only a handle across — how PyTorch moves tensors between processes, and the trick to reach for if KV blocks ' +
-    'ever need to cross a boundary (Phase 10’s disaggregated prefill/decode).'));
+    'ever need to cross a boundary (Phase 12’s disaggregated prefill/decode).'));
 
   body.append(transport.root, diagPanel, cardPanel, hopPanel);
   svg.appendChild(dotG);

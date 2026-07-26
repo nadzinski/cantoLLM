@@ -5,12 +5,14 @@ IPC, observability, graceful shutdown, admission control, paged memory, multi-GP
 parallelism, and more — and you only build real intuition for those problems by putting
 yourself in their shoes. But the goal is to understand these systems deeply enough to have
 opinions about them, not to run CantoLLM in production. Educational detours over the
-optimal path when they teach us something; performance is measured, not targeted.
+optimal path when they teach us something; performance is measured, not targeted. The
+roadmap is a living document: it gets a periodic big-picture review against the state of
+the art (last one 2026-07-19) and folds in what the frontier has made worth learning.
 
 The end state is a project that can be walked through end-to-end — from the PyTorch
 attention kernel up through the paged KV allocator, the continuous-batching scheduler, and
 the multi-GPU collective path — with every layer understood and defensible. That's why
-multi-GPU (Phase 8) is non-optional even though the local setup doesn't need it.
+multi-GPU (Phase 10) is non-optional even though the local setup doesn't need it.
 
 ## Headline features, in build order
 
@@ -26,19 +28,24 @@ actually _do_ at each stage.
 3. **CUDA optimization with SDPA, `torch.compile`, and CUDA graphs** (Phase 3) — swap
    einsum for optimized kernels on the now-mature batched engine; first real perf-tuning
    pass, against a stable target that's worth optimizing.
-4. **Paged KV cache** (Phase 4) — block-indexed KV pool with preemption; unlocks real
-   concurrent capacity.
+4. **Paged KV cache + overlap scheduling** (Phase 4) — block-indexed KV pool with
+   preemption and per-request priorities; the scheduler plans step N+1 while step N runs.
 5. **Prefix caching with cache-aware routing** (Phase 5) — shared prefixes reused across
    requests; sticky routing keeps sessions on warm caches.
-6. **Second model family: Gemma** (Phase 6) — sliding-window attention, SentencePiece,
-   tied embeddings. Proves the runtime abstraction.
+6. **Second model family: Gemma 4** (Phase 6) — 5:1 SWA:global hybrid attention,
+   SentencePiece, tied embeddings, a hybrid KV allocator. Proves the runtime abstraction.
 7. **Mixture of Experts: Qwen3-30B-A3B** (Phase 7) — router, experts, token dispatch.
    Single-GPU MoE in INT4.
-8. **Multi-GPU tensor and expert parallelism** (Phase 8) — TP for dense models, EP for
-   MoE. Real collectives on real cloud hardware.
-9. **Quantization: INT8 weights and FP8/INT8 KV cache** (Phase 9) — decode bandwidth win
-   on weights; capacity win on KV.
-10. **Bonus track** (Phase 10) — guided decoding, multi-LoRA serving, disaggregated
+8. **Architecture frontier: MLA + gated DeltaNet** (Phase 8) — DeepSeek-V2-Lite's
+   latent-KV attention and Qwen3.5-9B's linear-attention hybrid; the cache abstraction
+   meets architectures that don't look like Qwen3.
+9. **Speculative decoding** (Phase 9) — ngram drafting + rejection sampling, then shipped
+   MTP heads, then batched ragged verification.
+10. **Multi-GPU tensor and expert parallelism** (Phase 10) — TP for dense models, EP for
+    MoE. Real collectives on real cloud hardware.
+11. **Quantization: INT8 → FP8 → FP4, plus quantized KV cache** (Phase 11) — decode
+    bandwidth win on weights; capacity win on KV. All native on the 5090.
+12. **Bonus track** (Phase 12) — guided decoding, multi-LoRA serving, disaggregated
     prefill/decode, multimodal. Pick based on interest.
 
 Here's the full roadmap. Each phase is structured as: goal → refactors that have to land
@@ -73,7 +80,7 @@ contract, results schema, and reporting format, with the harness itself under
 
 ---
 
-## Phase 1a — Refactor the engine seams
+## Phase 1a — Refactor the engine boundaries
 
 **Goal:** land the architectural hygiene that continuous batching will need. Stay
 single-process — but shape every interface so the Phase 2 process split is a later
@@ -351,7 +358,7 @@ readiness work pays off.
 sequences turn the batched forward pass into a ragged horror that isn't worth debugging
 right now. Keep a separate unbatched engine mode where speculation is enabled — useful as
 a single-request fast path and as a sandbox for revisiting batched speculation later as
-its own research detour.
+its own research detour (that revisit is now Phase 9's capstone).
 
 **Minimal CUDA bring-up** (not the optimization pass — that's Phase 3): enough MPS-ism
 cleanup (env vars, dtype dispatching) to run the new batched engine on the 5090 for
@@ -486,15 +493,21 @@ basics that were deferred from Phase 1.
 
 ---
 
-## Phase 4 — Paged KV cache
+## Phase 4 — Paged KV cache + overlap scheduling
 
-**Goal:** replace padded contiguous KV with a block-indexed pool + block tables. The
-memory management lesson.
+**Goal:** replace padded contiguous KV with a block-indexed pool + block tables — the
+memory management lesson — and overlap scheduling with execution so the CPU plans step
+N+1 while the GPU runs step N.
 
-**Status (2026-07-19):** Not started. Scope note: the flash-proper attention
+**Status (2026-07-22):** Not started. Scope notes: the flash-proper attention
 restructure moved here from Phase 3 (see its Status) — expressing raggedness
 as lengths metadata instead of an explicit mask tensor is the same interface
-change paging requires, so the two land together.
+change paging requires, so the two land together. The 2026-07-19 roadmap
+review added async/overlap scheduling here (deliberately not Phase 3: it
+reshapes the scheduler loop, and doing that once, on the paged engine, beats
+doing it twice), plus preemption victim-selection policies and per-request
+priority scheduling, with a goodput-under-joint-SLO bench metric to judge
+them by.
 
 - KV blocks of fixed size (16 tokens is the vLLM default) in a single preallocated pool.
 - Per-request block table mapping logical token positions → block IDs.
@@ -508,11 +521,23 @@ change paging requires, so the two land together.
 - Block allocator with free-list, refcounts, eviction policy.
 - Preemption support: when out of blocks, evict a low-priority request's cache
   (recompute-on-resume first; swap-to-CPU is a fancier alternative).
+- **Preemption policy, beyond "it works"**: victim-selection policies (LIFO vs
+  priority-weighted vs cost-aware) and per-request priority scheduling surfaced through
+  both API dialects — preemption needs someone worth preempting.
+- **Async/overlap scheduling**: plan step N+1 while step N executes on the GPU. Sampled
+  token IDs stay GPU-resident as a "future" the next step's inputs consume; D2H copies
+  for detokenization move to a side stream; the scheduler stops blocking on the forward
+  pass. This attacks the same CPU-dispatch floor Phase 3's profiling exposed, from the
+  scheduling side. (vLLM's async scheduler is ~75 lines over its base scheduler and has
+  been the default since v0.14 — the lesson is how small the diff gets once the state
+  objects are right.)
 
 **Hardware:** 5090 primary. Cloud H100 at the end for a scale check.
 
 **Bench:** KV utilization goes up materially. Maximum concurrent requests at a given
-prompt-length distribution climbs.
+prompt-length distribution climbs. The harness gains a **goodput-under-joint-SLO**
+metric — fraction of requests meeting a TTFT + ITL SLO pair — which is the number
+preemption and priority policies actually move (aggregate tok/s barely sees them).
 
 ---
 
@@ -520,12 +545,23 @@ prompt-length distribution climbs.
 
 **Goal:** reuse prefixes across requests. Natural stack on top of paging.
 
+**Status (2026-07-22):** Not started. The 2026-07-19 roadmap review added the
+LPM-vs-FCFS queue-policy comparison and a prefix-heavy bench workload set;
+CPU-tier KV offload was considered here and pushed to the bonus track
+(Phase 12) instead.
+
 - Hash block contents (include position/prev-block-hash in the hash to avoid collisions).
 - Lookup table: `block_hash → block_id`.
 - On new request: walk the prompt in block-sized chunks, look up the longest cached
   prefix, skip prefill for those blocks.
 - Refcount cached blocks so they're not evicted while in use.
+- **Queue policy: LPM vs FCFS.** Longest-prefix-match-first admission from the waiting
+  queue (SGLang's policy) against plain FCFS — measure the cache-hit-rate win against
+  the fairness/TTFT cost it charges.
 - `/metrics`: cache hit rate, tokens saved.
+
+**Bench:** a prefix-heavy workload set joins the harness — hit rates are meaningless on
+the existing prefix-light sets.
 
 **Cache-aware routing experiment:** stand up 2 API instances in front of 2 engine
 processes, both cohabiting on the 5090 (consumer Ada has no MIG — each engine just takes a
@@ -543,10 +579,20 @@ sticky routing. This teaches the distributed-systems half of §5.3.3.
 **Goal:** prove the abstractions. Different architecture, different tokenizer, different
 weight layout.
 
+**Status (2026-07-22):** Not started. The 2026-07-19 roadmap review verified
+the target against the actual Gemma 4 release (2026-04-02): 5:1 SWA:global
+hybrid attention, p-RoPE, tied embeddings, officially shipped MTP drafter
+heads (consumed later, in Phase 9), and a 26B-A4B MoE variant with a shared
+expert. New prereq surfaced by the hybrid attention: a per-layer-type KV
+allocator.
+
 **Refactors that have to land first:**
 
-- **Per-layer config** — layers aren't identical anymore; sliding window alternates with
-  global attention.
+- **Per-layer config** — layers aren't identical anymore; sliding-window and global
+  attention interleave 5:1.
+- **Hybrid KV allocator** — per-layer-type cache: a fixed ring buffer for SWA layers,
+  the Phase 4 paged pool for global layers. First time the cache abstraction serves two
+  layouts inside one model.
 - **Weight loader abstraction** — factor the tensor-name mapping into a per-model object.
 - **Tokenizer interface** — SentencePiece, not BPE. `Qwen3Tokenizer` becomes one
   implementation.
@@ -554,12 +600,14 @@ weight layout.
 
 **Feature work:**
 
-- Gemma 4 model class (verify the architecture specifics — sliding window pattern, RoPE
-  config, tying — against the actual release).
+- Gemma 4 model class — 5:1 SWA:global hybrid, p-RoPE, tied embeddings (verified against
+  the release). Keep the weight loader able to load the shipped MTP drafter heads even
+  though they idle until Phase 9.
 - Sliding window attention as a new `AttentionBackend` variant.
 - Second tokenizer implementation.
 
-**Hardware:** 5090 (Gemma 4B / 12B comfortably fit).
+**Hardware:** 5090 (the dense sizes fit comfortably; the 26B-A4B MoE variant with its
+shared expert is a natural revisit once Phase 7's INT4 path exists).
 
 ---
 
@@ -567,11 +615,14 @@ weight layout.
 
 **Goal:** MoE architecture, single GPU first. Teeing up parallelism.
 
+**Status (2026-07-22):** Not started. Reaffirmed as the MoE anchor in the
+2026-07-19 roadmap review.
+
 **Prereq — INT8 weight-only quantization:** Quant infrastructure has to land before
 Qwen3-30B-A3B fits on the 5090. Build INT8 weight-only (per-channel scale factors) on the
 dense Qwen3 models first — debug the quant path and benchmark it against bf16 on a model
 whose quality you have intuition for. Then extend to INT4 for A3B. (Further quant work —
-KV-cache quant, AWQ, FP8 — lives in Phase 9.)
+KV-cache quant, AWQ, FP8, FP4 — lives in Phase 11.)
 
 **Feature work:**
 
@@ -586,11 +637,64 @@ KV-cache quant, AWQ, FP8 — lives in Phase 9.)
 
 ---
 
-## Phase 8 — Multi-GPU parallelism (cloud-primary phase)
+## Phase 8 — Architecture frontier: MLA + gated DeltaNet
 
-**Goal:** the big cloud session. ~$60–100 budget, one focused weekend. Non-optional for
-the end state — understanding collective comms and sharding is half of what a modern
-inference engine is doing.
+**Goal:** the attention-architecture lesson beyond classic GQA. Two models, each breaking
+a different assumption the engine has baked into its attention path and cache: MLA caches
+a compressed latent instead of per-head K/V; gated DeltaNet replaces attention outright in
+most layers with a recurrent state. This is where the runtime and cache abstractions meet
+architectures that don't look like Qwen3.
+
+**Status (2026-07-22):** Not started. New phase from the 2026-07-19 roadmap
+review.
+
+- **MLA via DeepSeek-V2-Lite.** Multi-head latent attention: cache the compressed KV
+  latent (plus the decoupled RoPE key path), not per-head K/V — a materially different
+  cache entry that the paged pool has to accommodate. INT4 (~9 GB) fits the 5090. Bonus:
+  it's also a second MoE with shared experts, exercising Phase 7's machinery on someone
+  else's layout.
+- **Hybrid gated DeltaNet via Qwen3.5-9B.** Linear-attention (DeltaNet) layers
+  interleaved with full attention; the linear layers keep a fixed-size recurrent state
+  instead of a growing KV — Phase 6's per-layer-type allocator generalizes. (Checked at
+  review time: Qwen3.6 ships no small models and is architecturally identical to 3.5;
+  Qwen3.8 was rumor — don't wait for it.)
+
+**Hardware:** 5090.
+
+---
+
+## Phase 9 — Speculative decoding
+
+**Goal:** promote the Phase 2 punt into a full phase — the draft/verify stack end to end,
+finishing at the research-grade problem batched speculation poses.
+
+**Status (2026-07-22):** Not started. New phase from the 2026-07-19 roadmap
+review; absorbs the "batched speculative decoding" bonus-track item (the
+Phase 2 punt).
+
+- **ngram / prompt-lookup drafting + a proper rejection sampler** first — all the engine
+  machinery with no draft model at all. The existing single-request `SpeculativeBackend`
+  is the starting point.
+- **MTP drafting with shipped heads**: Gemma 4's official MTP drafters and Qwen3.5's,
+  loaded through the Phase 6 weight-loader abstraction.
+- **Capstone: batched ragged verification** — divergent accept counts across the batch,
+  exactly why Phase 2 disabled speculation in batched mode.
+- Measure acceptance rate and end-to-end speedup per workload. Speculation buys latency
+  and can cost throughput — make the bench show both sides.
+
+**Hardware:** 5090.
+
+---
+
+## Phase 10 — Multi-GPU parallelism (cloud-primary phase)
+
+**Goal:** the big cloud session. ~$60–100 budget for the core weekend, one focused
+weekend. Non-optional for the end state — understanding collective comms and sharding is
+half of what a modern inference engine is doing.
+
+**Status (2026-07-22):** Not started. The 2026-07-19 roadmap review kept the
+core TP/EP weekend as-is and added optional extensions to decide after it
+lands (see below); cloud budget is flexible to ~$500 across them.
 
 **Local dev (Mac / 5090):** implement TP/EP using PyTorch distributed with `gloo` backend
 on CPU. Multiple processes, all-reduce / broadcast / rank routing — validates the _shape_
@@ -604,63 +708,92 @@ top of this, not a clean "just run it."
 - **Expert parallelism** on Qwen3-30B-A3B. Shard experts across GPUs.
 - Benchmark each against single-GPU baseline.
 
+**Optional extensions (decide after the core weekend, not before):**
+
+- A **DP-attention + EP day** — data-parallel attention over expert-parallel FFs, the
+  deployment shape real MoE serving actually uses.
+- **Real P/D disaggregation on a 2–4 GPU box** — the bonus-track sketch promoted to
+  actual hardware, with KV transfer between prefill and decode engines.
+- **H100 kernel/compare days** — FA3/FA4 (tcgen05/TMEM), NVLink, and HBM bandwidth are
+  the only things Hopper+ offers that the 5090 can't show; rent for those, not for FP8.
+
 **Hardware:** Mac/5090 for dev, cloud for runs. Probably 2–3 cloud sessions of a few hours
-each.
+each for the core; extensions on top as interest and budget allow.
 
 ---
 
-## Phase 9 — Quantization, deeper
+## Phase 11 — Quantization, deeper
 
 **Goal:** INT8 weight-only landed in Phase 7 as a prereq; this is where quant gets serious
-— KV-cache quant, FP8, and AWQ.
+— KV-cache quant, FP8, FP4, and AWQ.
+
+**Status (2026-07-22):** Not started. Order set in the 2026-07-19 roadmap
+review: the INT8 arc first, then FP8 W8A8 + FP8 KV, then FP4. Corrected: the
+old "FP8 requires Hopper+" note here was wrong — the 5090 (sm_120) has native
+FP8 *and* FP4 tensor cores, so the whole matrix runs locally.
 
 - FP8/INT8 KV cache with per-block scales. Doubles effective KV capacity.
 - Interaction with paged attention (scale factors live per block).
+- **FP8 W8A8** — weights *and* activations in FP8 on the 5090's native FP8 tensor cores;
+  the per-tensor vs per-block scaling trade is the lesson.
+- **FP4 (NVFP4 / MXFP4)** — serve GPT-OSS-20B, which ships in MXFP4, as the forcing
+  function.
 - Quality measurement (needle-in-haystack, basic reasoning evals) across the full quant
-  matrix: bf16, INT8 weight-only, INT4, INT8-weight + INT8-KV, FP8-KV on Hopper.
+  matrix: bf16, INT8 weight-only, INT4, INT8-weight + INT8-KV, FP8-KV, FP4.
 - AWQ — activation-aware weight quantization, a conceptual step up from uniform
   per-channel scaling.
 
-**Hardware:** 5090. FP8 requires Hopper+ for native — 5090 can do it in software but it's
-a cloud H100 session for real numbers.
+**Hardware:** 5090, natively, for everything here. An H100 buys FA3/FA4, NVLink, and HBM
+bandwidth — kernel-comparison reasons (Phase 10's extensions), not quant reasons.
 
 ---
 
-## Phase 10 — Bonus track
+## Phase 12 — Bonus track
 
 Pick based on interest. All are self-contained after Phase 5.
 
+**Status (2026-07-22):** Scope shuffle in the 2026-07-19 roadmap review:
+batched speculative decoding moved out (promoted to Phase 9's capstone);
+CPU-tier KV offload moved in from the Phase 5 discussion.
+
 - **Guided decoding (FSM)** via xgrammar or outlines. Logit masking at each step.
-  Interesting CS, practical for agentic use.
+  Interesting CS, practical for agentic use. Stretch: **jump decoding** (emit
+  grammar-forced token runs without forward passes) — still unimplemented in vLLM as of
+  the 2026-07 review, so a from-scratch implementation is genuinely distinctive.
 - **Multi-LoRA serving**. Swap adapter weights per request. Different parallelism flavor
   than paged KV.
 - **Disaggregated P/D**. Prefill engine and decode engine as separate processes, KV
-  transfer between them. Can do meaningfully even single-node.
+  transfer between them. Can do meaningfully even single-node (multi-GPU version: Phase
+  10's optional extension).
+- **CPU-tier KV offload**. Spill cold prefix-cache blocks to pinned host memory and
+  stream them back on hit — a capacity tier underneath Phase 5's cache.
 - **Vision / multimodal** (Gemma 4 or Qwen-VL). Biggest undertaking; largely new ground.
-- **Batched speculative decoding**, revisiting the Phase 2 punt. Ragged accept counts
-  across sequences is a genuinely interesting research problem.
 
 ---
 
 ## Hardware cadence summary
 
-| Phase                           | Mac        | 5090    | Cloud                 |
-| ------------------------------- | ---------- | ------- | --------------------- |
-| 0 — rename + bench spec         | primary    | —       | —                     |
-| 1a — engine-seam refactors      | primary    | —       | —                     |
-| 1b — OpenAI + loose ends        | primary    | —       | —                     |
-| 2 — continuous batching + split | dev        | primary | 1 H100 day ($30)      |
-| 3 — CUDA beachhead              | dev        | primary | 1 H100 day ($30)      |
-| 3.5 — production hygiene        | dev        | primary | —                     |
-| 4 — paged KV                    | dev        | primary | optional              |
-| 5 — prefix + routing            | dev        | primary | —                     |
-| 6 — Gemma 4                     | dev        | primary | —                     |
-| 7 — MoE (+ INT8 prereq)         | dev        | primary | occasional            |
-| 8 — multi-GPU                   | dev (gloo) | dev     | **primary** ($60–100) |
-| 9 — quant deeper                | dev        | primary | 1 H100 day for FP8    |
-| 10 — bonus                      | varies     | varies  | varies                |
+| Phase                            | Mac        | 5090    | Cloud                        |
+| -------------------------------- | ---------- | ------- | ---------------------------- |
+| 0 — rename + bench spec          | primary    | —       | —                            |
+| 1a — engine-boundary refactors   | primary    | —       | —                            |
+| 1b — OpenAI + loose ends         | primary    | —       | —                            |
+| 2 — continuous batching + split  | dev        | primary | 1 H100 day ($30)             |
+| 3 — CUDA beachhead               | dev        | primary | 1 H100 day ($30)             |
+| 3.5 — production hygiene         | dev        | primary | —                            |
+| 4 — paged KV + overlap sched     | dev        | primary | optional                     |
+| 5 — prefix + routing             | dev        | primary | —                            |
+| 6 — Gemma 4                      | dev        | primary | —                            |
+| 7 — MoE (+ INT8 prereq)          | dev        | primary | occasional                   |
+| 8 — arch frontier (MLA/DeltaNet) | dev        | primary | —                            |
+| 9 — speculative decoding         | dev        | primary | —                            |
+| 10 — multi-GPU                   | dev (gloo) | dev     | **primary** ($60–100 core)   |
+| 11 — quant deeper                | dev        | primary | — (5090 FP8/FP4 are native)  |
+| 12 — bonus                       | varies     | varies  | varies                       |
 
-Total cloud budget: ~$150, front-loaded on Phase 8.
+Total cloud budget: ~$150 for the core path, front-loaded on Phase 10; flexible to ~$500
+if the Phase 10 optional extensions (DP-attention+EP, multi-GPU P/D, H100 kernel days)
+earn their keep.
 
 ---
 
