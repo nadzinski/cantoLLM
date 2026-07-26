@@ -1,0 +1,32 @@
+{
+  "cache_no_advance": {
+    "cache_position_before_capture": 16,
+    "cache_position_after_capture": 17,
+    "cache_position_after_3_replays": 17,
+    "logits_identical_across_replays": true,
+    "lesson": "the sequential KVCache grows by reallocating (concat); capture bakes one step's buffers, so replay recomputes the same step forever. A graphable decode needs preallocated static KV (the padded pool) with device-tensor indices"
+  },
+  "stale_input": {
+    "after_copy_into_static": [
+      3.0,
+      5.0,
+      7.0,
+      9.0
+    ],
+    "after_rebinding_python_name": [
+      3.0,
+      5.0,
+      7.0,
+      9.0
+    ],
+    "lesson": "the graph reads the captured buffer's memory; a new tensor bound to the old name is invisible to it"
+  },
+  "shape_mismatch": {
+    "error": "The size of tensor a (4) must match the size of tensor b (8) at non-singleton dimension 0",
+    "lesson": "a graph replays fixed shapes and pointers; a new shape means a new capture (why the engine's shape vocabulary exists)"
+  },
+  "sync_in_capture": {
+    "error": "CUDA error: operation failed due to a previous error during capture\nSearch for `cudaErrorStreamCaptureInvalidated' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+    "lesson": "capture records launches without running them, so anything that needs a result NOW (item, print, assert) cannot be answered"
+  }
+}

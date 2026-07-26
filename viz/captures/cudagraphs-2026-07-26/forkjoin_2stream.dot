@@ -1,0 +1,64 @@
+digraph dot {
+subgraph cluster_16 {
+label="graph_16" graph[style="dashed"];
+"graph_16_node_0"[style="bold" shape="record" label="{KERNEL
+| {ID | 0 (topoId: 4) | _ZN7cutlass7Kernel2I68cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_nn_align8EEvNT_6ParamsE\<\<\<\{32,2\},32,20736\>\>\>}
+| {{node handle | func handle} | {0x00005F8093203080 | 0x00005F8096D53490}}
+| {accessPolicyWindow | {base_ptr | num_bytes | hitRatio | hitProp | missProp} | {0x0000000000000000 | 0 | 0.000000 | N | N}}
+| {cooperative | 0}
+| {priority | 0}
+| {cluster dim | (0,0,0)}
+| {preferred cluster dim | (0,0,0)}
+| {cluster scheduling policy preference | 1}
+}"];
+
+"graph_16_node_1"[style="bold" shape="record" label="{KERNEL
+| {ID | 1 (topoId: 3) | _ZN7cutlass7Kernel2I68cutlass_80_wmma_tensorop_bf16_s161616gemm_bf16_16x16_128x2_nn_align8EEvNT_6ParamsE\<\<\<\{32,2\},32,20736\>\>\>}
+| {{node handle | func handle} | {0x00005F8093203880 | 0x00005F8096D53490}}
+| {accessPolicyWindow | {base_ptr | num_bytes | hitRatio | hitProp | missProp} | {0x0000000000000000 | 0 | 0.000000 | N | N}}
+| {cooperative | 0}
+| {priority | 0}
+| {cluster dim | (0,0,0)}
+| {preferred cluster dim | (0,0,0)}
+| {cluster scheduling policy preference | 1}
+}"];
+
+"graph_16_node_2"[style="bold" shape="record" label="{KERNEL
+| {ID | 2 (topoId: 2) | _ZN2at6native29vectorized_elementwise_kernelILi4ENS0_15CUDAFunctor_addIN3c108BFloat16EEESt5arrayIPcLm3EEEEviT0_T1_\<\<\<16,128,0\>\>\>}
+| {{node handle | func handle} | {0x00005F8093204080 | 0x00005F8091050440}}
+| {accessPolicyWindow | {base_ptr | num_bytes | hitRatio | hitProp | missProp} | {0x0000000000000000 | 0 | 0.000000 | N | N}}
+| {cooperative | 0}
+| {priority | 0}
+| {cluster dim | (0,0,0)}
+| {preferred cluster dim | (0,0,0)}
+| {cluster scheduling policy preference | 1}
+}"];
+
+"graph_16_node_3"[style="bold" shape="record" label="{KERNEL
+| {ID | 3 (topoId: 1) | _ZN2at6native18elementwise_kernelILi128ELi4EZNS0_22gpu_kernel_impl_nocastINS0_15CUDAFunctor_addIN3c108BFloat16EEEEEvRNS_18TensorIteratorBaseERKT_EUliE_EEviT1_\<\<\<32,128,0\>\>\>}
+| {{node handle | func handle} | {0x00005F8093204880 | 0x00005F8091036B60}}
+| {accessPolicyWindow | {base_ptr | num_bytes | hitRatio | hitProp | missProp} | {0x0000000000000000 | 0 | 0.000000 | N | N}}
+| {cooperative | 0}
+| {priority | 0}
+| {cluster dim | (0,0,0)}
+| {preferred cluster dim | (0,0,0)}
+| {cluster scheduling policy preference | 1}
+}"];
+
+"graph_16_node_4"[style="bold" shape="record" label="{KERNEL
+| {ID | 4 (topoId: 0) | _ZN2at6native29vectorized_elementwise_kernelILi4EZZZNS0_49_GLOBAL__N__d2ba64fb_16_TensorCompare_cu_71e06f4e19launch_clamp_scalarERNS_18TensorIteratorBaseEN3c106ScalarES6_NS0_6detail11ClampLimitsEENKUlvE_clEvENKUlvE7_clEvEUlNS5_8BFloat16EE_St5arrayIPcLm2EEEEviT0_T1_\<\<\<16,128,0\>\>\>}
+| {{node handle | func handle} | {0x00005F8093205080 | 0x00005F8091CA9120}}
+| {accessPolicyWindow | {base_ptr | num_bytes | hitRatio | hitProp | missProp} | {0x0000000000000000 | 0 | 0.000000 | N | N}}
+| {cooperative | 0}
+| {priority | 0}
+| {cluster dim | (0,0,0)}
+| {preferred cluster dim | (0,0,0)}
+| {cluster scheduling policy preference | 1}
+}"];
+
+"graph_16_node_0" -> "graph_16_node_2" [headlabel=1];
+"graph_16_node_1" -> "graph_16_node_2" [headlabel=0];
+"graph_16_node_2" -> "graph_16_node_3" [headlabel=0];
+"graph_16_node_3" -> "graph_16_node_4" [headlabel=0];
+}
+}

@@ -1,0 +1,57 @@
+{
+  "chain": {
+    "eager_gpu_us_per_iter": 31.51,
+    "eager_cpu_submit_us_per_iter": 31.63,
+    "graph_gpu_us_per_iter": 27.21,
+    "graph_cpu_submit_us_per_iter": 3.4,
+    "iters": 200
+  },
+  "chain_n4096": {
+    "eager_gpu_us_per_iter": 31.28,
+    "eager_cpu_submit_us_per_iter": 31.37,
+    "graph_gpu_us_per_iter": 5.9,
+    "graph_cpu_submit_us_per_iter": 3.32,
+    "iters": 200,
+    "note": "4096 elements; the graph win is launch overhead, so it fades as kernels grow"
+  },
+  "chain_n1048576": {
+    "eager_gpu_us_per_iter": 31.13,
+    "eager_cpu_submit_us_per_iter": 31.22,
+    "graph_gpu_us_per_iter": 27.2,
+    "graph_cpu_submit_us_per_iter": 3.28,
+    "iters": 200,
+    "note": "1048576 elements; the graph win is launch overhead, so it fades as kernels grow"
+  },
+  "chain_n16777216": {
+    "eager_gpu_us_per_iter": 3182.57,
+    "eager_cpu_submit_us_per_iter": 33.48,
+    "graph_gpu_us_per_iter": 3187.34,
+    "graph_cpu_submit_us_per_iter": 3.38,
+    "iters": 200,
+    "note": "16777216 elements; the graph win is launch overhead, so it fades as kernels grow"
+  },
+  "forkjoin_1stream": {
+    "eager_gpu_us_per_iter": 44.89,
+    "eager_cpu_submit_us_per_iter": 45.0,
+    "graph_gpu_us_per_iter": 11.66,
+    "graph_cpu_submit_us_per_iter": 3.2,
+    "iters": 200,
+    "note": "written as a fork-join, captured on one stream: the DOT is a straight chain, stream order became the edges"
+  },
+  "forkjoin_2stream": {
+    "eager_gpu_us_per_iter": 90.5,
+    "eager_cpu_submit_us_per_iter": 90.59,
+    "graph_gpu_us_per_iter": 9.66,
+    "graph_cpu_submit_us_per_iter": 4.49,
+    "iters": 200,
+    "note": "fork/join via events across two streams: the gemms record as genuinely parallel branches"
+  },
+  "tinymodel": {
+    "eager_gpu_us_per_iter": 2066.08,
+    "eager_cpu_submit_us_per_iter": 2066.18,
+    "graph_gpu_us_per_iter": 134.09,
+    "graph_cpu_submit_us_per_iter": 3.53,
+    "iters": 200,
+    "note": "both sides repeat the position-16 decode step; eager pays a host-side cache truncate per iter (cheap slicing), replay stays at the baked step (see failures.cache_no_advance)"
+  }
+}

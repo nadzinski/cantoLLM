@@ -15,7 +15,7 @@ detail lives behind the zoom targets):
   continuous-batching engine (`--engine batched`) on the side. Boxes are
   annotated with numbers from the real traces; three boxes zoom into the
   detail views.
-- **Roadmap** — PLAN.md as a metro line: 13 stops (phases 0–10) with real
+- **Roadmap** — PLAN.md as a metro line: 15 stops (phases 0–12) with real
   Status lines, a "you are here" marker, hardware tags (Mac → 5090 → cloud),
   per-phase detail cards, and the cross-cutting commitments. Static content
   authored from PLAN.md — update it when phase Status lines change.
@@ -85,6 +85,16 @@ detail lives behind the zoom targets):
   (grid/block/warp/tensor core, the deliberately-serial K scan, Flash-Decoding
   split-KV merge), and what SDPA claims in cantoLLM's bench numbers. Static
   design content, no trace needed.
+- **CUDA graphs**: Phase 3's next lever, taught from measured numbers. What
+  every kernel launch costs and why the decode floor is CPU dispatch
+  (step-profiling.md's ~1900-call flood), the capture/instantiate/replay
+  lifecycle as a steppable CPU/GPU/graph state board, real captured graph
+  topologies and eager-vs-replay timings (from `viz/capture_cudagraphs.py`,
+  below), the rules capture imposes (recorded rule-breakers with real error
+  text), and the decode step's graph boundary in cantoLLM (the KV-scatter
+  wrinkle, buckets as the capture vocabulary, the bills). Ends with the
+  toy-session exercise list. Static explainer plus committed capture
+  artifacts, no trace files needed.
 
 ## Regenerating the traces
 
@@ -98,6 +108,13 @@ before first use:
 .venv/bin/python viz/trace_speculative.py  # ~2-3min  → data/trace_spec.js (loads 0.6B + 1.7B, runs spec + baseline)
 .venv/bin/python viz/trace_split.py        # ~40s     → data/trace_split.js (spawns a real engine process on 0.6B)
 ```
+
+One harness is different: `viz/capture_cudagraphs.py` needs CUDA hardware
+(run it on the `infra/` GPU node; see `infra/README.md`) and its artifacts
+are **committed** under `viz/captures/` instead of gitignored, because a
+Mac can never regenerate them. The CUDA graphs tab embeds a curated inline
+copy of that data; the committed artifacts are the record it is transcribed
+from. `--dry-run` builds the examples CPU-side for a quick import check.
 
 The Tokenizer tab is live rather than trace-based — it needs its small server
 (starts instantly; loads only `tokenizer.json`, no weights):
