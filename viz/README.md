@@ -85,18 +85,22 @@ detail lives behind the zoom targets):
   (grid/block/warp/tensor core, the deliberately-serial K scan, Flash-Decoding
   split-KV merge), and what SDPA claims in cantoLLM's bench numbers. Static
   design content, no trace needed.
-- **CUDA graphs**: a 12-section mini-chapter, textbook-style, built entirely
-  from a real L4 capture session (`viz/capture_cudagraphs.py`; committed
-  record under `viz/captures/`). Arc: a motivating puzzle (five 1-µs kernels
-  that cost 31 µs, with a to-scale CPU/GPU timeline), the anatomy of one
-  launch, the record-once-replay-as-one idea, the lifecycle on a steppable
-  state board, real clickable graph dumps (the chain, then a tale of two
-  fork-joins showing where edges come from), the size-sweep crossover, the
-  rules derived from "replay consults no CPU" with recorded violations, a
-  110-kernel model at 15.4x, and only then the engine's 9 ms floor and the
-  cantoLLM design space (KV-scatter wrinkle, buckets as capture vocabulary,
-  the bills). Ends with the toy-session exercise list. Sections lean on each
-  other; read in order.
+- **CUDA graphs**: unlike the other tabs, this one is a textbook mini-chapter
+  in the format of `~/personal-projects/gr-learning` (serif prose, definition
+  and rule boxes, "predict first" prompts that gate their reveals, framed
+  interactives with captions, hands-on exercises, an end-of-chapter quiz);
+  all styling is scoped to the view, everything else keeps the explorer look.
+  Built entirely from a real L4 capture session (`viz/capture_cudagraphs.py`;
+  committed record under `viz/captures/`). Arc: a motivating puzzle (five
+  1-µs kernels that cost 31 µs, on a to-scale CPU/GPU timeline), the anatomy
+  of one launch, the record-once-replay-as-one idea, the lifecycle on a
+  steppable state board, real clickable graph dumps (the chain, then a tale
+  of two fork-joins showing where edges come from), the size-sweep crossover,
+  the rules derived from "replay consults no CPU" with recorded violations,
+  a 110-kernel model at 15.4x, the engine's 9 ms floor re-read, and the
+  cantoLLM boundary problem (KV-scatter wrinkle, buckets as capture
+  vocabulary, the bills). Predictions and quiz answers persist in
+  localStorage. Sections lean on each other; read in order.
 
 ## Regenerating the traces
 

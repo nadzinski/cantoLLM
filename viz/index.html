@@ -473,6 +473,235 @@
     .kv-cell, .gantt-cell, .wf-fill, .bar-fill, .meter-fill { transition: opacity 0.15s ease, box-shadow 0.15s ease, width 0.15s ease; }
   }
   @media (prefers-reduced-motion: reduce) { .cursor-caret { animation: none; } }
+
+  /* ---- CUDA graphs mini-chapter ----
+     Deliberately styled unlike the rest of the explorer: the textbook chapter
+     format of ~/personal-projects/gr-learning (serif prose, def/rule boxes,
+     predict-first bars, framed interactives, end-of-chapter quiz). Everything
+     is scoped to #view-cudagraphs; the shared palette variables are remapped
+     inside this view so reused components (transport, fw-board, chips) pick
+     up the chapter's colors automatically. */
+  #view-cudagraphs {
+    --plane: #f4f2ec;
+    --surface: #ffffff;
+    --grid: #e3dfd3;
+    --axis: #cfcabc;
+    --ink: #24242b;
+    --ink2: #4a4a52;
+    --muted: #716f68;
+    --ring: #e3dfd3;
+    --sA: #2f5fa8;   /* accent blue: the graph, replay, interactive highlights */
+    --sB: #2e7d4f;   /* green: GPU kernels, correct answers */
+    --sC: #c05f33;   /* rust: the toll, eager, predict bars */
+    --cg-paper: #fbfaf7;
+    --cg-faint: #a5a29a;
+    --cg-accent-soft: #e8eef7;
+    --cg-rust-soft: #f8ece4;
+    --cg-def-bg: #eef3fa;
+    --cg-thm-bg: #faf3e8;
+    --cg-thm-border: #c08a33;
+    --cg-note-bg: #f5f2ea;
+    --cg-wrong: #b3402e;
+    --cg-serif: 'Charter', 'Iowan Old Style', 'Palatino', 'Georgia', serif;
+  }
+  article.cgc {
+    max-width: 780px; margin: 0 auto; width: 100%;
+    padding: 10px 4px 48px;
+    font-family: var(--cg-serif); font-size: 17px; line-height: 1.65; color: var(--ink);
+  }
+  .cgc .ch-kicker {
+    font-family: var(--sans); font-size: 0.8rem; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--sA); font-weight: 600; margin: 0 0 0.3rem;
+  }
+  .cgc h1 { font-size: 2.1rem; line-height: 1.15; margin: 0 0 1.4rem; font-weight: 700; letter-spacing: 0; }
+  .cgc h2 {
+    font-size: 1.45rem; margin: 2.6rem 0 0.8rem; font-weight: 700;
+    letter-spacing: 0; text-transform: none; color: var(--ink); scroll-margin-top: 12px;
+  }
+  .cgc p { margin: 0 0 1.05rem; font-size: inherit; color: inherit; }
+  .cgc p.lede { font-size: 1.12rem; color: var(--muted); }
+  .cgc a { color: var(--sA); }
+  .cgc a[data-goto] { cursor: pointer; text-decoration: underline; text-decoration-color: var(--grid); }
+  .cgc a[data-goto]:hover { text-decoration-color: var(--sA); }
+  .cgc hr { border: none; border-top: 1px solid var(--grid); margin: 2.4rem 0; }
+  .cgc code { font-family: var(--mono); font-size: 0.82em; color: var(--ink2); }
+  .cgc pre.code {
+    font: 0.8rem/1.6 var(--mono); color: var(--ink2);
+    background: var(--plane); border: 1px solid var(--grid); border-radius: 8px;
+    padding: 0.7rem 1rem; overflow-x: auto; margin: 0 0 1.05rem;
+  }
+  .cgc ul { margin: 0 0 1.05rem; padding-left: 1.4rem; }
+  .cgc ul li { margin-bottom: 0.45rem; }
+
+  .cgc .def, .cgc .thm {
+    padding: 0.9rem 1.15rem 0.6rem; margin: 1.4rem 0;
+    border-left: 3px solid var(--sA); background: var(--cg-def-bg); border-radius: 0 8px 8px 0;
+  }
+  .cgc .thm { border-left-color: var(--cg-thm-border); background: var(--cg-thm-bg); }
+  .cgc .def .label, .cgc .thm .label {
+    display: block; font-family: var(--sans); font-size: 0.72rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.09em; color: var(--sA); margin-bottom: 0.3rem;
+  }
+  .cgc .thm .label { color: var(--cg-thm-border); }
+  .cgc aside.note {
+    font-size: 0.92rem; color: var(--muted); background: var(--cg-note-bg);
+    border-radius: 8px; padding: 0.8rem 1.1rem; margin: 1.3rem 0;
+  }
+  .cgc aside.note .label {
+    font-family: var(--sans); font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--cg-faint); display: block; margin-bottom: 0.2rem;
+  }
+
+  .cgc .widget {
+    margin: 1.8rem 0; border: 1px solid var(--grid); border-radius: 10px;
+    background: var(--surface); overflow: hidden; font-family: var(--sans);
+  }
+  .cgc .widget-title {
+    padding: 0.55rem 1rem; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--muted); background: var(--plane);
+    border-bottom: 1px solid var(--grid);
+  }
+  .cgc .widget-body { padding: 0.9rem; position: relative; }
+  .cgc .cols-2 > * { min-width: 0; }
+  .cgc .widget > .transport {
+    border: 0; border-bottom: 1px solid var(--grid); border-radius: 0;
+    background: var(--plane); padding: 8px 12px;
+  }
+  .cgc .widget-caption {
+    font-family: var(--sans); font-size: 0.85rem; color: var(--muted);
+    margin: -1.2rem 0 1.6rem; line-height: 1.5;
+  }
+  .cgc .widget-hint { font-size: 0.78rem; color: var(--cg-faint); padding-top: 0.6rem; font-family: var(--sans); }
+  .cgc .widget-readout {
+    font-family: var(--mono); font-size: 0.78rem; color: var(--ink2);
+    background: var(--plane); border-radius: 6px; padding: 0.55rem 0.8rem;
+    margin-top: 0.7rem; line-height: 1.7; white-space: pre-wrap; overflow-x: auto;
+  }
+  .cgc .widget-controls {
+    display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap;
+    padding: 0 0 0.7rem; font-size: 0.82rem; color: var(--muted); font-family: var(--sans);
+  }
+  .cgc .widget p.panel-sub { font-size: 0.85rem; color: var(--ink2); margin: 0 0 0.6rem; font-family: var(--sans); }
+  .cgc .widget pre.code { margin: 0; font-size: 0.7rem; line-height: 1.55; }
+  .cgc .asm {
+    font: 0.7rem/1.55 var(--mono); color: var(--ink2);
+    background: var(--plane); border: 1px solid var(--grid); border-radius: 8px;
+    padding: 0.7rem 1rem; overflow-x: auto;
+  }
+  .cgc .asm .asm-ln { white-space: pre; border-radius: 4px; padding: 0 4px; margin: 0 -4px; cursor: help; }
+  .cgc .asm .asm-ln:hover { background: color-mix(in srgb, var(--sA) 13%, transparent); }
+  .cgc .veil {
+    position: absolute; inset: 0; z-index: 2;
+    background: color-mix(in srgb, var(--cg-paper) 92%, transparent);
+    backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-family: var(--sans); font-size: 0.9rem; color: var(--muted); padding: 1rem;
+  }
+
+  .cgc .predict {
+    border: 1px solid var(--sC); border-radius: 10px; background: var(--cg-rust-soft);
+    padding: 0.8rem 1rem; margin: 1.4rem 0; font-family: var(--sans); font-size: 0.9rem;
+  }
+  .cgc .predict .label {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--sC); display: block; margin-bottom: 0.25rem;
+  }
+  .cgc .predict .choices { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.6rem; }
+  .cgc .predict button {
+    font: inherit; font-size: 0.85rem; padding: 0.35rem 0.9rem;
+    border: 1px solid var(--sC); border-radius: 999px;
+    background: var(--surface); color: var(--sC); cursor: pointer;
+  }
+  .cgc .predict button:hover:not(:disabled) { background: var(--sC); color: #fff; }
+  .cgc .predict button:disabled { opacity: 0.45; cursor: default; }
+  .cgc .predict button.chosen { background: var(--sC); color: #fff; opacity: 1; }
+  .cgc .predict .verdict { margin-top: 0.6rem; font-weight: 600; }
+
+  .cgc .detail {
+    border: 1px solid var(--grid); border-radius: 8px; background: var(--cg-paper);
+    padding: 0.7rem 0.9rem; font-family: var(--sans);
+  }
+  .cgc .detail-title { font: 600 12.5px var(--mono); margin: 2px 0 8px; color: var(--ink); }
+  .cgc .detail .dline { font-size: 0.85rem; color: var(--ink2); padding: 4px 0; border-bottom: 1px dashed var(--grid); }
+  .cgc .detail .dline:last-child { border-bottom: 0; }
+
+  .cgc .rule { border: 1px solid var(--grid); border-radius: 8px; margin: 0.5rem 0; background: var(--cg-paper); overflow: hidden; }
+  .cgc button.rule-head {
+    display: flex; align-items: baseline; gap: 0.6rem; width: 100%; text-align: left;
+    font: inherit; font-size: 0.9rem; font-weight: 600; padding: 0.55rem 0.9rem;
+    background: none; border: 0; cursor: pointer; color: var(--ink); flex-wrap: wrap;
+  }
+  .cgc .rule-head:hover { background: color-mix(in srgb, var(--plane) 60%, transparent); }
+  .cgc .rule-head .rule-did { font-weight: 400; font-size: 0.78rem; color: var(--muted); }
+  .cgc .rule-head .rule-badge {
+    margin-left: auto; flex: none; font-size: 0.62rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em; border-radius: 999px; padding: 1px 8px;
+    color: var(--sC); border: 1px solid var(--sC);
+  }
+  .cgc .rule-head .rule-badge.silent { color: var(--cg-wrong); border-color: var(--cg-wrong); border-style: dashed; }
+  .cgc .rule-body { padding: 0 0.9rem 0.8rem; font-size: 0.85rem; color: var(--ink2); display: none; }
+  .cgc .rule.open .rule-body { display: block; }
+  .cgc .rule .err {
+    font-family: var(--mono); font-size: 0.72rem; line-height: 1.55; white-space: pre-wrap;
+    background: #faeeec; border: 1px solid #eccfc7; border-radius: 6px;
+    padding: 0.5rem 0.7rem; margin: 0.2rem 0 0.6rem; color: #7c2d1e;
+  }
+
+  .cgc .fact-row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 6px 8px; border-radius: 5px; align-items: baseline; }
+  .cgc .fact-row:nth-child(odd) { background: var(--plane); }
+  .cgc .fact-name { font: 600 12px var(--mono); color: var(--ink); }
+  .cgc .fact-body { font-size: 0.85rem; color: var(--ink2); }
+
+  .cgc .bd-grid { display: grid; grid-template-columns: 260px 1fr; gap: 12px; align-items: start; }
+  @media (max-width: 700px) { .cgc .bd-grid { grid-template-columns: 1fr; } }
+  .cgc .bd-list { display: flex; flex-direction: column; gap: 5px; }
+  .cgc button.bd-stage {
+    display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left;
+    font-family: var(--sans); padding: 0.45rem 0.7rem; border-radius: 8px; cursor: pointer;
+    background: var(--cg-paper); border: 1px dashed var(--axis); color: var(--ink);
+  }
+  .cgc .bd-stage b { font-size: 0.82rem; font-weight: 600; }
+  .cgc .bd-stage small { font-size: 0.7rem; color: var(--muted); font-family: var(--mono); }
+  .cgc .bd-stage.zone-graph { border: 1px solid var(--sA); background: color-mix(in srgb, var(--sA) 8%, var(--surface)); }
+  .cgc .bd-stage.zone-door { border: 1px solid var(--sC); background: color-mix(in srgb, var(--sC) 8%, var(--surface)); }
+  .cgc .bd-stage.zone-wrinkle { border: 1px solid var(--cg-thm-border); background: color-mix(in srgb, var(--cg-thm-border) 12%, var(--surface)); }
+  .cgc .bd-stage.cur { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+  .cgc .quiz { margin-top: 3rem; font-family: var(--sans); }
+  .cgc .quiz > h2 { font-family: var(--cg-serif); }
+  .cgc .quiz-item { border: 1px solid var(--grid); border-radius: 10px; padding: 1rem 1.2rem; margin: 1rem 0; background: var(--surface); }
+  .cgc .quiz-item .q-prompt { font-size: 0.95rem; margin-bottom: 0.7rem; }
+  .cgc .quiz-item ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+  .cgc .quiz-item ul li { margin: 0; }
+  .cgc .quiz-item li button {
+    font: inherit; font-size: 0.88rem; text-align: left; width: 100%;
+    padding: 0.5rem 0.8rem; border: 1px solid var(--grid); border-radius: 8px;
+    background: var(--cg-paper); color: var(--ink); cursor: pointer; line-height: 1.45;
+  }
+  .cgc .quiz-item li button:hover:not(:disabled) { border-color: var(--sA); }
+  .cgc .quiz-item li button:disabled { cursor: default; }
+  .cgc .quiz-item li button.right { border-color: var(--sB); background: #edf6f0; }
+  .cgc .quiz-item li button.wrong { border-color: var(--cg-wrong); background: #faeeec; }
+  .cgc .quiz-item li button.reveal-right { border-color: var(--sB); border-style: dashed; }
+  .cgc .quiz-item .explain {
+    font-size: 0.85rem; color: var(--muted); margin-top: 0.7rem;
+    border-top: 1px dashed var(--grid); padding-top: 0.6rem;
+  }
+  .cgc .quiz-item .numeric-row { display: flex; gap: 0.6rem; align-items: center; }
+  .cgc .quiz-item input[type='text'] {
+    font-family: var(--mono); font-size: 0.9rem; padding: 0.4rem 0.6rem;
+    border: 1px solid var(--grid); border-radius: 8px; width: 9em;
+    background: var(--cg-paper); color: var(--ink);
+  }
+  .cgc .quiz-item input.right { border-color: var(--sB); background: #edf6f0; }
+  .cgc .quiz-item input.wrong { border-color: var(--cg-wrong); background: #faeeec; }
+  .cgc .quiz-score { font-size: 0.85rem; color: var(--muted); margin-top: 0.8rem; }
+  .cgc button.btn {
+    font-family: var(--sans); font-size: 0.85rem; padding: 0.42rem 1rem;
+    border: 1px solid var(--sA); border-radius: 8px; background: var(--surface);
+    color: var(--sA); cursor: pointer;
+  }
+  .cgc button.btn:hover { background: var(--cg-accent-soft); }
 </style>
 </head>
 <body>
@@ -640,14 +869,10 @@
   </section>
 
   <!-- ================= CUDA GRAPHS ================= -->
+  <!-- This view is a textbook-style mini-chapter (gr-learning format) and
+       builds its entire article in initCudaGraphs(); styles are scoped under
+       #view-cudagraphs and do not touch the other tabs. -->
   <section id="view-cudagraphs" data-view hidden>
-    <p class="view-sub">
-      A mini-chapter on CUDA graphs, built entirely from real measurements (an L4 capture session; raw record in
-      <code>viz/captures/</code>). It starts with a puzzle: five 1-µs kernels that cost 31 µs, and works up through
-      what a launch really costs, recording and replay, real graph dumps you can click, the rules and their recorded
-      violations, a 110-kernel model at 15x, and finally the engine&rsquo;s 9 ms floor and the design space for
-      attacking it. Read in order; every section leans on the one before.
-    </p>
     <div id="cg-body"></div>
   </section>
 
@@ -4297,125 +4522,1000 @@ function initFlashWalk() {
   tWalk.set(0);
 }
 
-/* =============== CUDA graphs view =============== */
-
+/* =============== CUDA graphs view: a textbook mini-chapter =============== */
+/*
+ * This tab deliberately breaks with the explorer's dashboard styling: it uses
+ * the chapter format of ~/personal-projects/gr-learning (serif prose, def/rule
+ * boxes, predict-first bars, framed interactives, an end-of-chapter quiz),
+ * scoped to this view only. Every number is a real measurement from the
+ * committed capture record viz/captures/cudagraphs-2026-07-26/ (NVIDIA L4,
+ * torch 2.10.0+cu128) or from step-profiling.md (Qwen3-0.6B on the 5090).
+ */
 function initCudaGraphs() {
-  const body = $('cg-body');
-  const para = (html) => { const p = el('p', 'panel-note'); p.style.fontSize = '12.5px'; p.innerHTML = html; return p; };
-  const line = (html) => { const d = el('div', 'fa-line'); d.innerHTML = html; return d; };
-  const bullets = (items) => {
-    const ul = el('ul', 'panel-note');
-    ul.style.cssText = 'font-size:12.5px; margin:6px 0 0 0; padding-left:20px; display:flex; flex-direction:column; gap:5px;';
-    items.forEach(h => { const li = el('li'); li.innerHTML = h; ul.appendChild(li); });
-    return ul;
-  };
+  const REC = 'viz/captures/cudagraphs-2026-07-26/';
   const NS3 = 'http://www.w3.org/2000/svg';
+
+  /* ---------- infra: persistence, dom, svg ---------- */
+  const store = (() => {
+    const KEY = 'cantollm-viz-cg-chapter';
+    let data = {};
+    try { data = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { data = {}; }
+    return {
+      get: (k) => data[k],
+      set: (k, v) => { data[k] = v; try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} },
+    };
+  })();
+  const html = (tag, cls, markup) => { const n = el(tag, cls); if (markup !== undefined) n.innerHTML = markup; return n; };
   const smk = (tag, attrs, text, parent) => {
     const n = document.createElementNS(NS3, tag);
     for (const k in attrs) n.setAttribute(k, attrs[k]);
     if (text !== undefined && text !== null) n.textContent = text;
-    parent.appendChild(n);
+    if (parent) parent.appendChild(n);
     return n;
   };
-  const svgIn = (w, h) => {
-    const svg = document.createElementNS(NS3, 'svg');
-    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-    svg.setAttribute('class', 'anat-svg');
-    svg.style.minWidth = '640px';
+  const svgIn = (w, h, minW) => {
+    const svg = smk('svg', { viewBox: `0 0 ${w} ${h}` });
+    svg.style.cssText = `display:block;width:100%;height:auto;min-width:${minW === undefined ? 640 : minW}px;`;
     const scroll = el('div', 'kv-scroll');
     scroll.appendChild(svg);
     return [svg, scroll];
   };
-  const cgBar = (label, us, maxUs, color, sub) => {
+  const widget = (title) => {
+    const box = el('div', 'widget');
+    box.appendChild(html('div', 'widget-title', title));
+    const body = el('div', 'widget-body');
+    box.appendChild(body);
+    return { box, body };
+  };
+
+  /* predict-gated reveals: predict id -> unveil() */
+  const reveals = {};
+  const gate = (body, pid, msg) => {
+    if (store.get('predict:' + pid) !== undefined) return;
+    const veil = el('div', 'veil', msg || 'Commit to the prediction above to reveal the measurement.');
+    body.appendChild(veil);
+    reveals[pid] = () => { veil.remove(); delete reveals[pid]; };
+  };
+
+  const predictBar = (mount, opts) => {
+    const bar = el('div', 'predict');
+    bar.appendChild(el('span', 'label', 'Predict first'));
+    bar.appendChild(html('div', '', opts.question));
+    const row = el('div', 'choices');
+    const verdict = el('div', 'verdict');
+    verdict.style.display = 'none';
+    const btns = [];
+    const answer = (idx, fresh) => {
+      btns.forEach((b, i) => { b.disabled = true; b.classList.toggle('chosen', i === idx); });
+      let text = '';
+      if (opts.correct !== undefined) {
+        text = idx === opts.correct ? '✓ Your instinct was right. '
+          : '✗ In fact: “' + opts.choices[opts.correct] + '”. ';
+      }
+      if (opts.explain) text += opts.explain;
+      if (text) { verdict.innerHTML = text; verdict.style.display = ''; }
+      if (fresh) store.set('predict:' + opts.id, idx);
+      if (reveals[opts.id]) reveals[opts.id]();
+    };
+    opts.choices.forEach((c, i) => {
+      const b = el('button', null, c);
+      b.addEventListener('click', () => answer(i, true));
+      btns.push(b);
+      row.appendChild(b);
+    });
+    bar.append(row, verdict);
+    mount.appendChild(bar);
+    const saved = store.get('predict:' + opts.id);
+    if (typeof saved === 'number' && saved >= 0 && saved < opts.choices.length) answer(saved, false);
+  };
+
+  /* ---------- chart primitives ---------- */
+  const fmtT = (us) => us >= 2500 ? (us / 1000).toFixed(2) + ' ms' : us + ' µs';
+  const barRow = (label, val, max, color, sub, tipText) => {
     const row = el('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:8px;margin:3px 0;';
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;margin:5px 0;';
     const lab = el('span', null, label);
-    lab.style.cssText = 'font:11px var(--mono);color:var(--muted);width:130px;text-align:right;flex:none;';
+    lab.style.cssText = 'font:11.5px var(--mono);color:var(--muted);width:148px;text-align:right;flex:none;';
     const track = el('div');
-    track.style.cssText = 'flex:1;background:var(--plane);border-radius:4px;height:13px;';
+    track.style.cssText = 'flex:1;background:var(--plane);border-radius:4px;height:14px;overflow:hidden;';
     const fill = el('div');
-    fill.style.cssText = `width:${Math.max(1.5, us / maxUs * 100)}%;background:${color};height:100%;border-radius:4px;`;
+    fill.style.cssText = `width:${Math.max(1.2, val / max * 100)}%;background:color-mix(in srgb, ${color} 72%, #fff);height:100%;border-radius:0 4px 4px 0;`;
     track.appendChild(fill);
-    const val = el('span');
-    val.innerHTML = `<b>${us}</b> µs${sub ? ` <small style="color:var(--muted)">${sub}</small>` : ''}`;
-    val.style.cssText = 'font:11px var(--mono);width:190px;flex:none;';
-    row.append(lab, track, val);
+    const num = html('span', null, `<b>${fmtT(val)}</b>${sub ? ` <small style="color:var(--muted)">${sub}</small>` : ''}`);
+    num.style.cssText = 'font:11.5px var(--mono);flex:none;width:212px;color:var(--ink2);';
+    row.append(lab, track, num);
+    if (tipText) tipify(track, tipText);
     return row;
   };
-  // All measured numbers below come from the committed capture record
-  // viz/captures/cudagraphs-2026-07-26/ (NVIDIA L4, torch 2.10.0+cu128).
-  const REC = 'viz/captures/cudagraphs-2026-07-26/';
+  const legend = (items) => {
+    const box = el('div');
+    box.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font:11.5px var(--sans);color:var(--ink2);align-items:center;';
+    items.forEach(([style, label]) => {
+      const s = el('span');
+      const sw = el('span');
+      sw.style.cssText = 'width:11px;height:11px;border-radius:2px;display:inline-block;vertical-align:-1px;margin-right:5px;' + style;
+      s.append(sw, document.createTextNode(label));
+      box.appendChild(s);
+    });
+    return box;
+  };
+  const swInside = (c, pct) => `background:color-mix(in srgb, ${c} ${pct || 30}%, var(--surface));border:1px solid ${c};`;
 
-  /* ================= 1 · the puzzle ================= */
-  const p1 = el('section', 'panel');
-  p1.appendChild(el('h2', null, '1 · The puzzle: five tiny kernels that somehow cost 31 microseconds'));
-  p1.appendChild(para('Start small. Here is a five-step computation on a 4096-element tensor, the kind of thing that appears ' +
-    'thousands of times inside any model:'));
-  p1.appendChild(para('<code style="font-size:13px">y = ((relu(x·1.01 + 0.5)) · 0.9) + a</code>'));
-  p1.appendChild(para('Five operations, so the GPU runs five <b>kernels</b> (a kernel is one GPU program launch: "multiply these 4096 ' +
-    'numbers by 1.01"). Each kernel is trivial: 4096 multiplies take a modern GPU about <b>a microsecond</b>. So one pass should cost ' +
-    'perhaps 5 or 6 µs. We measured it (on an L4; every number in this chapter is a real measurement from ' +
-    `<code>${REC}</code>): <b>31.3 µs per pass</b>. The arithmetic is 5 µs of the 31. Where do the other 26 go?`));
-  p1.appendChild(para('They go to the <i>space between</i> kernels. Here is one pass, drawn to scale from the measurements. Top lane: what ' +
-    'the CPU is doing. Bottom lane: what the GPU is doing.'));
-  (() => {
-    const [svg, scroll] = svgIn(780, 300);
-    const X0 = 90, X1 = 760, T = 32;                    // µs → x
+  /* Shared DAG renderer. nodes: {op, pos?[col,row]}, edges: [[a,b]]. */
+  const drawDag = (nodes, edges, opts) => {
+    const o = Object.assign({ w: 740, h: 128, W: 126, H: 40, ncols: null, onClick: null, minW: 640 }, opts || {});
+    const [svg, scroll] = svgIn(o.w, o.h, o.minW);
+    const posOf = (nd, i) => {
+      const col = nd.pos ? nd.pos[0] : i;
+      const rowv = nd.pos ? nd.pos[1] : 0.5;
+      const ncols = o.ncols || (nd.pos ? 4 : nodes.length);
+      return [16 + col * ((o.w - 32 - o.W) / (ncols - 1)), 10 + rowv * (o.h - 20 - o.H)];
+    };
+    const defs = smk('defs', {}, null, svg);
+    const mid = 'cgc-arr-' + (drawDag.seq = (drawDag.seq || 0) + 1);
+    defs.innerHTML = `<marker id="${mid}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--axis)"/></marker>`;
+    edges.forEach(([a, b]) => {
+      const [ax, ay] = posOf(nodes[a], a);
+      const [bx, by] = posOf(nodes[b], b);
+      const vertical = by > ay + o.H;
+      const [x1, y1, x2, y2] = vertical
+        ? [ax + o.W / 2, ay + o.H, bx + o.W / 2, by - 3]
+        : [ax + o.W, ay + o.H / 2, bx - 3, by + o.H / 2];
+      smk('line', { x1, y1, x2, y2, style: 'stroke:var(--axis);stroke-width:1.6', 'marker-end': `url(#${mid})` }, null, svg);
+    });
+    nodes.forEach((nd, i) => {
+      const [x, y] = posOf(nd, i);
+      const g = smk('g', { style: o.onClick ? 'cursor:pointer' : '' }, null, svg);
+      smk('rect', { x, y, width: o.W, height: o.H, rx: 8,
+        style: 'fill:color-mix(in srgb, var(--sA) 9%, var(--surface));stroke:var(--sA);stroke-width:1.4' }, null, g);
+      smk('text', { x: x + o.W / 2, y: y + 18, style: 'font:600 11.5px var(--sans);fill:var(--ink);text-anchor:middle' }, nd.op, g);
+      smk('text', { x: x + o.W / 2, y: y + 32, style: 'font:9.5px var(--mono);fill:var(--muted);text-anchor:middle' }, `node ${i} · KERNEL`, g);
+      if (o.onClick) g.addEventListener('click', () => o.onClick(i));
+    });
+    return scroll;
+  };
+
+  /* ---------- the chapter ---------- */
+  const article = el('article', 'cgc');
+  article.innerHTML = `
+<p class="ch-kicker">cantoLLM · Phase 3 · a mini-chapter</p>
+<h1>CUDA Graphs</h1>
+<p class="lede">A GPU only ever does what the CPU tells it to, one kernel launch at a time,
+and the telling costs more than the doing. This chapter measures that cost on a small
+program, learns to record it away, and ends at the change Phase 3 is preparing: replaying
+the engine&rsquo;s whole decode step as a single launch.</p>
+
+<aside class="note"><span class="label">How this chapter works</span>
+Every number here is a real measurement, taken for this project on a rented NVIDIA L4
+(about a dollar of GPU time; the harness is <code>viz/capture_cudagraphs.py</code>, the raw
+record is committed at <code>${REC}</code>). The interactives are part of the argument, not
+decoration: play with each one, and commit to the &ldquo;predict first&rdquo; prompts before
+revealing. Predictions and quiz answers are saved locally in this browser.</aside>
+
+<aside class="note"><span class="label">Contents</span>
+<a data-goto="s-puzzle">The puzzle</a> ·
+<a data-goto="s-kernel">What a kernel is</a> ·
+<a data-goto="s-anatomy">Anatomy of a launch</a> ·
+<a data-goto="s-idea">The idea</a> ·
+<a data-goto="s-lifecycle">The lifecycle</a> ·
+<a data-goto="s-dump">A real dump</a> ·
+<a data-goto="s-edges">Where edges come from</a> ·
+<a data-goto="s-sweep">When graphs pay</a> ·
+<a data-goto="s-rules">The rules</a> ·
+<a data-goto="s-model">A model under capture</a> ·
+<a data-goto="s-engine">Our engine</a> ·
+<a data-goto="s-boundary">Drawing the boundary</a> ·
+<a data-goto="s-exercises">Exercises</a> ·
+<a data-goto="s-quiz">Quiz</a></aside>
+
+<h2 id="s-puzzle">A puzzle to start: five tiny kernels, thirty-one microseconds</h2>
+
+<p>Begin with a computation almost too small to care about: five elementwise operations
+on a tensor of 4096 floats, the kind of line that appears thousands of times inside any
+model&rsquo;s forward pass.</p>
+
+<pre class="code">y = (relu(x * 1.01 + 0.5)) * 0.9 + a      # five ops, 4096 floats each</pre>
+
+<p>PyTorch executes each operation by launching a <em>kernel</em> on the GPU.</p>
+
+<div class="def"><span class="label">Definition · kernel, launch</span>
+A <strong>kernel</strong> is one GPU program: &ldquo;multiply these 4096 numbers by
+1.01.&rdquo; A <strong>launch</strong> is the CPU-side act of submitting one kernel to the
+GPU through the CUDA driver. Everything a GPU ever does begins as a launch.</div>
+
+<p>The arithmetic here is nothing. 4096 multiplications take a modern GPU about a
+microsecond, so five kernels are roughly 5 µs of GPU work. The question is what one full
+pass through the line above costs end to end, wall clock, measured.</p>
+
+<div data-predict="p-cost"></div>
+<div data-widget="w-timeline"></div>
+<p class="widget-caption"><strong>Interactive.</strong> Both passes drawn to scale from
+<code>timings.json</code>: the top pair of lanes is the ordinary (eager) pass, the bottom
+pair the same five kernels replayed as a CUDA graph. Hover any block for its cost. The
+gaps in the eager GPU lane are the whole story of this chapter.</p>
+
+<p>The measured answer is <strong>31.3 µs</strong>, six times the arithmetic, and the
+picture shows where the time goes: not into the kernels (the green slivers, about 1 µs
+each) but into the <em>space between them</em>. Before each sliver the CPU spends about
+6 µs deciding, packaging, and submitting the launch, and during those 6 µs the GPU has
+nothing to do but wait. The bottom lanes, one call and 5.9 µs, are this chapter&rsquo;s
+destination. But the figure opens two mysteries, and they deserve one section each. How
+can 4096 multiplications cost only a microsecond? And what is the CPU doing for six
+times that long?</p>
+
+<h2 id="s-kernel">What is a kernel, actually? One multiply, all the way down</h2>
+
+<p>The chapter keeps saying &ldquo;the GPU runs a kernel&rdquo; as if that were elementary.
+Time to open the box. Take the puzzle&rsquo;s first operation and give it a shape:
+<code>x</code> is a rank-2 tensor, 64 × 64 float32s (4096 elements, 16 KB), and we want
+<code>y = x * 1.01</code>.</p>
+
+<p>The first thing to unlearn: the GPU never sees a 64 × 64 anything. Device memory is
+flat, so element <code>(r, c)</code> simply lives at flat index <code>i = 64r + c</code>,
+four bytes per float, one long row of 4096. Rank is bookkeeping that the framework
+compiles into index arithmetic; by the time a kernel runs, there are only addresses.</p>
+
+<p>Here is the kernel, in real CUDA. It is an ordinary C++ function with one strange
+marker (<code>__global__</code>: callable from the CPU, runs on the GPU) and one strange
+call syntax:</p>
+
+<pre class="code">__global__ void scale(const float* x, float* y, float c, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;   /* who am I?      */
+    if (i &lt; n) y[i] = x[i] * c;                      /* my one element */
+}
+
+scale&lt;&lt;&lt;32, 128&gt;&gt;&gt;(x, y, 1.01f, 4096);   /* the launch: 32 blocks of 128 threads */</pre>
+
+<p>Read the body from the perspective of a single <em>thread</em>, and notice what is
+missing: the loop. The body handles exactly one element. It is the launch, the
+<code>&lt;&lt;&lt;32, 128&gt;&gt;&gt;</code>, that stamps out 4096 executions of that body,
+and the only thing distinguishing one execution from another is the pair of built-in
+coordinates <code>blockIdx</code> and <code>threadIdx</code>. You write the program for
+one element; the hardware supplies the multiplicity. The style has a name: SIMT, single
+instruction, multiple threads.</p>
+
+<div class="def"><span class="label">Definition · thread, warp, block, grid, SM</span>
+A <strong>thread</strong> is one execution of the kernel body, owning one index
+<code>i</code>. A <strong>warp</strong> is 32 threads the hardware executes in lockstep:
+the GPU&rsquo;s true unit of execution. A <strong>block</strong> is a group of threads
+(128 here) that lives together on one <strong>SM</strong> (streaming multiprocessor, the
+GPU&rsquo;s core-like unit; the L4 has 58 of them) and can share fast on-chip memory. The
+<strong>grid</strong> is all the blocks of one launch. The config
+<code>&lt;&lt;&lt;blocks, threads&gt;&gt;&gt;</code> names the grid, and it is part of the
+kernel&rsquo;s identity: the dump section will show it baked into every recorded node.</div>
+
+<aside class="note"><span class="label">These are not CPU threads</span>
+Forget most of what the word &ldquo;thread&rdquo; means on a CPU. There is no stack to
+set up, no operating system, no context-switch machinery: a GPU thread is closer to
+<em>a vector lane with a name</em>, a handful of private registers plus the index
+<code>i</code>. The hardware carves the grid into warps with a counter, so creating
+4096 threads costs nothing beyond the launch itself, and a thread&rsquo;s only marginal
+cost is the register space it occupies. That is why one element per thread is the
+natural default: threads are the cheap resource, and the model wants every scrap of
+parallelism exposed so the hardware can schedule it. (Real kernels do sometimes give
+each thread a few elements; the end of this section says why.)</aside>
+
+<div data-widget="w-kernel"></div>
+<p class="widget-caption"><strong>Interactive.</strong> Pick an element of the rank-2
+tensor and meet the thread that computes it: the flattening, the block (two tensor rows
+each, since 128 threads is 2 rows of 64), the warp, the lane. Every thread runs the same
+line of code; only <code>i</code> differs.</p>
+
+<p>The hardware side is where the speed comes from. An SM does not run threads one at a
+time; it marches whole warps in lockstep, keeps dozens of warps resident at once, and
+switches between them <em>every cycle, for free</em>: all the resident warps&rsquo;
+registers live in the register file simultaneously, so there is nothing to save or
+restore. The right mental picture of an SM is an extremely wide hyperthreaded core, and
+the crowd of threads is its latency-hiding budget: while one warp waits hundreds of
+cycles on a memory read, hundreds of others take turns issuing. Lockstep also has a
+price worth knowing: all 32 lanes of a warp execute the same instruction, so an
+<code>if</code> that splits a warp runs both sides with lanes masked off. Our
+<code>if (i &lt; n)</code> guard is free only because all 4096 threads agree on it.</p>
+
+<p>Blocks are the unit of placement: each of our 32 blocks is pinned to one SM for its
+whole life, and a hardware scheduler sprays the grid across the chip; nothing in the
+program ever picks an SM. In one line: threads name the data, warps do the executing,
+blocks decide where things live, and the size of the crowd is what hides the memory
+latency.</p>
+
+<div data-predict="p-occupancy"></div>
+<div data-widget="w-machine"></div>
+<p class="widget-caption"><strong>Figure.</strong> The launch, placed on the machine.
+Each tinted square holds one of our 32 blocks (4 warps of 32 threads); hover any SM. The
+L4 has 58 SMs and room for roughly 89,000 resident threads.</p>
+
+<aside class="note"><span class="label">Sanity-checking the microsecond</span>
+The kernel&rsquo;s ~1 µs is not arithmetic. 4096 multiplications spread over the
+L4&rsquo;s 7,424 lanes is less than one multiply per lane: a fraction of one clock cycle
+at ~2 GHz. What the microsecond buys is <em>movement and setup</em>: 16 KB in from HBM
+and 16 KB back out (~0.1 µs at ~300 GB/s), plus the fixed few hundred nanoseconds every
+kernel spends getting its grid onto and off the machine.</aside>
+
+<p>So the ride is short because the machine is wide, not fast the way a CPU is fast, and
+the ride has a floor no cleverness removes: memory traffic plus fixed setup. A tiny
+kernel cannot be made much quicker. It can only be <em>merged</em> with its neighbors so
+there are fewer of them (fusion, the FlashAttention tabs&rsquo; story) or
+<em>launched</em> less wastefully (this chapter&rsquo;s story).</p>
+
+<p>One refinement before going a layer deeper. PyTorch&rsquo;s real elementwise kernel
+does the same job as our <code>scale</code>, except each thread handles <em>four</em>
+elements, moved by single 16-byte vector instructions (a <code>float4</code> load and
+store). Not because threads are scarce; because 16 bytes is the widest access one thread
+can issue in one instruction, so four floats per load means a quarter of the memory
+instructions, bounds checks, and index arithmetic for the same bytes (a 2-byte dtype
+would pack eight). That is the <code>4</code> in
+<code>vectorized_elementwise_kernel&lt;4, ...&gt;</code>, a name you will meet again in
+the dump section. The tension it hints at is real but mild: more elements per thread
+saves instructions, while fewer threads shrinks the latency-hiding crowd; elementwise
+kernels sit happily at four.</p>
+
+<h3>The next layer down: what the C++ compiles to</h3>
+
+<p>GPUs do not execute C++, and, more surprisingly, they do not even have a stable
+public machine language. The kernel is compiled twice. <code>nvcc</code> lowers the
+device function to <b>PTX</b>: a readable, documented assembly for a <em>virtual</em>
+GPU that NVIDIA promises to keep stable across generations. Then <code>ptxas</code> (at
+build time) or the driver (at load time) compiles PTX to <b>SASS</b>: the actual
+machine code of one concrete architecture, <code>sm_89</code> for our L4,
+<code>sm_120</code> for the 5090, different and undocumented for each generation. Here
+is our thread&rsquo;s whole life at both levels, lightly abridged:</p>
+
+<div data-widget="w-sass"></div>
+<p class="widget-caption"><strong>Interactive.</strong> The same five C++ lines at both
+levels: about ten instructions per thread, and each is issued once <em>per warp</em>,
+driving all 32 lanes. The comments tie every instruction back to its source line;
+<strong>hover any instruction</strong> for what it actually does with its registers.
+Register numbers and constant-bank offsets vary with compiler version; the shape does
+not.</p>
+
+<aside class="note"><span class="label">Why two stages, and where you have met them</span>
+PTX is the stable contract; SASS changes freely between generations, which is how the
+hardware keeps improving without breaking every shipped program. A binary carries SASS
+for the architectures it chose plus PTX as a fallback, and the driver JIT-compiles that
+PTX for GPUs newer than the build. This project has already lived on this layer: the
+5090&rsquo;s <code>sm_120</code> demanded torch wheels built against cu128, a toolchain
+new enough to know its SASS. And the mangled kernel names you will click in the dump
+section, <code>vectorized_elementwise_kernel&lt;4, ...&gt;</code> and friends, are
+exactly these compiled entry points; the &ldquo;kernel selection&rdquo; stage of the
+next section is choosing one of them.</aside>
+
+<p>A kernel, then, is a warp-wide instruction stream plus a frozen geometry, and
+launching one means handing the GPU a pointer to compiled code it already holds. Which
+sharpens the puzzle nicely: if the code is compiled and resident, what is the CPU doing
+for 6 µs per launch? The other mystery, at last.</p>
+
+<h2 id="s-anatomy">Anatomy of a launch: the toll booth in front of every kernel</h2>
+
+<p>Follow the first <code>x * 1.01</code> from your Python line down to silicon. Five
+stages run, in order, <em>every single time</em>, no matter how small the kernel:</p>
+
+<div data-widget="w-anatomy"></div>
+<p class="widget-caption"><strong>Figure.</strong> The launch pipeline. Rust stages are
+CPU work: the toll. The green stage is the GPU actually computing: the ride.</p>
+
+<p>Two things to notice. First, the toll is <strong>CPU time</strong>: the GPU is not
+involved until the last stage, so while the toll is being paid the GPU can only sit idle.
+Those are the gaps in the opening figure. Second, the toll is <strong>per launch</strong>:
+it does not shrink when the kernel does. A 3 ms matmul does not notice 6 µs of paperwork.
+A 1 µs multiply drowns in it.</p>
+
+<div class="def"><span class="label">Definition · launch-bound</span>
+A program is <strong>launch-bound</strong> when its wall clock is set by per-launch CPU
+overhead rather than by GPU execution. Symptoms: step time roughly proportional to the
+<em>number</em> of ops rather than their size, low GPU utilization, individually tiny
+kernels. The kernels are not the problem; the space between them is.</div>
+
+<aside class="note"><span class="label">Why is dispatch so expensive?</span>
+Because it buys flexibility. Every eager call re-answers the same questions: what dtype?
+which device? does autograd need a record? which of the many compiled kernel variants
+fits this exact input? Eager PyTorch pays per call for the freedom to run any line on
+anything. A CUDA graph will be the opposite trade: answer everything once, then give the
+freedom up.</aside>
+
+<h2 id="s-idea">The idea: pay the toll once</h2>
+
+<p>Look at what is actually different between two passes of our five-op program: nothing
+but the numbers inside the buffers. Same kernels, same shapes, same addresses, same
+order. Paying five identical tolls per pass to re-derive identical decisions is absurd,
+and the fix is the obvious one: do the dispatch work <em>once</em>, write down its
+result, and thereafter submit the recording.</p>
+
+<div class="def"><span class="label">Definition · CUDA graph</span>
+A <strong>CUDA graph</strong> is a recording of a set of kernel launches: for each one,
+the exact compiled kernel, its launch configuration, and the exact device addresses it
+reads and writes, plus dependency edges between launches. A single API call
+(<code>cudaGraphLaunch</code>) submits the whole recording, and the GPU walks it on its
+own, kernel to kernel, with no CPU in between.</div>
+
+<div data-widget="w-idea"></div>
+<p class="widget-caption"><strong>Figure.</strong> The same five kernels, measured both
+ways on the L4. Hover a bar for the CPU-side submit cost.</p>
+
+<p>31.3 µs becomes 5.9, with zero changes to the arithmetic. And watch the submit
+numbers: the CPU&rsquo;s cost of issuing a pass fell from 31.4 µs to 3.3. The CPU has
+almost left the loop. Hold on to that number; it will not change when the recording grows
+from five kernels to a hundred and ten.</p>
+
+<p>The rest of the chapter, in order: how a recording is actually made (the lifecycle),
+what one looks like inside (a real dump), where its edges come from (a trap), when it
+pays (a sweep), what it forbids (four recorded failures), and then what happens when we
+point it at a real model and finally at our engine.</p>
+
+<h2 id="s-lifecycle">The lifecycle: warm up, capture, instantiate, replay</h2>
+
+<p>Recording is not freeform; it is a strict little liturgy with four movements. The
+board below walks all of them on our five-op chain. Three homes to watch: the
+<strong>CPU</strong> (where tolls are paid), the <strong>GPU stream</strong> (a stream is
+an ordered work queue the GPU consumes), and the <strong>CUDAGraph object</strong> being
+built.</p>
+
+<div data-widget="w-lifecycle"></div>
+<p class="widget-caption"><strong>Interactive.</strong> Step through with the buttons,
+the slider, or the arrow keys. Watch which home is active at each step, and what the
+mode chip says the stream is doing.</p>
+
+<h2 id="s-dump">What a recording looks like: the real dump</h2>
+
+<p>A graph is not an opaque blob. The driver will print one for you
+(<code>cudaGraphDebugDotPrint</code>), and the DOT files it produced for this chapter are
+committed alongside the timings. Below is the actual recording of our chain, redrawn
+node for node from <code>chain.dot</code>: five kernel nodes, four edges. <strong>Click a
+node</strong> to see its true identity: the kernel symbol and launch configuration that
+were frozen into it.</p>
+
+<div data-widget="w-dump"></div>
+<p class="widget-caption"><strong>Interactive.</strong> The chain as the driver recorded
+it. Nothing in a node is symbolic: each says &ldquo;run this exact compiled function over
+these exact addresses with this exact geometry.&rdquo;</p>
+
+<p>The dump hands you two small surprises, which is exactly what dumps are for. PyTorch
+compiled our <code>relu</code> into a <em>clamp</em> kernel. And the final <code>+ a</code>
+is a different kernel from the middle add: three pointers instead of two, because it has
+two tensor inputs and one output. Dumps do not lie; this is what actually runs.</p>
+
+<aside class="note"><span class="label">Getting a dump out of torch</span>
+On this torch build (2.10) the documented <code>enable_debug_mode()</code> route returns
+without writing anything. What works: construct <code>CUDAGraph(keep_graph=True)</code>,
+capture, call <code>debug_dump(path)</code>, then call <code>instantiate()</code>
+explicitly before replaying. The harness does exactly that.</aside>
+
+<h2 id="s-edges">Where do the edges come from? A tale of two fork-joins</h2>
+
+<p>Our chain recorded as a chain, which feels inevitable until you ask how the recorder
+knew. It never saw our Python. It saw a <em>stream</em>. That distinction has teeth, and
+the way to feel them is an experiment: a program with genuine parallelism in it, two
+matmuls with no dependency between each other.</p>
+
+<pre class="code">y1 = x @ W1
+y2 = x @ W2          # independent of y1
+out = relu(y1 + y2 + b)</pre>
+
+<p>We captured it twice. Once exactly as written, on one stream. Once with the second
+matmul placed on a second stream, fenced by fork and join events. Same math both
+times.</p>
+
+<div data-predict="p-fork"></div>
+<div data-widget="w-forkjoin"></div>
+<p class="widget-caption"><strong>Interactive.</strong> Both recordings, redrawn from
+their DOT dumps, with the measured timings of all four variants below. Hover the bars for
+submit costs.</p>
+
+<p>One stream is a total order. Edges come from <em>stream order</em>, so the two matmuls
+that could have run in parallel record as if the second depends on the first: your Python
+said fork, the recording says queue. On two streams the recorder saw two queues meeting
+at an event and wrote down a genuine fan-in of 2, and during replay the GPU may run both
+matmuls at once.</p>
+
+<p>None of this is automatic; it is worth seeing exactly what &ldquo;fenced by fork and
+join events&rdquo; meant, because every character of it is something you write yourself.
+The single-stream version required nothing: every op a process issues lands on the
+device&rsquo;s <em>current stream</em>, one ordered queue, and that is the default state
+of all PyTorch code. The two-stream version is explicit choreography, verbatim from the
+harness:</p>
+
+<pre class="code">side = torch.cuda.Stream()            # a second queue
+fork_ev, join_ev = torch.cuda.Event(), torch.cuda.Event()
+
+cur = torch.cuda.current_stream()
+fork_ev.record(cur)                   # marker into the main queue
+with torch.cuda.stream(side):         # ops in this block land on side
+    side.wait_event(fork_ev)          # side may not pass this point early
+    y2 = x @ w2                       # branch 2, on the side queue
+    join_ev.record(side)
+y1 = x @ w1                           # branch 1, still on the main queue
+cur.wait_event(join_ev)               # main stalls here until y2 exists
+out = torch.relu(y1 + y2 + b)</pre>
+
+<p>The events are not decoration. Streams have <strong>no implicit ordering between
+them</strong>: without the join fence, the main stream&rsquo;s <code>y1 + y2</code>
+could run before the side stream had written <code>y2</code>, and you would read
+garbage. An event is the one cross-stream ordering tool: <code>record</code> drops a
+marker into a queue, <code>wait_event</code> makes another queue refuse to proceed past
+that point until the marker has been reached. That record/wait pairing is the
+fence.</p>
+
+<aside class="note"><span class="label">How the fences become the edges</span>
+During capture nothing executes, so the waits are not waits; they are dependency
+declarations. Capture starts on one stream, and a second stream <em>joins the
+capture</em> at the moment it waits on an event recorded by a captured stream: that is
+the fan-out. The main stream&rsquo;s wait on <code>join_ev</code> is the fan-in of 2 in
+the dump. The recorder never discovers parallelism; it transcribes exactly the
+parallelism your events declared, which is why the as-written capture is a chain.</aside>
+
+<p>The timings teach two lessons. Run eagerly, the two-stream version is <em>twice as
+slow</em> (90.5 vs 44.9 µs): streams and events are more CPU choreography, more toll. But
+its <em>replay</em> is the fastest of all four rows (9.7 µs): the recording kept the
+parallelism and discarded the choreography bill. And carry this warning to the model
+section: a model&rsquo;s forward pass runs on one stream, so its recording will be one
+long chain unless somebody deliberately splits it.</p>
+
+<h2 id="s-sweep">When graphs pay: the size sweep</h2>
+
+<p>Graphs remove the toll, not the ride. So the win must depend entirely on the ratio
+between the two, and it should be possible to make it vanish by growing the kernels. We
+swept the chain&rsquo;s tensor from 4096 elements to 16.7 million and measured eager and
+replay at each size.</p>
+
+<div data-predict="p-sweep"></div>
+<div data-widget="w-sweep"></div>
+<p class="widget-caption"><strong>Interactive.</strong> Pick a tensor size; the bars
+rescale to that pair, and the readout gives the accounting. Hover the bars for CPU submit
+costs.</p>
+
+<p>At 4k elements the kernels are ~1 µs each and the pass is almost pure toll: 5.3×. At
+1M the kernels have grown to ~5 µs and the win thins to 1.2×. At 16.7M each kernel runs
+~640 µs and replay measures dead even with eager; this particular run even read 0.1%
+<em>slower</em> under replay, which is what a true zero looks like through measurement
+noise.</p>
+
+<p>One more thing the sweep shows, quietly: <em>eager</em> costs ~31 µs at 4k and still
+~31 µs at 1M. The kernels grew fivefold and the wall clock never moved, because the
+growing ride stayed hidden underneath the toll. Replay is the cleaner probe: its 5.9 →
+27.2 µs is the true kernel time the toll was concealing.</p>
+
+<div class="thm"><span class="label">Rule of thumb</span>
+A CUDA graph buys back the space between kernels and nothing else. Many small kernels:
+large win. Few large kernels: no win. The win is proportional to how launch-bound the
+program is. (Keep this rule; at the engine section it makes a prediction.)</div>
+
+<h2 id="s-rules">The rules: what replay forbids</h2>
+
+<p>Everything a replayed graph cannot do follows from a single sentence:</p>
+
+<div class="thm"><span class="label">The one sentence</span>
+<strong>During replay, the CPU is not consulted.</strong> So there is nobody to handle a
+new shape, nobody to chase a moved pointer, nobody to answer a question mid-flight, and
+nobody to allocate memory.</div>
+
+<p>Rather than take that on faith, we broke each rule on purpose on the L4 and committed
+what happened (<code>failures.json</code>). Two of the four fail loudly. Two fail
+silently, which is worse: wrong numbers and no error, forever.</p>
+
+<div data-predict="p-stale"></div>
+<div data-widget="w-rules"></div>
+<p class="widget-caption"><strong>Interactive.</strong> Four deliberate violations,
+recorded. Open each one; the error text is verbatim from the run.</p>
+
+<h2 id="s-model">From toy to transformer: 110 kernels, one launch</h2>
+
+<p>Five-op chains are a laboratory. The question that matters is what happens when the
+thing under capture is a model. So we captured one decode step of the test suite&rsquo;s
+miniature Qwen3 (2 layers, hidden size 64) generating its 17th token. The recording came
+back with <strong>110 kernel nodes and 109 edges</strong>: one stream, so a pure chain,
+exactly as the fork-join experiment predicted. And because dumps name their kernels, the
+whole architecture is legible in the census:</p>
+
+<div data-widget="w-census"></div>
+<p class="widget-caption"><strong>Figure.</strong> The 110 nodes of
+<code>tinymodel.dot</code>, grouped by kernel family. You can read the model straight out
+of its recording: nine RMSNorms, two attentions, the SwiGLU muls, the KV appends.</p>
+
+<p>Fifteen matvecs and four matmuls (a single token in flight turns most matmuls into
+matvecs), nine pow/mean/rsqrt trios (exactly the model&rsquo;s nine RMSNorms), twenty-six
+muls and thirteen adds (RoPE rotations, SwiGLU, residual adds), six concats (the KV-cache
+appends: the fourth rule lives there), two softmaxes, and a tril + fill pair (the causal
+mask, built inside the forward). Now the measurement.</p>
+
+<div data-predict="p-model"></div>
+<div data-widget="w-model"></div>
+<p class="widget-caption"><strong>Figure.</strong> One decode step of the 2-layer model,
+both ways, on the L4. Hover for submit costs.</p>
+
+<p>Essentially all of it. Eagerly this step costs 2066 µs <em>of which 2066 µs is CPU
+submit</em>: to measurement precision, the pass is pure toll, 110 consecutive trips
+through the launch pipeline. Replay collapses it to 134 µs, a 15.4× win, and the submit
+cost lands at 3.5 µs: the same ~3 µs it cost to launch the five-kernel chain.</p>
+
+<div class="thm"><span class="label">The key property</span>
+Replay submit cost is <strong>flat in the number of kernels</strong>: one API call,
+whether the recording holds five launches or a hundred and ten. The win therefore scales
+with how many launches the recording swallows.</div>
+
+<p>The scaling argument writes itself. This fixture is 2 layers at hidden size 64. The
+engine&rsquo;s Qwen3-0.6B is 28 layers at hidden size 1024. Scale 110 nodes to 28 layers
+and you land around 1700 launches per decode step. That number should ring a bell.</p>
+
+<h2 id="s-engine">Interlude: reading our engine with graph eyes</h2>
+
+<p>Phase 3 opened with a profile of the batched engine&rsquo;s decode step
+(<code>step-profiling.md</code>, Qwen3-0.6B on the 5090). At the time it read as a list
+of grim facts. After this chapter it reads as a diagnosis you can make yourself:</p>
+
+<div data-widget="w-engine"></div>
+<p class="widget-caption"><strong>Figure.</strong> The measured decode step of the real
+engine. The top bar is the opening figure&rsquo;s eager lane stretched a thousandfold:
+per-launch CPU time, not GPU work, sets the floor.</p>
+
+<p>The engine is launch-bound, which is precisely the regime the rule of thumb says
+graphs love. It is also precisely the part SDPA could not touch: in the SDPA A/B,
+short_chat moved by about a percent, because fused kernels shrink the <em>ride</em> and
+the ride was never the problem in short-context decode. Fused attention and CUDA graphs
+are complements, not rivals: one shrinks the kernels, the other removes the space between
+them.</p>
+
+<p>So the prediction: record one decode step per served shape, replay it thereafter, and
+the ~1900 API calls collapse toward one <code>cudaGraphLaunch</code>, attacking the 9 ms
+floor directly. Which leaves only the hard question: <em>where exactly can the recording
+begin and end?</em></p>
+
+<h2 id="s-boundary">The design problem: drawing the boundary in our decode step</h2>
+
+<p>Knowing graphs will help is the easy half. The hard half is geometry. A real decode
+step is not a clean chain of kernels: it has host-side planning at the top, host-side
+bookkeeping at the bottom, and one awkward customer in the middle. The rules decide what
+may live inside the recording. Walk the step, top to bottom:</p>
+
+<div data-widget="w-boundary"></div>
+<p class="widget-caption"><strong>Interactive.</strong> The batched engine&rsquo;s decode
+step. Click a stage; the colors mark what can sit inside a captured graph, what feeds it
+at the door, and what must stay outside.</p>
+
+<p>Six of the seven stages settle instantly once you know the rules. The seventh is the
+genuinely open problem: the KV scatter passes the memory rule (device-side writes into
+the preallocated pool through <code>KVWriteMap</code>), but its <strong>index length
+varies within a shape bucket</strong>: the same padded geometry can carry different
+numbers of rows actually writing KV. A graph bakes every shape it touches. This one moves
+between replays.</p>
+
+<p>Two candidate answers, deliberately left unresolved here. <strong>(a) Pad the write
+map</strong> to the bucket&rsquo;s row count so the scatter&rsquo;s index shape is
+constant: filler rows already exist as a convention (<code>num_new == 0</code>), so
+filler writes can land in a scratch slot and one whole-step graph survives.
+<strong>(b) Piecewise graphs</strong>: capture only the forward body and leave scatter
+and sampling eager, the way vLLM&rsquo;s piecewise CUDA-graph mode does. Option (a) keeps
+more inside the recording; option (b) is simpler and tolerates anything dynamic at the
+edges. The Phase 3 design note decides between them, with measurements, not this
+chapter.</p>
+
+<aside class="note"><span class="label">The bills</span>
+Nothing above is free. Each instantiated graph owns a private memory pool and workspace,
+so N buckets cost roughly N times the step&rsquo;s activation memory unless pools are
+shared (vLLM shares one pool across its graphs for exactly this reason). Capture time
+joins the existing 102-second warm-up bill behind Ready: the 477-shape sweep already
+visits every shape a graph would need, which makes it the natural place for capture to
+hide. And cold or oversized shapes keep the eager path as a fallback, the same way they
+bypass warm cuDNN plans today.</aside>
+
+<h2 id="s-exercises">Exercises: do it with your own hands</h2>
+
+<p>Everything in this chapter came from about a dollar of rented GPU time
+(<code>infra/</code> brings a node up and down in one command each). The harness is
+<code>viz/capture_cudagraphs.py</code>, and the point of these exercises is to
+<em>not</em> read it first.</p>
+
+<ul>
+<li>Rewrite the chain capture from scratch: warm up, capture, <code>copy_</code> new
+inputs in, replay, verify the output. Then reproduce the 5.3×.</li>
+<li>Go one layer down for real: compile the <code>scale</code> kernel with
+<code>nvcc -ptx</code> and dump machine code with <code>cuobjdump --dump-sass</code> (on
+the infra node, or on Compiler Explorer), then match every SASS instruction to a line of
+the C++.</li>
+<li>Break capture three ways and read each failure like a message: an
+<code>.item()</code> inside the region, a wrong-shape copy into the static buffer, a
+rebound input that goes silently stale.</li>
+<li>Find your own crossover: sweep the tensor size until eager and replay converge, then
+explain the curve in one sentence.</li>
+<li>Reproduce the two fork-joins: capture once on one stream, once on two streams with
+fork/join events, and diff the DOT dumps.</li>
+<li>Capture the tiny model&rsquo;s decode step and confirm the concat-grown
+<code>KVCache</code> never advances across replays. Then say precisely what a
+preallocated pool with device-side indices changes.</li>
+<li>Read one DOT dump end to end and name every kernel&rsquo;s source op. Count the nodes
+you did not expect; the relu-is-a-clamp surprise scales up.</li>
+</ul>
+
+<div data-quiz></div>
+
+<hr>
+
+<aside class="note"><span class="label">Where this goes next</span>
+This chapter is the toy session that PLAN.md&rsquo;s Phase 3 CUDA-graphs bullet called
+for. The next artifact is the design note: whole-step vs piecewise capture, decided with
+measurements on the 5090, then landed behind the shape vocabulary and its warm-up window.
+Sources: <code>${REC}</code> (README, timings, failures, DOT dumps),
+<code>step-profiling.md</code>, <code>sdpa-results.md</code>,
+<code>shape-buckets-results.md</code>, and PLAN.md Phase 3.</aside>
+`;
+  $('cg-body').appendChild(article);
+
+  /* in-page navigation without touching the location hash (it routes tabs) */
+  article.addEventListener('click', (e) => {
+    const a = e.target.closest('[data-goto]');
+    if (!a) return;
+    e.preventDefault();
+    const t = article.querySelector('#' + a.dataset.goto);
+    if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  /* ---------- widgets ---------- */
+  const W = {};
+
+  /* w-timeline: the opening two-pass timeline, to scale */
+  W['w-timeline'] = (mount) => {
+    const { box, body } = widget('One pass, drawn to scale · L4, measured');
+    const [svg] = svgIn(780, 300, 640);
+    body.appendChild(svg.parentNode);
+    const X0 = 90, X1 = 760, T = 32;
     const xAt = (us) => X0 + (X1 - X0) * us / T;
     const lane = (y, label) => {
       smk('text', { x: 12, y: y + 20, style: 'font:600 11px var(--sans);fill:var(--ink2)' }, label, svg);
       smk('line', { x1: X0, y1: y + 32, x2: X1, y2: y + 32, style: 'stroke:var(--grid);stroke-width:1' }, null, svg);
     };
-    const block = (y, t0, t1, color, label, small) => {
+    const block = (y, t0, t1, color, label, tipText) => {
       const x = xAt(t0), w = Math.max(2, xAt(t1) - x);
-      smk('rect', { x, y, width: w, height: 26, rx: 4,
+      const r = smk('rect', { x, y, width: w, height: 26, rx: 4,
         style: `fill:color-mix(in srgb, ${color} 26%, var(--surface));stroke:${color};stroke-width:1.2` }, null, svg);
       if (label) smk('text', { x: x + w / 2, y: y + 17,
-        style: `font:${small ? '9px' : '600 10px'} var(--sans);fill:var(--ink);text-anchor:middle` }, label, svg);
+        style: 'font:600 10px var(--sans);fill:var(--ink);text-anchor:middle' }, label, svg);
+      if (tipText) tipify(r, tipText);
     };
-    // ---- eager pass ----
-    smk('text', { x: 12, y: 16, style: 'font:700 11px var(--sans);letter-spacing:.05em;fill:var(--muted)' }, 'EAGER · ONE PASS · MEASURED 31.3 µs', svg);
+    smk('text', { x: 12, y: 16, style: 'font:700 11px var(--sans);letter-spacing:.05em;fill:var(--muted)' },
+      'EAGER · ONE PASS · MEASURED 31.3 µs', svg);
     lane(28, 'CPU');
     lane(74, 'GPU');
     const OPS = ['mul', 'add', 'relu', 'mul', 'add'];
-    const D = 31.3 / 5;                                  // per-op dispatch ≈ 6.3 µs
+    const D = 31.3 / 5;
     OPS.forEach((op, i) => {
-      block(28, i * D, (i + 1) * D - 0.3, 'var(--sC)', `dispatch ${op}`);
-      block(74, (i + 1) * D - 0.3, (i + 1) * D + 0.9, 'var(--sB)', '', true);   // ~1 µs kernel
+      block(28, i * D, (i + 1) * D - 0.3, 'var(--sC)', `dispatch ${op}`, `CPU: dispatch ${op}\n~6.3 µs of toll`);
+      block(74, (i + 1) * D - 0.3, (i + 1) * D + 0.9, 'var(--sB)', '', `GPU: ${op} kernel\n~1 µs of ride`);
     });
-    // gap annotation
-    smk('path', { d: `M${xAt(D + 1.4)},87 L${xAt(2 * D - 0.5)},87`, style: 'stroke:#8a5a00;stroke-width:1.4;stroke-dasharray:3 3' }, null, svg);
-    smk('text', { x: xAt(D * 1.55), y: 116, style: 'font:600 10.5px var(--sans);fill:#8a5a00;text-anchor:middle' }, 'GPU idle: waiting for the next dispatch', svg);
+    smk('path', { d: `M${xAt(D + 1.4)},87 L${xAt(2 * D - 0.5)},87`,
+      style: 'stroke:var(--sC);stroke-width:1.4;stroke-dasharray:3 3' }, null, svg);
+    smk('text', { x: xAt(D * 1.55), y: 116, style: 'font:600 10.5px var(--sans);fill:var(--sC);text-anchor:middle' },
+      'GPU idle: waiting for the next dispatch', svg);
     smk('text', { x: xAt(2.5), y: 66, style: 'font:9.5px var(--mono);fill:var(--muted)' }, '~6 µs of CPU work per op', svg);
     smk('text', { x: X1, y: 116, style: 'font:9.5px var(--mono);fill:var(--muted);text-anchor:end' }, 'kernels: ~1 µs each (green)', svg);
-    // ---- replay pass ----
-    smk('text', { x: 12, y: 152, style: 'font:700 11px var(--sans);letter-spacing:.05em;fill:var(--muted)' }, 'GRAPH REPLAY · ONE PASS · MEASURED 5.9 µs  (same kernels, same scale)', svg);
+    smk('text', { x: 12, y: 152, style: 'font:700 11px var(--sans);letter-spacing:.05em;fill:var(--muted)' },
+      'GRAPH REPLAY · ONE PASS · MEASURED 5.9 µs (same kernels, same scale)', svg);
     lane(164, 'CPU');
     lane(210, 'GPU');
-    block(164, 0, 3.3, 'var(--sA)', 'graphLaunch');
-    OPS.forEach((op, i) => block(210, 1.2 + i * 0.95, 1.2 + i * 0.95 + 0.9, 'var(--sB)', '', true));
-    smk('text', { x: xAt(6.5), y: 227, style: 'font:600 10.5px var(--sans);fill:var(--good-text, #0a6b45)' }, 'kernels back to back: the GPU chains them itself', svg);
-    smk('text', { x: xAt(6.5), y: 181, style: 'font:9.5px var(--mono);fill:var(--muted)' }, 'one API call: 3.3 µs, however many kernels', svg);
-    // shared axis
+    block(164, 0, 3.3, 'var(--sA)', 'graphLaunch', 'CPU: cudaGraphLaunch\n3.3 µs, one call, whole recording');
+    OPS.forEach((op, i) => block(210, 1.2 + i * 0.95, 1.2 + i * 0.95 + 0.9, 'var(--sB)', '',
+      `GPU: ${op} kernel\nchained by the GPU itself`));
+    smk('text', { x: xAt(6.5), y: 227, style: 'font:600 10.5px var(--sans);fill:var(--sB)' },
+      'kernels back to back: the GPU chains them itself', svg);
+    smk('text', { x: xAt(6.5), y: 181, style: 'font:9.5px var(--mono);fill:var(--muted)' },
+      'one API call: 3.3 µs, however many kernels', svg);
     smk('line', { x1: X0, y1: 262, x2: X1, y2: 262, style: 'stroke:var(--axis);stroke-width:1' }, null, svg);
     [0, 5, 10, 15, 20, 25, 30].forEach(us => {
       smk('line', { x1: xAt(us), y1: 259, x2: xAt(us), y2: 265, style: 'stroke:var(--axis);stroke-width:1' }, null, svg);
       smk('text', { x: xAt(us), y: 278, style: 'font:9.5px var(--mono);fill:var(--muted);text-anchor:middle' }, `${us}µs`, svg);
     });
-    p1.appendChild(scroll);
-  })();
-  p1.appendChild(para('The top picture is the puzzle&rsquo;s answer: the CPU spends ~6 µs of work preparing each 1 µs kernel, and the GPU ' +
-    'spends most of the pass <b>idle, waiting to be told what to do next</b>. The bottom picture is this chapter&rsquo;s destination: the ' +
-    'same five kernels, untouched, but delivered to the GPU as one pre-recorded package. That package is a <b>CUDA graph</b>. First, ' +
-    'though: what exactly is the CPU doing for 6 µs per op?'));
+    body.appendChild(legend([
+      [swInside('var(--sC)'), 'CPU: dispatch (the toll)'],
+      [swInside('var(--sB)'), 'GPU: kernel (the ride)'],
+      [swInside('var(--sA)'), 'CPU: cudaGraphLaunch'],
+    ]));
+    gate(body, 'p-cost');
+    mount.replaceWith(box);
+  };
 
-  /* ================= 2 · anatomy of one launch ================= */
-  const p2 = el('section', 'panel');
-  p2.appendChild(el('h2', null, '2 · Anatomy of one launch: the toll booth in front of every kernel'));
-  p2.appendChild(para('Follow a single <code>x · 1.01</code> from your Python line to the GPU. Every stage below runs <i>every time</i>, ' +
-    'no matter how small the kernel:'));
-  (() => {
-    const [svg, scroll] = svgIn(780, 130);
+  /* w-kernel: one element's journey from rank-2 index to warp lane */
+  W['w-kernel'] = (mount) => {
+    const { box, body } = widget('One element&rsquo;s journey · rank-2 index → flat address → block → warp → lane');
+    const controls = el('div', 'widget-controls');
+    const mkSlider = (labelText, init) => {
+      const wrap = el('label');
+      wrap.appendChild(document.createTextNode(labelText));
+      const inp = document.createElement('input');
+      inp.type = 'range'; inp.min = '0'; inp.max = '63'; inp.step = '1'; inp.value = String(init);
+      inp.style.width = '140px';
+      const val = el('b', null, String(init));
+      wrap.append(inp, val);
+      return { wrap, inp, val };
+    };
+    const sr = mkSlider('row ', 37);
+    const sc = mkSlider('col ', 5);
+    controls.append(sr.wrap, sc.wrap);
+    body.appendChild(controls);
+    const [svg] = svgIn(740, 260, 640);
+    body.appendChild(svg.parentNode);
+    const TX = 20, TY = 36, TS = 200, CELL = TS / 64;
+    smk('text', { x: TX, y: 16, style: 'font:600 11px var(--sans);fill:var(--ink2)' }, 'x · rank 2 · 64 × 64 float32', svg);
+    smk('text', { x: TX, y: 30, style: 'font:9.5px var(--mono);fill:var(--muted)' }, 'element (r, c)', svg);
+    for (let b = 0; b < 32; b++) {
+      smk('rect', { x: TX, y: TY + b * 2 * CELL, width: TS, height: 2 * CELL,
+        style: `fill:${b % 2 ? 'var(--plane)' : 'var(--surface)'}` }, null, svg);
+    }
+    const bandHl = smk('rect', { x: TX, width: TS, height: 2 * CELL,
+      style: 'fill:color-mix(in srgb, var(--sA) 22%, transparent);stroke:var(--sA);stroke-width:1' }, null, svg);
+    smk('rect', { x: TX, y: TY, width: TS, height: TS, style: 'fill:none;stroke:var(--axis);stroke-width:1' }, null, svg);
+    const dot = smk('circle', { r: 2.6, style: 'fill:var(--sC);stroke:#fff;stroke-width:0.8' }, null, svg);
+    const RX = 290, RY = 60, RW = 430, RH = 16;
+    smk('text', { x: RX, y: 26, style: 'font:600 11px var(--sans);fill:var(--ink2)' }, 'the same bytes as the GPU sees them: flat', svg);
+    smk('text', { x: RX, y: 40, style: 'font:9.5px var(--mono);fill:var(--muted)' }, 'x[0] … x[4095] · 16 KB · i = 64r + c', svg);
+    smk('rect', { x: RX, y: RY, width: RW, height: RH, rx: 3, style: 'fill:var(--plane);stroke:var(--axis)' }, null, svg);
+    const blockHl = smk('rect', { y: RY, width: RW / 32, height: RH,
+      style: 'fill:color-mix(in srgb, var(--sA) 26%, transparent);stroke:var(--sA);stroke-width:1' }, null, svg);
+    const tick = smk('line', { y1: RY - 3, y2: RY + RH + 3, style: 'stroke:var(--sC);stroke-width:1.6' }, null, svg);
+    const link = smk('line', { style: 'stroke:var(--sC);stroke-width:1;stroke-dasharray:3 3' }, null, svg);
+    const ribLab = smk('text', { y: RY + RH + 14, style: 'font:9.5px var(--mono);fill:var(--sA)' }, '', svg);
+    const WY = 130;
+    smk('text', { x: RX, y: WY - 8, style: 'font:600 11px var(--sans);fill:var(--ink2)' }, 'inside the block: 128 threads = 4 warps of 32', svg);
+    const laneCells = [];
+    for (let w2 = 0; w2 < 4; w2++) {
+      smk('text', { x: RX, y: WY + 14 + w2 * 22, style: 'font:9.5px var(--mono);fill:var(--muted)' }, 'warp ' + w2, svg);
+      for (let l = 0; l < 32; l++) {
+        laneCells.push(smk('rect', { x: RX + 52 + l * 11.5, y: WY + 4 + w2 * 22, width: 9.5, height: 14, rx: 2,
+          style: 'fill:var(--plane);stroke:var(--grid)' }, null, svg));
+      }
+    }
+    const readout = el('div', 'widget-readout');
+    body.appendChild(readout);
+    const update = () => {
+      const r = +sr.inp.value, c = +sc.inp.value;
+      sr.val.textContent = String(r);
+      sc.val.textContent = String(c);
+      const i = 64 * r + c;
+      const blk = Math.floor(i / 128), th = i % 128, warp = Math.floor(th / 32), lane = th % 32;
+      bandHl.setAttribute('y', TY + blk * 2 * CELL);
+      dot.setAttribute('cx', TX + (c + 0.5) * CELL);
+      dot.setAttribute('cy', TY + (r + 0.5) * CELL);
+      blockHl.setAttribute('x', RX + blk * (RW / 32));
+      const tx = RX + (i / 4096) * RW;
+      tick.setAttribute('x1', tx);
+      tick.setAttribute('x2', tx);
+      link.setAttribute('x1', TX + (c + 0.5) * CELL);
+      link.setAttribute('y1', TY + (r + 0.5) * CELL);
+      link.setAttribute('x2', tx);
+      link.setAttribute('y2', RY + RH);
+      ribLab.setAttribute('x', Math.min(RX + blk * (RW / 32), RX + RW - 150));
+      ribLab.textContent = `block ${blk}: x[${blk * 128}] … x[${blk * 128 + 127}]`;
+      laneCells.forEach((cell, idx) => {
+        const isWarp = Math.floor(idx / 32) === warp;
+        const isLane = idx === warp * 32 + lane;
+        cell.setAttribute('style', isLane
+          ? 'fill:color-mix(in srgb, var(--sC) 65%, var(--surface));stroke:var(--sC);stroke-width:1.2'
+          : isWarp
+            ? 'fill:color-mix(in srgb, var(--sA) 18%, var(--surface));stroke:var(--sA)'
+            : 'fill:var(--plane);stroke:var(--grid)');
+      });
+      readout.textContent =
+        `element (r, c) = (${r}, ${c})\n` +
+        `flat index   i = 64·${r} + ${c} = ${i}      (byte offset 4·i = ${4 * i})\n` +
+        `block  = i ÷ 128 = ${blk}      (owns rows ${blk * 2} and ${blk * 2 + 1})\n` +
+        `thread = i mod 128 = ${th}      warp = ${warp}      lane = ${lane}\n` +
+        `this thread executes:  y[${i}] = x[${i}] * 1.01f`;
+    };
+    sr.inp.addEventListener('input', update);
+    sc.inp.addEventListener('input', update);
+    update();
+    mount.replaceWith(box);
+  };
+
+  /* w-sass: the kernel at PTX and SASS level, hoverable per instruction */
+  W['w-sass'] = (mount) => {
+    const { box, body } = widget('scale, compiled · PTX (virtual ISA) → SASS (sm_89 machine code)');
+    const PTX = [
+      ['mov.u32     %r2, %ctaid.x;      // blockIdx.x',
+       'mov.u32: copy a 32-bit value.\n%ctaid.x is a special read-only\nregister: this thread’s block index\nin the grid (0..31 here). It lands in\n%r2. PTX registers are virtual and\nunlimited, typed by prefix (%r 32-bit\nint, %rd 64-bit, %f float, %p\npredicate); ptxas maps them onto the\nreal register file later.'],
+      ['mov.u32     %r3, %ntid.x;       // blockDim.x = 128',
+       'Same copy, from %ntid.x: the number\nof threads per block, 128 here.\nThe launch geometry is visible to\nevery thread through these special\nregisters.'],
+      ['mov.u32     %r4, %tid.x;        // threadIdx.x',
+       '%tid.x: this thread’s own index\nwithin its block, 0..127, into %r4.'],
+      ['mad.lo.s32  %r1, %r2, %r3, %r4; // i',
+       'Multiply-add, signed 32-bit:\n%r1 = %r2 × %r3 + %r4, keeping the\nlow half of the product.\nThe whole “who am I?” line is one\ninstruction: i = block·128 + thread.'],
+      ['setp.ge.s32 %p1, %r1, %r6;      // i >= n ?',
+       'setp: set a predicate register.\n%p1 = (%r1 >= %r6), signed compare.\nn arrived in %r6 from the kernel\nparams. Predicates are 1-bit\nregisters that gate instructions.'],
+      ['@%p1 bra    DONE;',
+       'Predicated branch: only threads\nwhose %p1 is true jump to DONE.\nThe @ prefix can guard any\ninstruction with a predicate.'],
+      ['mul.wide.s32 %rd3, %r1, 4;      // byte offset 4i',
+       'Multiply with a wide result: 32-bit\ni × 4 produces a full 64-bit %rd3,\nthe byte offset of element i.\nWide, so address math cannot\noverflow for large tensors.'],
+      ['add.s64     %rd4, %rd_x, %rd3;',
+       '64-bit add: x’s base pointer (from\nthe kernel params) + byte offset\n= the address of x[i], in %rd4.'],
+      ['ld.global.f32 %f2, [%rd4];      // x[i]',
+       'Load 4 bytes from global memory\n(HBM) at [%rd4] into float register\n%f2. The slow one: hundreds of\ncycles in flight. The warp parks;\nother warps issue meanwhile.'],
+      ['mul.f32     %f3, %f2, %f1;      // × c',
+       'Single-precision multiply:\n%f3 = %f2 × %f1. c = 1.01f came in\nvia %f1. This is the kernel’s entire\npayload: one instruction of math.'],
+      ['add.s64     %rd5, %rd_y, %rd3;',
+       'The same byte offset %rd3, reused,\nadded to y’s base pointer: &y[i].'],
+      ['st.global.f32 [%rd5], %f3;      // y[i]',
+       'Store %f3’s 4 bytes to global\nmemory at [%rd5]. Fire-and-forget:\nthe thread does not wait for the\nwrite to reach HBM.'],
+      ['DONE:',
+       'Branch target for the @%p1 bra:\nthreads with i >= n land here,\nhaving done nothing.'],
+      ['ret;',
+       'This thread is finished; its lane\nretires from the warp.'],
+    ];
+    const SASS = [
+      ['S2R  R0, SR_CTAID.X         // blockIdx.x',
+       'S2R: special-register-to-register.\nReads hardware register SR_CTAID.X\n(this thread’s block index) into\ngeneral register R0. SASS registers\nare the real ones: ptxas allocated\nthem, and a kernel’s register count\ndecides how many warps fit on an SM.'],
+      ['S2R  R3, SR_TID.X           // threadIdx.x',
+       'SR_TID.X: thread index within the\nblock, 0..127, into R3.'],
+      ['IMAD R0, R0, c[0x0][0x0], R3  // i = b·128+t',
+       'Integer multiply-add, one cycle:\nR0 = R0 × c[0x0][0x0] + R3.\nblockDim (128) is read straight out\nof constant bank 0 as an operand,\nno separate load. R0 is overwritten\nin place: it now holds i.'],
+      ['ISETP.GE.AND P0, PT, R0,\n        c[0x0][0x17c], PT   // i >= n ?',
+       'Integer set-predicate:\nP0 = (R0 >= n) AND PT.\nPT is the always-true predicate;\nthe AND form lets compares chain.\nn sits in the constant bank with\nthe other kernel parameters.'],
+      ['@P0  EXIT              // masked lanes exit',
+       'Predicated exit: lanes whose P0 is\ntrue retire here. With n = 4096 and\nexactly 4096 threads, none do, but\nthe warp still spends the cycle.\nIf lanes disagreed, the warp would\nrun on with them masked off.'],
+      ['IMAD.WIDE R4, R0, 0x4,\n        c[0x0][0x168]       // &x[i]',
+       'Multiply-add with a 64-bit result\nwritten to the register PAIR R4:R5:\ni × 4 + x’s base pointer = &x[i].\nptxas fused PTX’s mul.wide and\nadd.s64 into one instruction.'],
+      ['LDG.E R7, [R4.64]           // 4-byte load, HBM',
+       'Load-global: 4 bytes from the\naddress in pair R4:R5 into R7\n(.E = 64-bit addressing). This is\nthe HBM round trip: hundreds of\ncycles in flight; the scheduler\nissues other warps meanwhile.'],
+      ['FMUL R7, R7, c[0x0][0x178]  // × 1.01f',
+       'fp32 multiply: R7 = R7 × 1.01f,\nthe constant read directly from the\nconstant bank. The kernel’s entire\narithmetic: one cycle.'],
+      ['IMAD.WIDE R2, R0, 0x4,\n        c[0x0][0x170]       // &y[i]',
+       'Same trick for the output side:\npair R2:R3 = i × 4 + y’s base\npointer = &y[i].'],
+      ['STG.E [R2.64], R7           // store',
+       'Store-global: R7’s 4 bytes to the\naddress in pair R2:R3. The thread\ndoes not wait for the write to\nland in memory.'],
+      ['EXIT',
+       'The lane retires. Once all 32 lanes\nof a warp have exited, the warp’s\nregisters free up for the next\nblock waiting to run.'],
+    ];
+    const cols = el('div', 'cols-2');
+    const mkCol = (labelHtml, lines) => {
+      const d = el('div');
+      d.appendChild(html('p', 'panel-sub', labelHtml));
+      const block = el('div', 'asm');
+      lines.forEach(([text, tip]) => {
+        const ln = el('div', 'asm-ln', text);
+        if (tip) tipify(ln, tip);
+        block.appendChild(ln);
+      });
+      d.appendChild(block);
+      return d;
+    };
+    cols.append(
+      mkCol('<b>PTX</b> · portable, documented, stable', PTX),
+      mkCol('<b>SASS</b> · real machine code, per architecture', SASS));
+    body.appendChild(cols);
+    body.appendChild(el('div', 'widget-hint',
+      'Hover any instruction for what it actually does with its registers. Kernel parameters (x, y, c, n) arrive in the constant bank, the c[0x0][...] operands. See the real thing with nvcc -ptx and cuobjdump --dump-sass, or on Compiler Explorer.'));
+    mount.replaceWith(box);
+  };
+
+  /* w-machine: the launch placed on the L4's 58 SMs */
+  W['w-machine'] = (mount) => {
+    const { box, body } = widget('The machine is wide · 58 SMs on the L4');
+    const [svg] = svgIn(740, 122, 640);
+    body.appendChild(svg.parentNode);
+    const COLS = 29, S = 22, GAP = 3;
+    for (let k = 0; k < 58; k++) {
+      const cx = 8 + (k % COLS) * (S + GAP), cy = 26 + Math.floor(k / COLS) * (S + GAP);
+      const mine = k < 32;
+      const rect = smk('rect', { x: cx, y: cy, width: S, height: S, rx: 4,
+        style: mine
+          ? 'fill:color-mix(in srgb, var(--sA) 26%, var(--surface));stroke:var(--sA);stroke-width:1.2'
+          : 'fill:var(--plane);stroke:var(--grid)' }, null, svg);
+      tipify(rect, mine
+        ? `SM ${k}: holds one of our 32 blocks\n4 warps of 32 threads = 128 of its\n~1536-resident-thread capacity`
+        : `SM ${k}: idle for this launch`);
+    }
+    smk('text', { x: 8, y: 16, style: 'font:600 11px var(--sans);fill:var(--ink2)' },
+      'one launch of scale<<<32, 128>>>: 32 SMs get a block each, 26 sit idle', svg);
+    smk('text', { x: 8, y: 112, style: 'font:9.5px var(--mono);fill:var(--muted)' },
+      '4096 threads on ~89,000 of resident capacity ≈ 5% of the machine, for ~1 µs', svg);
+    body.appendChild(legend([
+      [swInside('var(--sA)'), 'holds one of our blocks'],
+      ['background: var(--plane); border: 1px solid var(--grid);', 'idle for this launch'],
+    ]));
+    gate(body, 'p-occupancy');
+    mount.replaceWith(box);
+  };
+
+  /* w-anatomy: the launch pipeline */
+  W['w-anatomy'] = (mount) => {
+    const { box, body } = widget('The launch pipeline · one op, every time');
+    const [svg] = svgIn(780, 130, 640);
+    body.appendChild(svg.parentNode);
     const boxes = [
       ['your Python', 'x * 1.01', 'var(--sC)'],
       ['aten dispatcher', 'dtype · device · autograd', 'var(--sC)'],
@@ -4424,518 +5524,648 @@ function initCudaGraphs() {
       ['driver queue', 'work lands on the stream', 'var(--sC)'],
       ['GPU runs it', '4096 mults ≈ 1 µs', 'var(--sB)'],
     ];
-    const W = 116, H = 56, GAP = 10, Y = 24;
+    const BW = 116, BH = 56, GAP = 10, Y = 24;
     boxes.forEach(([t, s, c], i) => {
-      const x = 8 + i * (W + GAP);
-      smk('rect', { x, y: Y, width: W, height: H, rx: 8,
+      const x = 8 + i * (BW + GAP);
+      smk('rect', { x, y: Y, width: BW, height: BH, rx: 8,
         style: `fill:color-mix(in srgb, ${c} 12%, var(--surface));stroke:${c};stroke-width:1.4` }, null, svg);
-      smk('text', { x: x + W / 2, y: Y + 20, style: 'font:600 11px var(--sans);fill:var(--ink);text-anchor:middle' }, t, svg);
+      smk('text', { x: x + BW / 2, y: Y + 20, style: 'font:600 11px var(--sans);fill:var(--ink);text-anchor:middle' }, t, svg);
       const words = s.split(' ');
-      let ln = '', lines = [];
-      words.forEach(w => { if ((ln + ' ' + w).length > 20) { lines.push(ln); ln = w; } else ln = ln ? ln + ' ' + w : w; });
+      let ln = '';
+      const lines = [];
+      words.forEach(w2 => { if ((ln + ' ' + w2).length > 20) { lines.push(ln); ln = w2; } else ln = ln ? ln + ' ' + w2 : w2; });
       lines.push(ln);
-      lines.forEach((l, j) => smk('text', { x: x + W / 2, y: Y + 33 + j * 11,
+      lines.forEach((l, j) => smk('text', { x: x + BW / 2, y: Y + 33 + j * 11,
         style: 'font:8.5px var(--mono);fill:var(--muted);text-anchor:middle' }, l, svg));
-      if (i < boxes.length - 1) smk('text', { x: x + W + GAP / 2, y: Y + H / 2 + 4,
+      if (i < boxes.length - 1) smk('text', { x: x + BW + GAP / 2, y: Y + BH / 2 + 4,
         style: 'font:12px var(--sans);fill:var(--axis);text-anchor:middle' }, '→', svg);
     });
-    smk('path', { d: `M14,${Y + H + 12} L${8 + 5 * (W + GAP) - GAP - 2},${Y + H + 12}`,
-      style: 'stroke:#8a5a00;stroke-width:1.4;fill:none' }, null, svg);
-    smk('text', { x: 8 + 2.5 * (W + GAP), y: Y + H + 28, style: 'font:600 10.5px var(--sans);fill:#8a5a00;text-anchor:middle' },
+    smk('path', { d: `M14,${Y + BH + 12} L${8 + 5 * (BW + GAP) - GAP - 2},${Y + BH + 12}`,
+      style: 'stroke:var(--sC);stroke-width:1.4;fill:none' }, null, svg);
+    smk('text', { x: 8 + 2.5 * (BW + GAP), y: Y + BH + 28,
+      style: 'font:600 10.5px var(--sans);fill:var(--sC);text-anchor:middle' },
       'the toll: ~6 µs of CPU, paid per launch, forever', svg);
-    smk('text', { x: 8 + 5 * (W + GAP) + W / 2, y: Y + H + 28, style: 'font:600 10.5px var(--sans);fill:var(--good-text, #0a6b45);text-anchor:middle' },
+    smk('text', { x: 8 + 5 * (BW + GAP) + BW / 2, y: Y + BH + 28,
+      style: 'font:600 10.5px var(--sans);fill:var(--sB);text-anchor:middle' },
       'the ride: ~1 µs', svg);
-    p2.appendChild(scroll);
-  })();
-  p2.appendChild(para('Two things to notice. First, the toll is <b>CPU time</b>: the GPU is not involved until the very end, so while the ' +
-    'toll is being paid the GPU can only sit idle (the gaps in §1). Second, the toll is <b>per launch</b>: it does not shrink when the ' +
-    'kernel does. Big kernels amortize it; a 3 ms matmul does not care about 6 µs of paperwork. Tiny kernels drown in it: our 1 µs ' +
-    'multiply pays a 6 µs toll for its ride. A program dominated by this cost is called <b>launch-bound</b>: the kernels are not the ' +
-    'problem, the space between them is.'));
-
-  /* ================= 3 · the idea ================= */
-  const p3 = el('section', 'panel');
-  p3.appendChild(el('h2', null, '3 · The idea: record the launches once, replay them as one'));
-  p3.appendChild(para('Every pass through our five-op program pays the same five tolls to launch the same five kernels with the same ' +
-    'shapes, the same buffers, the same everything. The dispatch work is identical each time; only the <i>numbers inside the buffers</i> ' +
-    'change. So: do the dispatch work once, save the result, and skip it thereafter.'));
-  p3.appendChild(para('That is a <b>CUDA graph</b>. You run the program once in <i>recording mode</i>: the five launches are not executed ' +
-    'but written down, as a small dependency graph (which kernel, what launch configuration, which memory addresses, what order). Then, ' +
-    'each pass, you submit the whole recording with a single API call, <code>cudaGraphLaunch</code>, and the GPU works through it on its ' +
-    'own, kernel to kernel, with no CPU in between. Five tolls become one:'));
-  (() => {
-    const wrap = el('div');
-    wrap.style.margin = '6px 0';
-    wrap.appendChild(cgBar('eager', 31.3, 31.3, 'var(--sC)', 'submit 31.4'));
-    wrap.appendChild(cgBar('graph replay', 5.9, 31.3, 'var(--sB)', 'submit 3.3 · 5.3x'));
-    p3.appendChild(wrap);
-  })();
-  p3.appendChild(para('Measured, same kernels, zero changes to the arithmetic: <b>31.3 → 5.9 µs</b>. And look at the <i>submit</i> ' +
-    'numbers (the CPU-side cost of issuing a pass): 31.4 → 3.3 µs. The CPU has almost left the loop, which will matter enormously ' +
-    'later, when the thing being replayed is not five kernels but a hundred and ten. The rest of this chapter: how recording actually ' +
-    'works (§4), what a recording looks like inside (§5, §6), when it pays (§7), what it forbids (§8), and what happens when you point ' +
-    'it at a real model (§9) and at our engine (§10, §11).'));
-
-  /* ================= 4 · capture, step by step ================= */
-  const p4 = el('section', 'panel');
-  p4.appendChild(el('h2', null, '4 · Capture, instantiate, replay: the lifecycle, step by step'));
-  p4.appendChild(para('The board below is the whole lifecycle on our five-op chain. Three homes to watch: the <b>CPU</b> (where tolls are ' +
-    'paid), the <b>GPU stream</b> (where kernels run: a stream is just an ordered work queue the GPU consumes), and the ' +
-    '<b>CUDAGraph object</b> being built. Step through with the arrows or space.'));
-
-  const cgCols = el('div', 'cols-2');
-  const cgL = el('div');
-  const boardEl = el('div', 'fw-board');
-  const mkChip = (title, sub, cls) => {
-    const c = el('div', 'fw-chip' + (cls ? ' ' + cls : ''));
-    const b = el('b', null, title);
-    const s = el('small', null, sub || '');
-    c.append(b, s);
-    return { c, b, s };
+    mount.replaceWith(box);
   };
-  const mkCells = (label, n) => {
-    const grp = el('span', 'fw-poolgrp'); grp.append(document.createTextNode(label));
-    const wrap = el('span', 'fw-cells');
-    const cells = [];
-    for (let i = 0; i < n; i++) { const c = el('span', 'fw-cell', String(i + 1)); cells.push(c); wrap.appendChild(c); }
-    grp.appendChild(wrap);
-    return { grp, cells };
-  };
-  const zC = el('div', 'fw-zone');
-  const zCname = el('div', 'fw-zone-name');
-  zCname.innerHTML = 'CPU <small>· Python → aten → CUDA API: where the toll is paid</small>';
-  const ctrs = el('span', 'fw-ctrs');
-  const cLaunch = el('span', 'statchip'), cMode = el('span', 'statchip');
-  ctrs.append(cLaunch, cMode);
-  zCname.appendChild(ctrs);
-  const zCchips = el('div', 'fw-chips');
-  const dCells = mkCells('dispatches', 5);
-  const chGL = mkChip('cudaGraphLaunch', 'one call, whole DAG', 'ghost');
-  zCchips.append(dCells.grp, chGL.c);
-  zC.append(zCname, zCchips);
-  const zG = el('div', 'fw-zone');
-  const zGname = el('div', 'fw-zone-name');
-  zGname.innerHTML = 'GPU stream <small>· kernels, and the gaps between them</small>';
-  const zGchips = el('div', 'fw-chips');
-  const kCells = mkCells('kernels', 5);
-  const chX = mkChip('static x', 'input buffer, address fixed');
-  const chOut = mkChip('static out', 'unwritten', 'ghost');
-  zGchips.append(kCells.grp, chX.c, chOut.c);
-  zG.append(zGname, zGchips);
-  const zGr = el('div', 'fw-zone');
-  const zGrname = el('div', 'fw-zone-name');
-  zGrname.innerHTML = 'CUDAGraph g <small>· the recording: kernels as nodes, order as edges, addresses baked</small>';
-  const zGrchips = el('div', 'fw-chips');
-  const nCells = mkCells('nodes', 5);
-  const chPool = mkChip('private pool', 'not allocated', 'ghost');
-  const chExec = mkChip('exec graph', 'not instantiated', 'ghost');
-  zGrchips.append(nCells.grp, chPool.c, chExec.c);
-  zGr.append(zGrname, zGrchips);
-  boardEl.append(zC, zG, zGr);
-  cgL.appendChild(boardEl);
-  const cgLeg = el('div', 'fw-legend');
-  [['background: color-mix(in srgb, var(--sA) 30%, var(--surface)); border: 1px solid var(--sA);', 'active this step'],
-   ['background: color-mix(in srgb, var(--sB) 16%, var(--surface)); border: 1px solid var(--sB);', 'done'],
-   ['background: none; border: 1px dashed var(--axis);', 'not yet / never']].forEach(([style, label]) => {
-    const s = el('span');
-    const sw = el('span', 'swatch'); sw.style.cssText = style;
-    s.append(sw, document.createTextNode(label));
-    cgLeg.appendChild(s);
-  });
-  cgL.appendChild(cgLeg);
-  const cgR = el('div', 'fa-state');
-  const cgTitle = el('div', 'fa-state-title');
-  const cgBody2 = el('div');
-  cgR.append(cgTitle, cgBody2);
-  cgCols.append(cgL, cgR);
 
-  const CG = [
-    { t: 'the program, before anything special', mode: 'eager', launches: 0,
-      d: [-1, 0], gl: 0, k: [-1, 0], x: 2, out: 0, n: [-1, 0], pool: 0, exec: 0, lines: [
-      'Our five-op chain from §1, about to run. One resident matters already: the input buffer <code>x</code> lives at some device address, and that address is about to become part of a recording. It can never move again.',
-      'The other players are empty: the graph object has no nodes, no memory pool, no executable form. First, watch an ordinary eager pass through the toll booth from §2.'] },
-    { t: 'eager: op 1 pays the toll', mode: 'eager', launches: 1,
-      d: [0, 0], gl: 0, k: [0, 0], x: 2, out: 0, n: [-1, 0], pool: 0, exec: 0, lines: [
-      'Python calls <code>mul</code>. The §2 pipeline runs end to end: dispatcher, kernel selection, <code>cudaLaunchKernel</code>. Roughly 6 µs of CPU for 1 µs of GPU.',
-      'The kernel runs and finishes. The stream drains. The GPU sits idle, waiting for dispatch number two to arrive.'] },
-    { t: 'eager: four more tolls, four more gaps', mode: 'eager', launches: 5,
-      d: [4, 4], gl: 0, k: [4, 4], x: 2, out: 1, n: [-1, 0], pool: 0, exec: 0, lines: [
-      '<code>add</code>, <code>relu</code>, <code>mul</code>, <code>add</code>: each repeats the full pipeline. This is the top lane of §1&rsquo;s timeline: dispatch blocks back to back on the CPU, slivers and gaps on the GPU.',
-      'Total: 31.3 µs, of which arithmetic is about 5. Nothing is remembered; the next pass pays all five tolls again.'] },
-    { t: 'warm-up, then recording mode', mode: 'capture', launches: 0,
-      d: [0, 0], gl: 0, k: [-1, 0], x: 2, out: 0, n: [0, 0], pool: 0, exec: 0, lines: [
-      'Before recording we run the program a few times on a side stream: <b>warm-up</b>. First-ever executions do one-time work (allocator growth, lazy library init) that must not be baked into the recording.',
-      'Then the stream is switched into <b>capture mode</b> (<code>with torch.cuda.graph(g)</code>) and the same Python runs again. But now each launch is <b>recorded, not executed</b>: kernel, launch config, and the exact pointers it would touch become node 1. The GPU does nothing at all.'] },
-    { t: 'capture: a DAG with baked addresses', mode: 'capture', launches: 0,
-      d: [-1, 5], gl: 0, k: [-1, 0], x: 2, out: 0, n: [-1, 5], pool: 1, exec: 0, lines: [
-      'Ops 2 through 5 become nodes 2 through 5. Edges come from stream order: same stream means depends-on-previous, so our chain records as a chain. (§6 shows what it takes to record genuinely parallel branches.)',
-      'Anything <i>allocated</i> during capture comes from the graph&rsquo;s <b>private memory pool</b>, and every address, input, output, or intermediate, is baked into the recording. Remember this; it is where most of §8&rsquo;s rules come from.'] },
-    { t: 'instantiate: from recording to executable', mode: 'capture', launches: 0,
-      d: [-1, 5], gl: 0, k: [-1, 0], x: 2, out: 0, n: [-1, 5], pool: 2, exec: 1, lines: [
-      'The recording is validated and bound into an <b>executable graph</b> (<code>cudaGraphInstantiate</code>): resources allocated, launch plan laid out. Done once.',
-      'This is the expensive step, and it rhymes with a lesson this project already paid for (sdpa-results.md): per-shape setup cost wants a bounded set of shapes and a warm-up window to hide in. Hold that thought for §11.'] },
-    { t: 'replay prologue: feed the static buffers', mode: 'replay', launches: 0,
-      d: [-1, 0], gl: 0, k: [-1, 0], x: 1, out: 0, n: [-1, 5], pool: 2, exec: 2, lines: [
-      'A new pass, new input values. They must be written <i>into</i> the captured buffer: <code>x.copy_(new_values)</code>. The graph reads addresses, not Python variables.',
-      'Rebinding the name (<code>x = something_new</code>) is the classic silent failure: the graph keeps reading the old memory forever. We did it for real; the evidence is in §8.'] },
-    { t: 'replay: one launch, zero gaps', mode: 'replay', launches: 1,
-      d: [-1, 0], gl: 1, k: [-1, 5], x: 2, out: 1, n: [-1, 5], pool: 2, exec: 2, lines: [
-      'One <code>cudaGraphLaunch</code>: 3.3 µs of CPU, and the GPU walks the DAG itself, kernels chaining back to back. This is the bottom lane of §1&rsquo;s timeline: the gaps are simply gone.',
-      'Notice what the CPU is doing during GPU execution now: <i>nothing</i>. It is free. (Phase 4&rsquo;s overlap scheduling is exactly a plan to spend that freedom on preparing the next step.)'] },
-    { t: 'the ledger, and the price', mode: 'replay', launches: 1,
-      d: [-1, 0], gl: 2, k: [-1, 5], x: 2, out: 2, n: [-1, 5], pool: 2, exec: 2, lines: [
-      'Per pass: five tolls became one launch plus one input copy. 31.3 µs became 5.9. The win scales with how many launches the recording swallows, which is the whole point of §9.',
-      'The price is rigidity. A replay consults no Python: shapes, addresses, kernel choices, even the <i>number</i> of kernels are frozen at capture time. Everything §8 demonstrates follows from that one sentence.'] },
-  ];
-  const setCells = (cells, cur, done) => cells.forEach((c, j) => {
-    c.className = 'fw-cell' + (j === cur ? ' cur' : j < done ? ' done' : '');
-  });
-  const setChipState = (ref, state, subs) => {
-    ref.c.className = 'fw-chip' + (state === 1 ? ' cur' : state === 0 ? ' ghost' : '');
-    if (subs) ref.s.textContent = subs[state];
+  /* w-idea: eager vs replay bars for the chain */
+  W['w-idea'] = (mount) => {
+    const { box, body } = widget('Five kernels, two ways · 4096 elements');
+    body.appendChild(barRow('eager', 31.3, 31.3, 'var(--sC)', 'submit 31.4 µs',
+      'eager: 31.3 µs/pass\nCPU submit: 31.4 µs\nfive tolls, five rides'));
+    body.appendChild(barRow('graph replay', 5.9, 31.3, 'var(--sA)', 'submit 3.3 µs · 5.3×',
+      'replay: 5.9 µs/pass\nCPU submit: 3.3 µs\none call, five rides'));
+    mount.replaceWith(box);
   };
-  const tCg = makeTransport({
-    max: CG.length - 1,
-    labelFn: (i) => `step ${i} / ${CG.length - 1}: ${CG[i].t}`,
-    onSet: (i) => {
-      const s = CG[i];
-      cLaunch.innerHTML = `launches this step <b>${s.launches}</b>`;
-      cLaunch.style.borderColor = s.launches === 1 && s.mode === 'replay' ? 'var(--sB)' : '';
-      cMode.innerHTML = `mode <b>${s.mode}</b>`;
-      setCells(dCells.cells, s.d[0], s.d[1]);
-      setCells(kCells.cells, s.k[0], s.k[1]);
-      setCells(nCells.cells, s.n[0], s.n[1]);
-      setChipState(chGL, s.gl, ['one call, whole DAG', 'the only dispatch left', 'the only dispatch left']);
-      setChipState(chX, s.x, ['input buffer', 'copy_() lands the new input', 'input buffer, address fixed']);
-      setChipState(chOut, s.out, ['unwritten', 'being written', 'result, same address every pass']);
-      setChipState(chPool, s.pool, ['not allocated', 'allocations routed here, addresses baked', 'owned by the graph']);
-      setChipState(chExec, s.exec, ['not instantiated', 'instantiate: validate + bind, once', 'ready to replay']);
-      cgTitle.textContent = s.t;
-      cgBody2.innerHTML = '';
-      s.lines.forEach(h => cgBody2.appendChild(line(h)));
-    },
-    playMs: 3600,
-  });
-  activeTransports['cudagraphs'] = tCg;
-  p4.append(tCg.root, cgCols);
 
-  /* ================= 5 · the recording itself ================= */
-  // Shared DAG renderer. nodes: {op, k, cfg, pos?[col,row]}, edges: [[a,b]].
-  const drawDag = (nodes, edges, opts) => {
-    const o = Object.assign({ w: 760, h: 130, W: 128, H: 40, ncols: null, onClick: null }, opts || {});
-    const svg = document.createElementNS(NS3, 'svg');
-    svg.setAttribute('viewBox', `0 0 ${o.w} ${o.h}`);
-    svg.setAttribute('class', 'anat-svg');
-    svg.style.minWidth = o.w > 500 ? '640px' : '0';
-    const posOf = (nd, i) => {
-      const col = nd.pos ? nd.pos[0] : i;
-      const rowv = nd.pos ? nd.pos[1] : 0.5;
-      const ncols = o.ncols || (nd.pos ? 4 : nodes.length);
-      return [16 + col * ((o.w - 32 - o.W) / (ncols - 1)), 12 + rowv * (o.h - 24 - o.H)];
+  /* w-lifecycle: the steppable four-movement board */
+  W['w-lifecycle'] = (mount) => {
+    const { box, body } = widget('Capture, instantiate, replay · the whole lifecycle on the chain');
+    const cols = el('div', 'cols-2');
+    const left = el('div');
+    const board = el('div', 'fw-board');
+    const mkChip = (title, sub, cls) => {
+      const c = el('div', 'fw-chip' + (cls ? ' ' + cls : ''));
+      const b = el('b', null, title);
+      const s = el('small', null, sub || '');
+      c.append(b, s);
+      return { c, b, s };
     };
-    const defs = smk('defs', {}, null, svg);
-    const mid = 'cg-arr-' + Math.floor(o.w * 7 + o.h);
-    defs.innerHTML = `<marker id="${mid}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--axis)"/></marker>`;
-    edges.forEach(([a, b]) => {
-      const [ax, ay] = posOf(nodes[a], a);
-      const [bx, by] = posOf(nodes[b], b);
-      const vertical = by > ay + o.H;   // b sits below a: connect bottom to top
-      const [x1, y1, x2, y2] = vertical
-        ? [ax + o.W / 2, ay + o.H, bx + o.W / 2, by - 3]
-        : [ax + o.W, ay + o.H / 2, bx - 3, by + o.H / 2];
-      smk('line', { x1, y1, x2, y2,
-        style: 'stroke:var(--axis);stroke-width:1.6', 'marker-end': `url(#${mid})` }, null, svg);
+    const mkCells = (label, n) => {
+      const grp = el('span', 'fw-poolgrp');
+      grp.append(document.createTextNode(label));
+      const wrap = el('span', 'fw-cells');
+      const cells = [];
+      for (let i = 0; i < n; i++) { const c = el('span', 'fw-cell', String(i + 1)); cells.push(c); wrap.appendChild(c); }
+      grp.appendChild(wrap);
+      return { grp, cells };
+    };
+    const zone = (nameHtml) => {
+      const z = el('div', 'fw-zone');
+      const nm = html('div', 'fw-zone-name', nameHtml);
+      const chips = el('div', 'fw-chips');
+      z.append(nm, chips);
+      return { z, nm, chips };
+    };
+    const zC = zone('CPU <small>· Python → aten → CUDA API: where the toll is paid</small>');
+    const ctrs = el('span', 'fw-ctrs');
+    const cLaunch = el('span', 'statchip'), cMode = el('span', 'statchip');
+    ctrs.append(cLaunch, cMode);
+    zC.nm.appendChild(ctrs);
+    const dCells = mkCells('dispatches', 5);
+    const chGL = mkChip('cudaGraphLaunch', 'one call, whole DAG', 'ghost');
+    zC.chips.append(dCells.grp, chGL.c);
+    const zG = zone('GPU stream <small>· kernels, and the gaps between them</small>');
+    const kCells = mkCells('kernels', 5);
+    const chX = mkChip('static x', 'input buffer, address fixed');
+    const chOut = mkChip('static out', 'unwritten', 'ghost');
+    zG.chips.append(kCells.grp, chX.c, chOut.c);
+    const zGr = zone('CUDAGraph g <small>· the recording: kernels as nodes, order as edges, addresses baked</small>');
+    const nCells = mkCells('nodes', 5);
+    const chPool = mkChip('private pool', 'not allocated', 'ghost');
+    const chExec = mkChip('exec graph', 'not instantiated', 'ghost');
+    zGr.chips.append(nCells.grp, chPool.c, chExec.c);
+    board.append(zC.z, zG.z, zGr.z);
+    left.appendChild(board);
+    left.appendChild(legend([
+      ['background: color-mix(in srgb, var(--sA) 30%, var(--surface)); border: 1px solid var(--sA);', 'active this step'],
+      ['background: color-mix(in srgb, var(--sB) 16%, var(--surface)); border: 1px solid var(--sB);', 'done'],
+      ['background: none; border: 1px dashed var(--axis);', 'not yet / never'],
+    ]));
+    const right = el('div', 'detail');
+    const rTitle = el('div', 'detail-title');
+    const rBody = el('div');
+    right.append(rTitle, rBody);
+    cols.append(left, right);
+
+    const STEPS = [
+      { t: 'the program, before anything special', mode: 'eager', launches: 0,
+        d: [-1, 0], gl: 0, k: [-1, 0], x: 2, out: 0, n: [-1, 0], pool: 0, exec: 0, lines: [
+        'Our five-op chain, about to run. One resident already matters: the input buffer <code>x</code> lives at some device address, and that address is about to become part of a recording. It can never move again.',
+        'The other players are empty: the graph object has no nodes, no memory pool, no executable form. First, watch an ordinary eager pass go through the toll booth.'] },
+      { t: 'eager: op 1 pays the toll', mode: 'eager', launches: 1,
+        d: [0, 0], gl: 0, k: [0, 0], x: 2, out: 0, n: [-1, 0], pool: 0, exec: 0, lines: [
+        'Python calls <code>mul</code>. The whole launch pipeline runs end to end: dispatcher, kernel selection, <code>cudaLaunchKernel</code>. Roughly 6 µs of CPU for 1 µs of GPU.',
+        'The kernel runs and finishes. The stream drains. The GPU sits idle, waiting for dispatch number two to arrive.'] },
+      { t: 'eager: four more tolls, four more gaps', mode: 'eager', launches: 5,
+        d: [4, 4], gl: 0, k: [4, 4], x: 2, out: 1, n: [-1, 0], pool: 0, exec: 0, lines: [
+        '<code>add</code>, <code>relu</code>, <code>mul</code>, <code>add</code>: each repeats the full pipeline. This is the top lane of the opening figure: dispatch blocks back to back on the CPU, slivers and gaps on the GPU.',
+        'Total: 31.3 µs, of which arithmetic is about 5. Nothing is remembered; the next pass pays all five tolls again.'] },
+      { t: 'warm-up, then recording mode', mode: 'capture', launches: 0,
+        d: [0, 0], gl: 0, k: [-1, 0], x: 2, out: 0, n: [0, 0], pool: 0, exec: 0, lines: [
+        'Before recording, the program runs a few times on a side stream: <b>warm-up</b>. First-ever executions do one-time work (allocator growth, lazy library init) that must not be baked into the recording.',
+        'Then the stream is switched into <b>capture mode</b> (<code>with torch.cuda.graph(g)</code>) and the same Python runs again. But now each launch is <b>recorded, not executed</b>: kernel, launch config, and the exact pointers it would touch become node 1. The GPU does nothing at all.'] },
+      { t: 'capture: a DAG with baked addresses', mode: 'capture', launches: 0,
+        d: [-1, 5], gl: 0, k: [-1, 0], x: 2, out: 0, n: [-1, 5], pool: 1, exec: 0, lines: [
+        'Ops 2 through 5 become nodes 2 through 5. Edges come from stream order: same stream means depends-on-previous, so our chain records as a chain. (What it takes to record genuine parallelism is the fork-join section&rsquo;s story.)',
+        'Anything <i>allocated</i> during capture comes from the graph&rsquo;s <b>private memory pool</b>, and every address, input, output, or intermediate, is baked into the recording. Remember this; most of the rules follow from it.'] },
+      { t: 'instantiate: from recording to executable', mode: 'capture', launches: 0,
+        d: [-1, 5], gl: 0, k: [-1, 0], x: 2, out: 0, n: [-1, 5], pool: 2, exec: 1, lines: [
+        'The recording is validated and bound into an <b>executable graph</b> (<code>cudaGraphInstantiate</code>): resources allocated, launch plan laid out. Done once.',
+        'This is the expensive step, and it rhymes with a bill this project has already paid once (<code>sdpa-results.md</code>): per-shape setup cost wants a bounded set of shapes and a warm-up window to hide in. Hold that thought until the boundary section.'] },
+      { t: 'replay prologue: feed the static buffers', mode: 'replay', launches: 0,
+        d: [-1, 0], gl: 0, k: [-1, 0], x: 1, out: 0, n: [-1, 5], pool: 2, exec: 2, lines: [
+        'A new pass, new input values. They must be written <i>into</i> the captured buffer: <code>x.copy_(new_values)</code>. The graph reads addresses, not Python variables.',
+        'Rebinding the name (<code>x = something_new</code>) is the classic silent failure: the graph keeps reading the old memory forever. We did it for real; the evidence is in the rules section.'] },
+      { t: 'replay: one launch, zero gaps', mode: 'replay', launches: 1,
+        d: [-1, 0], gl: 1, k: [-1, 5], x: 2, out: 1, n: [-1, 5], pool: 2, exec: 2, lines: [
+        'One <code>cudaGraphLaunch</code>: 3.3 µs of CPU, and the GPU walks the DAG itself, kernels chaining back to back. This is the bottom lane of the opening figure: the gaps are simply gone.',
+        'Notice what the CPU does while the GPU executes: <i>nothing</i>. It is free. (Phase 4&rsquo;s overlap scheduling is exactly a plan for spending that freedom on preparing the next step.)'] },
+      { t: 'the ledger, and the price', mode: 'replay', launches: 1,
+        d: [-1, 0], gl: 2, k: [-1, 5], x: 2, out: 2, n: [-1, 5], pool: 2, exec: 2, lines: [
+        'Per pass: five tolls became one launch plus one input copy. 31.3 µs became 5.9. The win scales with how many launches the recording swallows, which is where the model section is headed.',
+        'The price is rigidity. A replay consults no Python: shapes, addresses, kernel choices, even the <i>number</i> of kernels are frozen at capture time. Every rule in the rules section follows from that one sentence.'] },
+    ];
+    const setCells = (cells, cur, done) => cells.forEach((c, j) => {
+      c.className = 'fw-cell' + (j === cur ? ' cur' : j < done ? ' done' : '');
     });
-    nodes.forEach((nd, i) => {
-      const [x, y] = posOf(nd, i);
-      const g = smk('g', { style: o.onClick ? 'cursor:pointer' : '' }, null, svg);
-      smk('rect', { x, y, width: o.W, height: o.H, rx: 8,
-        style: 'fill:color-mix(in srgb, var(--sA) 10%, var(--surface));stroke:var(--sA);stroke-width:1.4' }, null, g);
-      smk('text', { x: x + o.W / 2, y: y + 18, style: 'font:600 11.5px var(--sans);fill:var(--ink);text-anchor:middle' }, nd.op, g);
-      smk('text', { x: x + o.W / 2, y: y + 32, style: 'font:9.5px var(--mono);fill:var(--muted);text-anchor:middle' }, `node ${i} · KERNEL`, g);
-      if (o.onClick) g.addEventListener('click', () => o.onClick(i));
+    const setChip = (ref, state, subs) => {
+      ref.c.className = 'fw-chip' + (state === 1 ? ' cur' : state === 0 ? ' ghost' : '');
+      if (subs) ref.s.textContent = subs[state];
+    };
+    const t = makeTransport({
+      max: STEPS.length - 1,
+      labelFn: (i) => `step ${i} / ${STEPS.length - 1}: ${STEPS[i].t}`,
+      onSet: (i) => {
+        const s = STEPS[i];
+        cLaunch.innerHTML = `launches this step <b>${s.launches}</b>`;
+        cMode.innerHTML = `mode <b>${s.mode}</b>`;
+        setCells(dCells.cells, s.d[0], s.d[1]);
+        setCells(kCells.cells, s.k[0], s.k[1]);
+        setCells(nCells.cells, s.n[0], s.n[1]);
+        setChip(chGL, s.gl, ['one call, whole DAG', 'the only dispatch left', 'the only dispatch left']);
+        setChip(chX, s.x, ['input buffer', 'copy_() lands the new input', 'input buffer, address fixed']);
+        setChip(chOut, s.out, ['unwritten', 'being written', 'result, same address every pass']);
+        setChip(chPool, s.pool, ['not allocated', 'allocations routed here, addresses baked', 'owned by the graph']);
+        setChip(chExec, s.exec, ['not instantiated', 'instantiate: validate + bind, once', 'ready to replay']);
+        rTitle.textContent = s.t;
+        rBody.innerHTML = '';
+        s.lines.forEach(h => rBody.appendChild(html('div', 'dline', h)));
+      },
+      playMs: 3600,
     });
-    const scroll = el('div', 'kv-scroll');
-    scroll.appendChild(svg);
-    return scroll;
+    activeTransports['cudagraphs'] = t;
+    box.insertBefore(t.root, body);
+    body.appendChild(cols);
+    t.set(0);
+    mount.replaceWith(box);
   };
+
+  /* w-dump: the chain DAG, clickable, from chain.dot */
   const CHAIN_NODES = [
     { op: 'x · 1.01', k: 'vectorized_elementwise_kernel&lt;4, AUnaryFunctor&lt;MulFunctor&lt;float&gt;&gt;&gt;', cfg: '&lt;&lt;&lt;1024,128&gt;&gt;&gt;' },
     { op: '+ 0.5', k: 'vectorized_elementwise_kernel&lt;4, CUDAFunctorOnSelf_add&lt;float&gt;&gt;', cfg: '&lt;&lt;&lt;1024,128&gt;&gt;&gt;' },
-    { op: 'relu', k: 'launch_clamp_scalar(...) via vectorized_elementwise_kernel: relu is a clamp', cfg: '&lt;&lt;&lt;1024,128&gt;&gt;&gt;' },
+    { op: 'relu', k: 'launch_clamp_scalar(...) via vectorized_elementwise_kernel: relu compiled as a clamp', cfg: '&lt;&lt;&lt;1024,128&gt;&gt;&gt;' },
     { op: '· 0.9', k: 'vectorized_elementwise_kernel&lt;4, AUnaryFunctor&lt;MulFunctor&lt;float&gt;&gt;&gt;', cfg: '&lt;&lt;&lt;1024,128&gt;&gt;&gt;' },
     { op: '+ a', k: 'vectorized_elementwise_kernel&lt;4, CUDAFunctor_add&lt;float&gt;&gt;, 3-pointer array: two inputs, one output', cfg: '&lt;&lt;&lt;1024,128&gt;&gt;&gt;' },
   ];
-  const p5 = el('section', 'panel');
-  p5.appendChild(el('h2', null, '5 · What the recording looks like: the real dump'));
-  p5.appendChild(para('The driver will show you a graph&rsquo;s contents (<code>cudaGraphDebugDotPrint</code>; the raw DOT files are in ' +
-    `<code>${REC}</code>). Below is the actual recording of our chain: five kernel nodes, four edges, drawn from the dump. ` +
-    '<b>Click a node</b> to see its true identity: the kernel symbol and launch configuration that were frozen into it.'));
-  const p5cols = el('div', 'cols-2');
-  const p5L = el('div');
-  const p5det = el('div', 'fa-state');
-  const p5title = el('div', 'fa-state-title');
-  const p5body = el('div');
-  p5det.append(p5title, p5body);
-  const showChainNode = (i) => {
-    const nd = CHAIN_NODES[i];
-    p5title.textContent = `node ${i}: ${nd.op}`;
-    p5body.innerHTML = '';
-    p5body.appendChild(line(`<b>kernel</b> <code style="font-size:10.5px">${nd.k}</code>`));
-    p5body.appendChild(line(`<b>launch config</b> <code>${nd.cfg}</code> (1024 blocks of 128 threads), baked into the node along with every pointer it touches`));
-    p5body.appendChild(line('Nothing here is symbolic. The node does not say "multiply the current input"; it says "run this exact compiled function over these exact addresses with this exact geometry".'));
+  W['w-dump'] = (mount) => {
+    const { box, body } = widget('chain.dot · five nodes, four edges · click a node');
+    const det = el('div', 'detail');
+    det.style.marginTop = '10px';
+    const dTitle = el('div', 'detail-title');
+    const dBody = el('div');
+    det.append(dTitle, dBody);
+    const show = (i) => {
+      const nd = CHAIN_NODES[i];
+      dTitle.textContent = `node ${i}: ${nd.op}`;
+      dBody.innerHTML = '';
+      dBody.appendChild(html('div', 'dline', `<b>kernel</b> <code style="font-size:10.5px">${nd.k}</code>`));
+      dBody.appendChild(html('div', 'dline', `<b>launch config</b> <code>${nd.cfg}</code> (1024 blocks of 128 threads), baked into the node along with every pointer it touches`));
+      dBody.appendChild(html('div', 'dline', 'Nothing here is symbolic. The node does not say &ldquo;multiply the current input&rdquo;; it says &ldquo;run this exact compiled function over these exact addresses with this exact geometry.&rdquo;'));
+    };
+    body.appendChild(drawDag(CHAIN_NODES, [[0, 1], [1, 2], [2, 3], [3, 4]], { onClick: show }));
+    dTitle.textContent = 'the chain, as the driver recorded it';
+    dBody.appendChild(html('div', 'dline', 'Click any node to read its frozen identity: the mangled kernel symbol and the launch geometry, straight from the DOT dump.'));
+    body.appendChild(det);
+    mount.replaceWith(box);
   };
-  p5L.appendChild(drawDag(CHAIN_NODES, [[0, 1], [1, 2], [2, 3], [3, 4]], { onClick: showChainNode }));
-  p5cols.append(p5L, p5det);
-  p5.appendChild(p5cols);
-  p5title.textContent = 'the chain, as the driver recorded it';
-  p5body.appendChild(line('Two small surprises worth savoring: PyTorch compiled our <code>relu</code> into a <i>clamp</i> kernel, and the ' +
-    'final add is a distinct kernel from the middle one (three pointers instead of two: two inputs, one output). Dumps do not lie; ' +
-    'this is what actually runs.'));
 
-  /* ================= 6 · where edges come from ================= */
-  const FJ_NODES_1 = [
-    { op: 'x @ W1', pos: [0.5, 0] }, { op: 'x @ W2', pos: [0.5, 0.25] },
-    { op: 'y1 + y2', pos: [0.5, 0.5] }, { op: '+ b', pos: [0.5, 0.75] }, { op: 'relu', pos: [0.5, 1] },
-  ];
-  const FJ_NODES_2 = [
-    { op: 'x @ W1', pos: [0.15, 0] }, { op: 'x @ W2', pos: [0.85, 0] },
-    { op: 'y1 + y2', pos: [0.5, 0.33] }, { op: '+ b', pos: [0.5, 0.66] }, { op: 'relu', pos: [0.5, 1] },
-  ];
-  const p6 = el('section', 'panel');
-  p6.appendChild(el('h2', null, '6 · Where do the edges come from? A tale of two fork-joins'));
-  p6.appendChild(para('Our chain recorded as a chain, which feels obvious. But <i>why</i>? The recorder never saw our Python; it saw a ' +
-    'stream. Time for an experiment. Take a program with genuine parallelism in it, two matmuls that do not depend on each other:'));
-  p6.appendChild(para('<code style="font-size:13px">y1 = x @ W1 &nbsp;&nbsp; y2 = x @ W2 &nbsp;&nbsp; out = relu(y1 + y2 + b)</code>'));
-  p6.appendChild(para('We captured it two ways. <b>Left</b>: exactly as written, on one stream. <b>Right</b>: with the second matmul ' +
-    'placed on a second stream, fenced by fork/join events. Same math. Look at the recordings:'));
-  const p6cols = el('div', 'cols-2');
-  const p6a = el('div');
-  p6a.appendChild(para('<b>One stream: a queue.</b> Edges come from stream order, and one stream is a total order. The two matmuls that ' +
-    '<i>could</i> run in parallel are recorded as if the second depends on the first. Your Python said fork; the graph says queue.'));
-  p6a.appendChild(drawDag(FJ_NODES_1, [[0, 1], [1, 2], [2, 3], [3, 4]], { w: 372, h: 260, W: 118, H: 36, ncols: 2 }));
-  const p6b = el('div');
-  p6b.appendChild(para('<b>Two streams: a real DAG.</b> The recorder saw two queues meeting at an event, so it recorded two branches ' +
-    'meeting at a node: fan-in of 2, straight from the dump. The GPU may now run both matmuls at once during replay.'));
-  p6b.appendChild(drawDag(FJ_NODES_2, [[0, 2], [1, 2], [2, 3], [3, 4]], { w: 372, h: 260, W: 118, H: 36, ncols: 2 }));
-  p6cols.append(p6a, p6b);
-  p6.appendChild(p6cols);
-  (() => {
-    const wrap = el('div');
-    wrap.style.margin = '8px 0 2px';
-    wrap.appendChild(cgBar('1-stream · eager', 44.9, 90.5, 'var(--sC)'));
-    wrap.appendChild(cgBar('1-stream · replay', 11.7, 90.5, 'var(--sB)'));
-    wrap.appendChild(cgBar('2-stream · eager', 90.5, 90.5, 'var(--sC)', 'choreography = CPU'));
-    wrap.appendChild(cgBar('2-stream · replay', 9.7, 90.5, 'var(--sB)', 'branches overlap'));
-    p6.appendChild(wrap);
-  })();
-  p6.appendChild(para('The timings carry two lessons. Eagerly, the two-stream version is <b>twice as slow</b> (90.5 vs 44.9 µs): streams ' +
-    'and events are more CPU choreography, more toll. But its <i>replay</i> is the fastest of all four rows (9.7 µs): the recording kept ' +
-    'the parallelism and discarded the choreography bill. And a warning for §9: a model&rsquo;s forward pass runs on one stream, so its ' +
-    'recording will be one long chain, parallelism-free, unless someone deliberately does what we did here.'));
+  /* w-forkjoin: two captures of the same parallel program */
+  W['w-forkjoin'] = (mount) => {
+    const { box, body } = widget('One program, two captures · forkjoin_1stream.dot vs forkjoin_2stream.dot');
+    const cols = el('div', 'cols-2');
+    const a = el('div');
+    a.appendChild(html('p', 'panel-sub', '<b>One stream: a queue.</b> Written as a fork-join, recorded as a chain. Edges come from stream order, and one stream is a total order.'));
+    const oneStream = el('div');
+    oneStream.style.position = 'relative';
+    oneStream.appendChild(drawDag(
+      [{ op: 'x @ W1', pos: [0.5, 0] }, { op: 'x @ W2', pos: [0.5, 0.25] },
+       { op: 'y1 + y2', pos: [0.5, 0.5] }, { op: '+ b', pos: [0.5, 0.75] }, { op: 'relu', pos: [0.5, 1] }],
+      [[0, 1], [1, 2], [2, 3], [3, 4]], { w: 360, h: 260, W: 118, H: 36, ncols: 2, minW: 0 }));
+    a.appendChild(oneStream);
+    const b = el('div');
+    b.appendChild(html('p', 'panel-sub', '<b>Two streams: a real DAG.</b> Fork/join events during capture record the two matmuls as genuinely parallel branches: fan-in of 2, straight from the dump.'));
+    b.appendChild(drawDag(
+      [{ op: 'x @ W1', pos: [0.15, 0] }, { op: 'x @ W2', pos: [0.85, 0] },
+       { op: 'y1 + y2', pos: [0.5, 0.33] }, { op: '+ b', pos: [0.5, 0.66] }, { op: 'relu', pos: [0.5, 1] }],
+      [[0, 2], [1, 2], [2, 3], [3, 4]], { w: 360, h: 260, W: 118, H: 36, ncols: 2, minW: 0 }));
+    cols.append(a, b);
+    body.appendChild(cols);
+    const bars = el('div');
+    bars.style.margin = '10px 0 2px';
+    bars.appendChild(barRow('1-stream · eager', 44.9, 90.5, 'var(--sC)', '', 'eager, one stream: 44.9 µs\nCPU submit: 45.0 µs'));
+    bars.appendChild(barRow('1-stream · replay', 11.7, 90.5, 'var(--sA)', 'serial chain', 'replay of the chain recording: 11.7 µs\nCPU submit: 3.2 µs'));
+    bars.appendChild(barRow('2-stream · eager', 90.5, 90.5, 'var(--sC)', 'choreography = CPU', 'eager, two streams + events: 90.5 µs\nCPU submit: 90.6 µs\nthe choreography is itself toll'));
+    bars.appendChild(barRow('2-stream · replay', 9.7, 90.5, 'var(--sA)', 'branches overlap · fastest', 'replay of the parallel recording: 9.7 µs\nCPU submit: 4.5 µs'));
+    body.appendChild(bars);
+    gate(body, 'p-fork', 'Commit to the prediction above to reveal the recordings.');
+    mount.replaceWith(box);
+  };
 
-  /* ================= 7 · when graphs pay ================= */
-  const p7 = el('section', 'panel');
-  p7.appendChild(el('h2', null, '7 · When graphs pay: the size sweep'));
-  p7.appendChild(para('Graphs remove the toll, not the ride. So the win must depend entirely on how the two compare. We swept the chain ' +
-    'across tensor sizes to watch the win drain away (each pair scaled to its own maximum):'));
-  (() => {
-    const wrap = el('div');
-    [
-      { n: '4k elems', eager: 31.3, graph: 5.9, sub: '5.3x · toll dominates' },
-      { n: '1M elems', eager: 31.5, graph: 27.2, sub: '1.2x · kernels ≈ toll' },
-      { n: '16M elems', eager: 3183, graph: 3187, sub: 'parity · ride dominates' },
-    ].forEach(sw => {
-      const m = Math.max(sw.eager, sw.graph);
-      wrap.appendChild(cgBar(`${sw.n} · eager`, sw.eager, m, 'var(--sC)'));
-      wrap.appendChild(cgBar(`${sw.n} · graph`, sw.graph, m, 'var(--sB)', sw.sub));
+  /* w-sweep: the size sweep, one pair at a time */
+  W['w-sweep'] = (mount) => {
+    const SWEEP = [
+      { lab: '4096 elements · 16 KB', eager: 31.3, graph: 5.9, es: 31.4, gs: 3.3,
+        note: '5.3× · kernels ~1 µs each: the pass is almost pure toll, and replay deletes it.' },
+      { lab: '1M elements · 4 MB', eager: 31.1, graph: 27.2, es: 31.2, gs: 3.3,
+        note: '1.2× · kernels ~5 µs each: toll and ride are now comparable; the win thins.' },
+      { lab: '16.7M elements · 64 MB', eager: 3183, graph: 3187, es: 33.5, gs: 3.4,
+        note: 'parity · kernels ~640 µs each: the toll vanishes into noise (this run read 0.1% slower under replay).' },
+    ];
+    const { box, body } = widget('The size sweep · same five ops, growing tensors');
+    const controls = el('div', 'widget-controls');
+    const seg = el('div', 'seg');
+    const bars = el('div');
+    const note = el('div', 'widget-readout');
+    const btns = [];
+    const set = (i) => {
+      btns.forEach((bb, j) => bb.classList.toggle('on', i === j));
+      const s = SWEEP[i];
+      const m = Math.max(s.eager, s.graph);
+      bars.innerHTML = '';
+      bars.appendChild(barRow('eager', s.eager, m, 'var(--sC)', `submit ${fmtT(s.es)}`,
+        `eager: ${fmtT(s.eager)}/pass\nCPU submit: ${fmtT(s.es)}`));
+      bars.appendChild(barRow('graph replay', s.graph, m, 'var(--sA)', `submit ${fmtT(s.gs)}`,
+        `replay: ${fmtT(s.graph)}/pass\nCPU submit: ${fmtT(s.gs)}`));
+      note.textContent = s.note;
+    };
+    SWEEP.forEach((s, i) => {
+      const bb = el('button', null, s.lab.split(' · ')[0]);
+      bb.addEventListener('click', () => set(i));
+      btns.push(bb);
+      seg.appendChild(bb);
     });
-    p7.appendChild(wrap);
-  })();
-  p7.appendChild(para('At 4k elements the kernels are ~1 µs and the toll is everything: 5.3x. At 1M the kernels have grown to ~5 µs each ' +
-    'and the toll is merely annoying: 1.2x. At 16M each kernel runs ~640 µs and the toll vanishes into the noise: parity (the graph ' +
-    'even measured 0.1% <i>slower</i> once, which is what honest noise looks like). The rule of thumb: <b>graphs pay in proportion to ' +
-    'how launch-bound you are</b>: many small kernels, big win; few big kernels, no win. Keep that rule; in §10 it predicts the ' +
-    'engine&rsquo;s behavior exactly.'));
-
-  /* ================= 8 · the rules ================= */
-  const p8 = el('section', 'panel');
-  p8.appendChild(el('h2', null, '8 · The rules: everything replay forbids, derived from one sentence'));
-  p8.appendChild(para('<b>During replay, the CPU is not consulted.</b> Every restriction follows from that. No CPU means nobody to ' +
-    'handle a new shape, nobody to chase a moved pointer, nobody to answer a question mid-flight, nobody to allocate memory. We broke ' +
-    'each rule on purpose on the L4 and recorded what happened (<code>failures.json</code>). Two fail loudly. Two fail silently, ' +
-    'which is worse.'));
-  const anat4 = el('div', 'anat');
-  const rRow = (op, sub, html) => {
-    const r = el('div', 'anat-row');
-    const left = el('div', 'anat-op');
-    left.innerHTML = op + (sub ? ` <small>${sub}</small>` : '');
-    const right = el('div', 'panel-note');
-    right.style.margin = '0';
-    right.innerHTML = html;
-    r.append(left, right);
-    anat4.appendChild(r);
+    controls.appendChild(seg);
+    body.append(controls, bars, note);
+    set(0);
+    gate(body, 'p-sweep');
+    mount.replaceWith(box);
   };
-  rRow('no questions mid-flight', 'we put .item() inside capture',
-    '<b>Loud.</b> <code style="font-size:10.5px">CUDA error: operation failed due to a previous error during capture ' +
-    '(cudaErrorStreamCaptureInvalidated)</code>. Capture records launches without running them, so a value does not <i>exist</i> yet ' +
-    'to be fetched: anything needing an answer NOW (<code>.item()</code>, <code>print</code>, an assert) invalidates the recording. ' +
-    'Corollary for engines: the sampled-token transfer to the host must sit <i>outside</i> the graph.');
-  rRow('no new shapes', 'we fed 8 elements to the 4-element static buffer',
-    '<b>Loud, but at the copy, not the replay.</b> <code style="font-size:10.5px">The size of tensor a (4) must match the size of ' +
-    'tensor b (8)...</code>. Note what this means: the graph itself would happily replay its baked 4-element geometry forever; the ' +
-    'guard rail is the <code>copy_()</code> at the door. A new shape does not "adapt", it demands a <i>new capture</i>. One graph per ' +
-    'shape you serve: remember this at §11.');
-  rRow('no moved pointers', 'we rebound the Python name instead of copy_()',
-    '<b>Silent.</b> Captured <code>y = 2x + 1</code>. Writing <code>[1,2,3,4]</code> into the static buffer and replaying gives ' +
-    '<code>[3,5,7,9]</code>: correct. Then we bound a fresh tensor <code>[10,20,30,40]</code> to the name <code>x</code> and replayed: ' +
-    'still <code>[3,5,7,9]</code>, where <code>[21,41,61,81]</code> was expected. No error, wrong numbers, forever. The recording ' +
-    'reads an <i>address</i>; Python names mean nothing to it.');
-  rRow('no allocation, no growth', 'we captured a decode step whose KV cache grows by concat',
-    '<b>Silent.</b> The sequential engine&rsquo;s <code>KVCache</code> appends by concatenating, i.e. by allocating a fresh, larger ' +
-    'tensor each step. Capture baked one step&rsquo;s buffers: the cache position went 16 → 17 during capture and then stayed ' +
-    '<b>17 across three replays</b>, logits bit-identical each time. The replay recomputes the same step forever; a cache that grows ' +
-    'by reallocating simply cannot live inside a graph. What can: a <i>preallocated</i> pool written through device-side indices, ' +
-    'which is exactly what the batched engine&rsquo;s padded pool is.');
-  p8.appendChild(anat4);
 
-  /* ================= 9 · a real model under capture ================= */
-  const p9 = el('section', 'panel');
-  p9.appendChild(el('h2', null, '9 · From toy to model: 110 kernels, one launch'));
-  p9.appendChild(para('Time to stop playing with five-op chains. We captured one decode step of a real (miniature) transformer: the test ' +
-    'suite&rsquo;s 2-layer, 64-dim Qwen3, generating its 17th token. The recording came back with <b>110 kernel nodes and 109 edges</b> ' +
-    '(one stream: a pure chain, as §6 predicted). And because dumps name their kernels, the whole model is legible in the census:'));
-  (() => {
-    const strip = el('div', 'fw-zone');
-    const nm = el('div', 'fw-zone-name');
-    nm.innerHTML = 'the 110 nodes, grouped by family <small>· from tinymodel.dot</small>';
-    const chipsRow = el('div', 'fw-chips');
+  /* w-rules: four recorded violations, accordion */
+  W['w-rules'] = (mount) => {
+    const RULES = [
+      { name: 'Ask a question mid-capture', did: 'we put .item() inside the capture region', loud: true,
+        err: 'CUDA error: operation failed due to a previous error during capture\n(cudaErrorStreamCaptureInvalidated)',
+        lesson: 'Capture records launches without executing them, so during capture no value <i>exists</i> yet to be fetched. Anything that demands an answer right now (<code>.item()</code>, <code>print</code>, an assert) invalidates the recording. Engine corollary: the sampled-token transfer to the host must sit <i>outside</i> the graph.' },
+      { name: 'Feed a new shape', did: 'we copied 8 elements into the 4-element static buffer', loud: true,
+        err: 'The size of tensor a (4) must match the size of tensor b (8) at non-singleton dimension 0',
+        lesson: 'Note <i>where</i> it failed: at the <code>copy_()</code>, not the replay. The graph itself would happily replay its baked 4-element geometry forever; the guard rail is the copy at the door. A new shape does not adapt, it demands a <b>new capture</b>. One graph per shape you serve: remember that at the boundary section.' },
+      { name: 'Move a pointer', did: 'we rebound the Python name instead of using copy_()', loud: false,
+        err: 'captured y = 2x + 1\ncopy_([1,2,3,4]) into the static buffer → replay → [3,5,7,9]   correct\nx = tensor([10,20,30,40])  (rebound)   → replay → [3,5,7,9]   expected [21,41,61,81]',
+        lesson: 'No error, wrong numbers, forever. The recording reads an <i>address</i>; Python names mean nothing to it. New inputs must be written into the captured buffer, never bound over it.' },
+      { name: 'Grow memory', did: 'we captured a decode step whose KV cache grows by torch.cat', loud: false,
+        err: 'cache position before capture: 16\ncache position after capture:  17\ncache position after 3 replays: 17   (logits bit-identical each replay)',
+        lesson: 'The sequential engine&rsquo;s <code>KVCache</code> appends by concatenating, i.e. by allocating a fresh, larger tensor each step. Capture baked one step&rsquo;s buffers, so replay recomputes that same step forever. A cache that grows by reallocating cannot live inside a graph. What can: a <b>preallocated</b> pool written through device-side indices, which is exactly what the batched engine&rsquo;s padded KV pool is.' },
+    ];
+    const { box, body } = widget('failures.json · four rules, broken on purpose');
+    RULES.forEach((r) => {
+      const card = el('div', 'rule');
+      const head = el('button', 'rule-head');
+      head.appendChild(el('span', null, r.name));
+      head.appendChild(html('small', 'rule-did', r.did));
+      head.appendChild(el('span', 'rule-badge' + (r.loud ? '' : ' silent'), r.loud ? 'fails loud' : 'fails silent'));
+      const bodyEl = el('div', 'rule-body');
+      const pre = el('div', 'err', r.err);
+      bodyEl.appendChild(pre);
+      bodyEl.appendChild(html('div', null, r.lesson));
+      head.addEventListener('click', () => card.classList.toggle('open'));
+      card.append(head, bodyEl);
+      body.appendChild(card);
+    });
+    body.appendChild(el('div', 'widget-hint',
+      'The two silent ones are the dangerous ones: nothing crashes, the numbers are simply wrong from then on.'));
+    mount.replaceWith(box);
+  };
+
+  /* w-census: the 110 nodes of tinymodel.dot, by family */
+  W['w-census'] = (mount) => {
+    const { box, body } = widget('tinymodel.dot · 110 nodes, 109 edges, max fan-in 1');
+    const strip = el('div', 'fw-chips');
     [
       ['gemv ×15 + gemm ×4', 'one token in flight turns matmuls into matvecs'],
-      ['pow / mean / rsqrt ×9', 'exactly the model’s 9 RMSNorms, 3 kernels each'],
+      ['pow / mean / rsqrt ×9', 'exactly the model&rsquo;s 9 RMSNorms, 3 kernels each'],
       ['mul ×26 · add ×13', 'RoPE rotations, SwiGLU, residual adds'],
-      ['cat ×6', 'the KV-cache appends (§8’s silent failure lives here)'],
-      ['softmax ×2', 'one per layer’s attention'],
+      ['cat ×6', 'the KV-cache appends (the fourth rule lives here)'],
+      ['softmax ×2', 'one per layer&rsquo;s attention'],
       ['tril + fill', 'the causal mask, built inside the forward'],
       ['embedding ×1 · copy ×4 · index ×2', 'lookup and glue'],
     ].forEach(([t, s]) => {
       const c = el('div', 'fw-chip');
-      c.append(el('b', null, t), el('small', null, s));
-      chipsRow.appendChild(c);
+      c.appendChild(el('b', null, t));
+      c.appendChild(html('small', null, s));
+      strip.appendChild(c);
     });
-    strip.append(nm, chipsRow);
-    p9.appendChild(strip);
-  })();
-  p9.appendChild(para('Now the measurement. Eagerly, this decode step costs <b>2066 µs per pass, of which 2066 µs is CPU submit</b>. ' +
-    'Read that twice: the GPU work is so small that the pass is, to measurement precision, <i>pure toll</i>: 110 trips through §2&rsquo;s ' +
-    'pipeline. Under replay:'));
-  (() => {
-    const wrap = el('div');
-    wrap.appendChild(cgBar('eager', 2066, 2066, 'var(--sC)', 'submit 2066: pure toll'));
-    wrap.appendChild(cgBar('graph replay', 134, 2066, 'var(--sB)', 'submit 3.5 · 15.4x'));
-    p9.appendChild(wrap);
-  })();
-  p9.appendChild(para('<b>15.4x</b>, and the submit cost fell from 2066 µs to 3.5: the same 3.3-ish µs it cost to launch the five-kernel ' +
-    'chain. That is the deepest property of graphs: <b>the launch cost is flat in the number of kernels</b>. Five kernels or a hundred ' +
-    'and ten, one call. The scaling argument writes itself: this fixture is 2 layers at dim 64; the engine&rsquo;s 0.6B model is 28 ' +
-    'layers at dim 1024. Scale 110 nodes accordingly and you land at roughly 1700 launches per decode step. Which brings us home.'));
-
-  /* ================= 10 · the engine numbers ================= */
-  const p10 = el('section', 'panel');
-  p10.appendChild(el('h2', null, '10 · The engine, re-read with graph eyes'));
-  p10.appendChild(para('Phase 3 opened with a profile of the batched engine&rsquo;s decode step (<code>step-profiling.md</code>, 0.6B on ' +
-    'the 5090). At the time it read as a list of grim facts. After §1 through §9, it reads as a diagnosis you can make yourself:'));
-  const anat10 = el('div', 'anat');
-  const aRow = (op, sub, html) => {
-    const r = el('div', 'anat-row');
-    const left = el('div', 'anat-op');
-    left.innerHTML = op + (sub ? ` <small>${sub}</small>` : '');
-    const right = el('div', 'panel-note');
-    right.style.margin = '0';
-    right.innerHTML = html;
-    r.append(left, right);
-    anat10.appendChild(r);
+    body.appendChild(strip);
+    mount.replaceWith(box);
   };
-  aRow('the flood', 'one decode step · 16 rows',
-    '<b>~1750 kernel launches + ~960 async memcpys ≈ 2700 CUDA API calls</b> (about ~1900 after the KV-write and finalize fixes). ' +
-    'The real math they deliver: 197 GEMMs, ≈ 2 ms of GPU time. This is §9&rsquo;s census at production scale, toll after toll after toll.');
-  aRow('the floor', 'step ≈ 9.2 ms fixed + 0.29 ms/row',
-    'At 1 row the step takes 9.3 ms, of which <b>8.97 ms is dispatch</b> (the forward call returning, before any GPU wait). At 16 rows ' +
-    'the GPU is busy ~5.9 ms of ~16: <b>idle ~60%</b>. §1&rsquo;s timeline, stretched to milliseconds: the engine is launch-bound, ' +
-    'exactly the regime §7&rsquo;s rule of thumb says graphs love.');
-  aRow('the prediction', 'what §3 + §9 say happens next',
-    'Record one decode step per served shape, replay it thereafter: ~1900 API calls collapse toward one <code>cudaGraphLaunch</code>, ' +
-    'attacking the 9 ms floor directly. Note this is precisely the part SDPA could not touch (short_chat moved &minus;1% in its A/B): ' +
-    'fused kernels shrink the ride, only graphs remove the toll. The two optimizations are complements, not rivals.');
-  p10.appendChild(anat10);
 
-  /* ================= 11 · where this lands in cantoLLM ================= */
-  const p11 = el('section', 'panel');
-  p11.appendChild(el('h2', null, '11 · The engineering puzzle: fitting a graph around our decode step'));
-  p11.appendChild(para('Knowing graphs help is the easy half. The hard half is drawing the boundary: a real decode step is not a pure ' +
-    'chain of kernels, it has host-side planning at the top and host-side bookkeeping at the bottom, and §8&rsquo;s rules decide what ' +
-    'may live inside. The step, walked top to bottom, boundary drawn where it can actually sit (this is the design space; the ' +
-    'decisions belong to the Phase 3 design note and its measurements, not to this tab):'));
-  const anat5 = el('div', 'anat');
-  const dRow = (op, sub, html) => {
-    const r = el('div', 'anat-row');
-    const left = el('div', 'anat-op');
-    left.innerHTML = op + (sub ? ` <small>${sub}</small>` : '');
-    const right = el('div', 'panel-note');
-    right.style.margin = '0';
-    right.innerHTML = html;
-    r.append(left, right);
-    anat5.appendChild(r);
+  /* w-model: the tiny-model decode step, both ways */
+  W['w-model'] = (mount) => {
+    const { box, body } = widget('One decode step, 110 kernels · 2-layer Qwen3 fixture');
+    body.appendChild(barRow('eager', 2066, 2066, 'var(--sC)', 'submit 2066 µs: pure toll',
+      'eager: 2066 µs/step\nCPU submit: 2066 µs\n110 trips through the pipeline'));
+    body.appendChild(barRow('graph replay', 134, 2066, 'var(--sA)', 'submit 3.5 µs · 15.4×',
+      'replay: 134 µs/step\nCPU submit: 3.5 µs\none call for all 110'));
+    gate(body, 'p-model');
+    mount.replaceWith(box);
   };
-  dRow('_plan_step · water-fill', 'scheduler · host',
-    'Queues, budgets, admission: Python control flow on Python state. Never capturable (§8: no CPU consulted), and never the problem: ' +
-    'scheduler bookkeeping measures in the tens of µs.');
-  dRow('shape_step', 'shaping.py · host',
-    'Quantized chunk widths, kv-span and batch buckets, filler rows. §8 said one graph per shape; this is what makes the set of shapes ' +
-    '<b>finite</b>: the shape vocabulary is the capture vocabulary. The 477-shape warm-up sweep behind Ready already visits every one ' +
-    'of them, which makes it the natural capture point (and §4&rsquo;s instantiate cost the natural thing to hide there).');
-  dRow('input ids + meta build', 'host → device',
-    'At replay time this becomes §4&rsquo;s prologue: <code>copy_()</code> into the graph&rsquo;s static input buffers. Same shape ' +
-    'bucket, same buffers, new contents each step.');
-  dRow('forward_batched body', 'embed → 28 layers → lm head',
-    'The capturable region: §9&rsquo;s chain at full scale, the ~1900-call flood. One graph per shape bucket turns all of it into one ' +
-    'launch. (Per §6, it records as a pure chain: fine, that is what it was eagerly too.)');
-  dRow('sampling', 'mostly device',
-    'Argmax and temperature math are device-side and capturable. The batched finalize already collapsed the per-row syncs to one D2H ' +
-    'transfer per step, and by §8 rule 1 that transfer stays <i>outside</i> the graph.');
-  dRow('KV scatter · KVWriteMap', 'the wrinkle',
-    'The gather+scatter is device-side and pool-backed, so it passes §8 rule 4. But the <b>index length varies within a shape ' +
-    'bucket</b>: the same padded geometry can have different numbers of rows actually writing KV. A graph bakes its shapes; this one ' +
-    'moves between replays. This is the one genuinely open design problem.');
-  dRow('events + finalize', 'host',
-    'The step boundary: stream sync, event batch out over IPC. Firmly outside the graph, and fine there.');
-  p11.appendChild(anat5);
-  p11.appendChild(para('<b>The wrinkle&rsquo;s two candidate answers, deliberately unresolved.</b> (a) <b>Pad the write map</b> to the ' +
-    'bucket&rsquo;s row count so the scatter&rsquo;s index shape is constant: filler rows already exist as a convention ' +
-    '(<code>num_new == 0</code>), so filler writes land in a scratch slot and one whole-step graph survives. (b) <b>Piecewise ' +
-    'graphs</b>: capture only the forward body, leave scatter and sampling eager, the way vLLM&rsquo;s piecewise CUDA-graph mode does. ' +
-    '(a) keeps more inside the graph; (b) is simpler and tolerates anything dynamic at the edges. The design note decides, with ' +
-    'measurements.'));
-  p11.appendChild(para('<b>The bills.</b> Each instantiated graph owns its private pool and workspace, so N buckets cost N × memory ' +
-    '(vLLM shares one pool across graphs for this reason); capture time joins the existing 102 s warm-up bill behind Ready; and cold ' +
-    'or oversized shapes keep the eager path as fallback, exactly as they bypass warm cuDNN plans today.'));
 
-  /* ================= 12 · exercises ================= */
-  const p12 = el('section', 'panel');
-  p12.appendChild(el('h2', null, '12 · Exercises: do it with your own hands'));
-  p12.appendChild(para('Everything above came from a ~$1 rented GPU session (<code>infra/</code> is a one-command rental; the harness ' +
-    'is <code>viz/capture_cudagraphs.py</code>, but the point of these is to <i>not</i> read it first):'));
-  p12.appendChild(bullets([
-    'Re-write §1&rsquo;s chain capture from scratch: warm-up, capture, <code>copy_</code> in, replay, verify the output. Then reproduce the 5.3x.',
-    'Break capture three ways and read each error like a message: <code>.item()</code> inside the region, a shape mismatch on the static buffer, a rebound input that goes silently stale (§8).',
-    'Find your own crossover: sweep the tensor size until eager and replay converge, then explain the curve in one sentence (§7).',
-    'Reproduce §6: capture the fork-join on one stream, then on two with fork/join events, and diff the DOT dumps.',
-    'Capture the tiny model&rsquo;s decode step and confirm the concat-grown <code>KVCache</code> never advances across replays; say precisely what a preallocated pool with device-tensor indices fixes (§8, §11).',
-    'Read one DOT dump end to end and name every kernel&rsquo;s source op; count the nodes you did not expect (§5&rsquo;s clamp surprise scales up).',
-  ]));
+  /* w-engine: step-profiling.md, re-read */
+  W['w-engine'] = (mount) => {
+    const { box, body } = widget('step-profiling.md · the real decode step, 0.6B on the 5090');
+    const stack = (label, segs, total, endHtml) => {
+      const row = el('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;margin:6px 0;';
+      const lab = el('span', null, label);
+      lab.style.cssText = 'font:11.5px var(--mono);color:var(--muted);width:148px;text-align:right;flex:none;';
+      const track = el('div');
+      track.style.cssText = 'flex:1;display:flex;gap:2px;background:var(--plane);border-radius:4px;height:16px;overflow:hidden;';
+      segs.forEach((s) => {
+        const seg = el('div');
+        seg.style.cssText = `width:${s.v / total * 100}%;background:${s.color};height:100%;`;
+        tipify(seg, s.tip);
+        track.appendChild(seg);
+      });
+      const num = html('span', null, endHtml);
+      num.style.cssText = 'font:11.5px var(--mono);flex:none;width:212px;color:var(--ink2);';
+      row.append(lab, track, num);
+      return row;
+    };
+    body.appendChild(stack('one step · 1 row', [
+      { v: 8.97, color: 'color-mix(in srgb, var(--sC) 72%, #fff)', tip: 'CPU dispatch: 8.97 ms\nthe forward call returning,\nbefore any GPU wait' },
+      { v: 0.33, color: 'color-mix(in srgb, var(--sB) 72%, #fff)', tip: 'everything else: ~0.33 ms' },
+    ], 9.3, '<b>9.3 ms</b> <small style="color:var(--muted)">8.97 dispatch</small>'));
+    body.appendChild(stack('one step · 16 rows', [
+      { v: 5.9, color: 'color-mix(in srgb, var(--sB) 72%, #fff)', tip: 'GPU busy: ~5.9 ms\n(197 GEMMs ≈ 2 ms of real math)' },
+      { v: 10.1, color: 'var(--grid)', tip: 'GPU idle: ~10.1 ms\nwaiting on dispatch' },
+    ], 16, '<b>~16 ms</b> <small style="color:var(--muted)">GPU idle ~60%</small>'));
+    body.appendChild(legend([
+      ['background: color-mix(in srgb, var(--sC) 72%, #fff);', 'CPU dispatch'],
+      ['background: color-mix(in srgb, var(--sB) 72%, #fff);', 'GPU busy'],
+      ['background: var(--grid);', 'GPU idle'],
+    ]));
+    const facts = el('div');
+    facts.style.marginTop = '12px';
+    [
+      ['the flood', '~1750 kernel launches + ~960 async memcpys ≈ <b>2700 CUDA API calls per step</b> at 16 rows (≈1900 after the KV-write and finalize fixes). The math they deliver: 197 GEMMs, about 2 ms of GPU work. This is the 110-node census at production scale.'],
+      ['the floor', 'step ≈ <b>9.2 ms fixed + 0.29 ms per row</b>. The fixed part is dispatch: per-launch CPU time that no batching amortizes and no faster kernel shrinks.'],
+      ['the prediction', 'record one decode step per served shape, replay it thereafter: ~1900 calls collapse toward <b>one</b>. This is the launch-bound regime from the rule of thumb, at a thousand times the toy&rsquo;s scale.'],
+    ].forEach(([t, d]) => {
+      const r = el('div', 'fact-row');
+      r.appendChild(el('span', 'fact-name', t));
+      r.appendChild(html('span', 'fact-body', d));
+      facts.appendChild(r);
+    });
+    body.appendChild(facts);
+    mount.replaceWith(box);
+  };
 
-  body.append(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
-  tCg.set(0);
+  /* w-boundary: the decode step, stage by stage, with the graph boundary */
+  W['w-boundary'] = (mount) => {
+    const STAGES = [
+      { name: '_plan_step · water-fill', zone: 'host', sub: 'scheduler · host Python',
+        d: 'Queues, budgets, admission: Python control flow over Python state. Never capturable (the CPU is not consulted during replay), and never the problem: scheduler bookkeeping measures in the tens of microseconds.' },
+      { name: 'shape_step · buckets', zone: 'host', sub: 'shaping.py · host',
+        d: 'Quantized chunk widths, kv-span and batch buckets, filler rows. The rules said one graph per shape; this stage is what makes the set of shapes <b>finite</b>. The shape vocabulary is the capture vocabulary, and the 477-shape warm-up sweep behind Ready already visits every one of them: the natural capture point, and the natural place to hide instantiation cost.' },
+      { name: 'build input ids + metadata', zone: 'door', sub: 'host → device',
+        d: 'At replay time this becomes the prologue from the lifecycle board: <code>copy_()</code> into the graph&rsquo;s static input buffers. Same bucket, same addresses, new contents every step.' },
+      { name: 'forward_batched body', zone: 'graph', sub: 'embed → 28 layers → lm head',
+        d: 'The capturable region: the 110-node chain at full scale, the ~1900-call flood. One graph per shape bucket turns all of it into one launch. On one stream it records as a pure chain, which is fine: that is what it was eagerly too.' },
+      { name: 'sampling math', zone: 'graph', sub: 'temperature · argmax · device',
+        d: 'Device-side and capturable. The batched finalize already collapsed the per-row syncs into one device-to-host transfer per step, and by the first rule that transfer stays <i>outside</i> the recording.' },
+      { name: 'KV scatter · KVWriteMap', zone: 'wrinkle', sub: 'the open problem',
+        d: 'Device-side and pool-backed, so it passes the memory rule. But the <b>index length varies within a shape bucket</b>: the same padded geometry can carry different numbers of rows actually writing KV. A graph bakes every shape it touches; this one moves between replays. Candidate fixes in the prose below.' },
+      { name: 'events + finalize', zone: 'host', sub: 'sync · IPC batch out',
+        d: 'The step boundary: stream sync, then the event batch crosses the process boundary to the API side. Firmly outside the graph, and fine there.' },
+    ];
+    const { box, body } = widget('The decode step, top to bottom · where can the recording sit?');
+    const grid = el('div', 'bd-grid');
+    const list = el('div', 'bd-list');
+    const det = el('div', 'detail');
+    const dTitle = el('div', 'detail-title');
+    const dBody = el('div');
+    det.append(dTitle, dBody);
+    const btns = [];
+    const ZONES = { host: 'outside · host', door: 'the door', graph: 'inside the graph', wrinkle: 'the wrinkle' };
+    const show = (i) => {
+      btns.forEach((bb, j) => bb.classList.toggle('cur', i === j));
+      const s = STAGES[i];
+      dTitle.textContent = s.name + ' · ' + ZONES[s.zone];
+      dBody.innerHTML = '';
+      dBody.appendChild(html('div', 'dline', s.d));
+    };
+    STAGES.forEach((s, i) => {
+      const bb = el('button', 'bd-stage zone-' + s.zone);
+      bb.appendChild(el('b', null, s.name));
+      bb.appendChild(el('small', null, s.sub));
+      bb.addEventListener('click', () => show(i));
+      btns.push(bb);
+      list.appendChild(bb);
+    });
+    grid.append(list, det);
+    body.appendChild(grid);
+    body.appendChild(legend([
+      [swInside('var(--sA)', 14), 'inside the recording'],
+      [swInside('var(--sC)', 14), 'the door: copy_() prologue'],
+      ['background: none; border: 1px dashed var(--axis);', 'host, never captured'],
+      [swInside('#c08a33', 16), 'the wrinkle: shape moves within a bucket'],
+    ]));
+    show(3);
+    mount.replaceWith(box);
+  };
+
+  /* ---------- mount widgets and predict bars ---------- */
+  article.querySelectorAll('[data-widget]').forEach((ph) => {
+    const fn = W[ph.dataset.widget];
+    if (fn) fn(ph);
+  });
+
+  const PREDICTS = {
+    'p-cost': {
+      question: 'Five kernels, each about 1 µs of arithmetic. What does one full pass cost, wall clock?',
+      choices: ['About 5 µs: the kernels are the work', 'About 15 µs: maybe 2× overhead', 'About 30 µs: mostly overhead'],
+      correct: 2,
+      explain: 'The L4 measured 31.3 µs per pass: roughly 5 µs of arithmetic under 26 µs of launch overhead. The figure below shows where every microsecond sits.',
+    },
+    'p-occupancy': {
+      question: 'The L4 can keep roughly 89,000 threads resident across its 58 SMs. Our multiply launches 4096. How much of the machine does it occupy?',
+      choices: ['Most of it: 4096 threads is a lot', 'About half', 'A few percent: it barely wakes the GPU up'],
+      correct: 2,
+      explain: '4096 of ~89,000 is under 5%: one shallow wave of warps and the whole tensor is done. That is why the ride costs a microsecond, and why speeding this kernel up further is hopeless: there is nothing left to compute. The only time worth chasing is the space between kernels.',
+    },
+    'p-fork': {
+      question: 'Captured exactly as written, on one stream: what does the recording of the two independent matmuls look like?',
+      choices: ['Two parallel branches that join', 'A straight chain of five nodes', 'Capture fails: it cannot order them'],
+      correct: 1,
+      explain: 'The recorder sees a stream, not your program. One stream is a total order, so the dump is a chain of five: the parallelism your Python expressed was already gone by the time the recorder looked.',
+    },
+    'p-sweep': {
+      question: 'Grow the tensors to 16.7 million elements each. How does graph replay compare with eager then?',
+      choices: ['Still around 5× faster', 'Around 1.5× faster', 'No measurable difference'],
+      correct: 2,
+      explain: 'Measured: 3183 µs eager, 3187 µs replay. At this size each kernel runs ~640 µs and the ~30 µs of toll disappears into noise. Graphs remove launch overhead, and only launch overhead.',
+    },
+    'p-stale': {
+      question: 'After capture, we bound a brand-new tensor to the Python name x (instead of copying into the static buffer) and replayed. What happened?',
+      choices: ['An error at the next replay', 'It used the new values: names are how Python finds tensors', 'No error, and the old answer came back, forever'],
+      correct: 2,
+      explain: 'The recording holds a device address, not a name. The replay read the old buffer and produced [3, 5, 7, 9] where [21, 41, 61, 81] was expected, with no error then or ever. The third card below has the recorded values.',
+    },
+    'p-model': {
+      question: 'The 110-kernel decode step measured 2066 µs eager. How much of that is CPU submit time?',
+      choices: ['About a third', 'About two thirds', 'Essentially all of it'],
+      correct: 2,
+      explain: 'Measured submit: 2066 µs of 2066. The GPU work is so small that the step is, to measurement precision, pure toll.',
+    },
+  };
+  article.querySelectorAll('[data-predict]').forEach((ph) => {
+    const id = ph.dataset.predict;
+    const opts = PREDICTS[id];
+    if (!opts) return;
+    const mountPoint = el('div');
+    ph.replaceWith(mountPoint);
+    predictBar(mountPoint, Object.assign({ id }, opts));
+  });
+
+  /* ---------- quiz ---------- */
+  const QUIZ = [
+    { id: 'q1',
+      prompt: 'Someone profiles a new workload and finds CUDA graphs give it a 6× speedup. Which picture must the profile have shown beforehand?',
+      choices: [
+        { html: 'Many small kernels with the GPU idle between launches: a launch-bound program', correct: true,
+          explain: 'Graphs remove the toll, not the ride: the win is proportional to how launch-bound the program is. A compute-saturated GPU has nothing for a graph to buy back, as the 16.7M row of the sweep showed.' },
+        { html: 'A few enormous kernels saturating the GPU' },
+        { html: 'Heavy host-to-device data transfer' },
+      ] },
+    { id: 'q-kernel', type: 'numeric',
+      prompt: 'In <code>scale&lt;&lt;&lt;32, 128&gt;&gt;&gt;</code>, the thread with <code>blockIdx.x = 5</code> and <code>threadIdx.x = 7</code> computes which flat element <code>i</code>?',
+      answer: 647, tol: 0, unit: '',
+      explain: 'i = blockIdx.x · blockDim.x + threadIdx.x = 5 · 128 + 7 = 647. In the 64-wide rank-2 view that is row 10, column 7: row-major flattening, 64 elements per row, two rows per block.' },
+    { id: 'q-ptx',
+      prompt: 'A years-old PyTorch build can still run on a GPU architecture released after it shipped (slowly, the first time). What makes that possible?',
+      choices: [
+        { html: 'Its binaries carry PTX alongside SASS, and the driver JIT-compiles the PTX into the new architecture&rsquo;s SASS', correct: true,
+          explain: 'SASS is not stable across generations; PTX is the contract. This project met the flip side on the 5090: sm_120 needed torch wheels built against cu128, a toolchain new enough to know its SASS.' },
+        { html: 'SASS is backward compatible across GPU generations' },
+        { html: 'The CUDA driver interprets the C++ source at runtime' },
+      ] },
+    { id: 'q2', type: 'numeric',
+      prompt: 'Use the toy chain&rsquo;s economics: about 6 µs of toll per launch and about 1 µs of kernel. Roughly what should an eager pass of a similar 20-kernel chain cost, in µs?',
+      answer: 140, tol: 30, unit: 'µs',
+      explain: '20 × (6 + 1) = 140 µs, almost all of it toll; a graph replay of the same chain would still submit in ~3 µs. (Real frameworks can pay even more per op: the tiny model averaged about 19 µs per launch.)' },
+    { id: 'q3',
+      prompt: 'A model&rsquo;s forward pass is captured exactly as written, on the default stream. Its recording is…',
+      choices: [
+        { html: 'a straight chain, whatever parallelism the math had', correct: true,
+          explain: 'Edges come from stream order, and one stream is a total order: the fork-join experiment recorded a written-as-parallel program as a chain of five. Genuine branches require multiple streams fenced by events during capture.' },
+        { html: 'the dependency structure of the tensors' },
+        { html: 'whatever order maximizes GPU occupancy' },
+      ] },
+    { id: 'q4',
+      prompt: 'Which of these can live inside a captured region?',
+      choices: [
+        { html: 'An argmax over the logits, on device', correct: true,
+          explain: 'Device-side math is exactly what capture is for. The others each break a rule: .item() and print demand an answer during capture, which invalidates it, and a concat-growing cache allocates fresh memory every step, which a replay cannot do.' },
+        { html: 'A .item() call that checks a value' },
+        { html: 'A KV cache that grows by torch.cat' },
+        { html: 'Printing a tensor for debugging' },
+      ] },
+    { id: 'q5',
+      prompt: 'The five-kernel chain replays with 3.3 µs of CPU submit. The 110-kernel tiny model replays with…',
+      choices: [
+        { html: 'about 3.5 µs: one call, however many kernels', correct: true,
+          explain: 'Measured: 3.3 µs for the chain, 3.5 µs for the model. Replay submit cost is flat in kernel count, which is why the win scales with how many launches the recording swallows.' },
+        { html: 'about 70 µs: submit scales with kernel count' },
+        { html: 'about 35 µs: it scales, but sublinearly' },
+      ] },
+    { id: 'q6',
+      prompt: 'Why is the engine&rsquo;s bounded shape vocabulary (quantized chunk widths, kv/batch buckets, warm-up behind Ready) the groundwork for CUDA graphs?',
+      choices: [
+        { html: 'A graph bakes shapes and addresses, so serving needs one graph per shape; the vocabulary makes that set finite, and its warm-up sweep is where capture can hide', correct: true,
+          explain: 'The same architecture that fixed cuDNN&rsquo;s per-shape plan compiles: bounded shapes, a warm-up window, an eager fallback for cold shapes. Graphs slot into all three.' },
+        { html: 'Buckets make the kernels themselves faster, which graphs then amplify' },
+        { html: 'cuDNN requires bucketed shapes before it will allow capture' },
+      ] },
+  ];
+  const quizHost = article.querySelector('[data-quiz]');
+  quizHost.classList.add('quiz');
+  quizHost.appendChild(el('h2', null, 'Check your understanding'));
+  quizHost.id = 's-quiz';
+  const score = el('div', 'quiz-score');
+  const states = new Map();
+  const updateScore = () => {
+    const answered = states.size;
+    const correct = [...states.values()].filter(Boolean).length;
+    score.textContent = answered === 0
+      ? `${QUIZ.length} questions`
+      : `${correct} / ${QUIZ.length} correct (${answered} answered)`;
+  };
+  QUIZ.forEach((item, idx) => {
+    const boxq = el('div', 'quiz-item');
+    boxq.appendChild(html('div', 'q-prompt', `<strong>${idx + 1}.</strong> ${item.prompt}`));
+    const saved = store.get('quiz:' + item.id);
+    if (item.type === 'numeric') {
+      const row = el('div', 'numeric-row');
+      const input = el('input');
+      input.type = 'text';
+      input.placeholder = 'your answer';
+      const unit = el('span', null, item.unit || '');
+      const check = el('button', 'btn', 'Check');
+      const explain = el('div', 'explain');
+      explain.innerHTML = item.explain || '';
+      explain.style.display = 'none';
+      const grade = (val) => {
+        const x = parseFloat(val);
+        if (!Number.isFinite(x)) return undefined;
+        const ok = Math.abs(x - item.answer) <= item.tol;
+        input.classList.remove('right', 'wrong');
+        input.classList.add(ok ? 'right' : 'wrong');
+        if (item.explain) explain.style.display = '';
+        states.set(item.id, ok);
+        updateScore();
+        return ok;
+      };
+      check.addEventListener('click', () => {
+        const ok = grade(input.value);
+        if (ok !== undefined) store.set('quiz:' + item.id, input.value);
+      });
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') check.click(); });
+      row.append(input, unit, check);
+      boxq.append(row, explain);
+      if (typeof saved === 'string') { input.value = saved; grade(saved); }
+    } else {
+      const ul = el('ul');
+      const btns = [];
+      const explain = el('div', 'explain');
+      explain.style.display = 'none';
+      const grade = (choiceIdx) => {
+        const chosen = item.choices[choiceIdx];
+        const ok = !!chosen.correct;
+        btns.forEach((bb, i) => {
+          bb.disabled = true;
+          bb.classList.remove('right', 'wrong', 'reveal-right');
+          if (i === choiceIdx) bb.classList.add(ok ? 'right' : 'wrong');
+          else if (item.choices[i].correct && !ok) bb.classList.add('reveal-right');
+        });
+        const text = chosen.explain || (item.choices.find((c) => c.correct) || {}).explain || '';
+        if (text) {
+          explain.innerHTML = (ok ? '<strong>Right.</strong> ' : '<strong>Not quite.</strong> ') + text;
+          explain.style.display = '';
+        }
+        states.set(item.id, ok);
+        updateScore();
+      };
+      item.choices.forEach((c, i) => {
+        const li = el('li');
+        const bb = el('button');
+        bb.innerHTML = c.html;
+        bb.addEventListener('click', () => { grade(i); store.set('quiz:' + item.id, i); });
+        btns.push(bb);
+        li.appendChild(bb);
+        ul.appendChild(li);
+      });
+      boxq.append(ul, explain);
+      if (typeof saved === 'number' && item.choices[saved]) grade(saved);
+    }
+    quizHost.appendChild(boxq);
+  });
+  quizHost.appendChild(score);
+  updateScore();
 }
 
 /* =============== boot =============== */
