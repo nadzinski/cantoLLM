@@ -14,9 +14,18 @@ import torch
 
 
 class PaddedKVPool:
-    """K/V tensors of shape (num_layers, max_batch, max_seq_len, num_groups,
-    head_dim), zero-initialized. Freed slots are not zeroed: the per-row
-    causal mask already hides a previous occupant's stale K/V.
+    """K/V tensors of shape (num_layers, max_batch, max_seq_len + 1,
+    num_groups, head_dim), zero-initialized. Freed slots are not zeroed: the
+    per-row causal mask already hides a previous occupant's stale K/V.
+
+    The extra position column is `scratch_pos` (= max_seq_len): a parking
+    spot for KV writes that must happen but must not land anywhere real.
+    CUDA-graph replay needs the write map's length to be a constant of the
+    step shape, so filler rows' map entries write their garbage here
+    (cuda-graphs-design.md §3, decision 4). Reads never see it: every
+    gather spans `[:max_history_len]` with `max_history_len <= max_seq_len`
+    (`Qwen3._validate_batched` enforces the cap). Cost: one position out of
+    thousands, ~2 MB at the 0.6B serve geometry.
     """
 
     def __init__(
@@ -30,14 +39,17 @@ class PaddedKVPool:
         dtype: torch.dtype,
         device: torch.device,
     ):
-        shape = (num_layers, max_batch, max_seq_len, num_groups, head_dim)
+        shape = (num_layers, max_batch, max_seq_len + 1, num_groups, head_dim)
         self.k = torch.zeros(shape, dtype=dtype, device=device)
         self.v = torch.zeros(shape, dtype=dtype, device=device)
         self.num_layers = num_layers
         self.max_batch = max_batch
         self.max_seq_len = max_seq_len
+        self.scratch_pos = max_seq_len
 
     def layer(self, i: int) -> tuple[torch.Tensor, torch.Tensor]:
-        """(k, v) views for layer i, each (max_batch, max_seq_len, num_groups,
-        head_dim) — no copy; attention writes through them into the pool."""
+        """(k, v) views for layer i, each (max_batch, max_seq_len + 1,
+        num_groups, head_dim) — no copy; attention writes through them into
+        the pool. The last position is the scratch column: the KV scatter
+        may write it, gathers never read it."""
         return self.k[i], self.v[i]

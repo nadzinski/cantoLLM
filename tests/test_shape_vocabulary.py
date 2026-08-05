@@ -98,6 +98,9 @@ class TestConfig:
             BatchingConfig(**BASE, kv_bucket=0)
         with pytest.raises(ValueError, match="warmup_shapes"):
             BatchingConfig(**BASE, warmup_shapes=True)  # unbounded
+        with pytest.raises(ValueError, match="cuda_graphs requires"):
+            # capture without the eager warm would record cold kernels
+            BatchingConfig(**BASE, **BUCKETS, cuda_graphs=True)
 
     def test_vocabulary_enumeration(self):
         config = BatchingConfig(**BASE, **BUCKETS)

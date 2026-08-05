@@ -24,6 +24,7 @@ from cantollm.engine.batching.scheduler import (
 )
 from cantollm.engine.batching.types import CBSequence
 from cantollm.engine.types import InferenceRequest, SamplingParams, TokenEvent
+from cantollm.models.attention.protocol import KVWriteMap
 from tests.toy_stepper import VOCAB_SIZE, ToyStepper, make_toy_pool, toy_oracle
 
 GREEDY = SamplingParams.from_temperature_top_p(temperature=0.0, top_p=1.0)
@@ -218,6 +219,57 @@ class TestProvidedPlumbing:
         scattered[m.slot, m.pos] = keys[m.row, m.off]
 
         assert torch.equal(scattered, looped)
+
+    def test_seed_kv_write_map_bypasses_derivation(self):
+        """CUDA-graph capture installs the recording's static buffers as
+        the map; the property must return exactly those tensors, never
+        rebuild — and the seeded map may disagree with rows on purpose
+        (the graph path pads it to the batch bucket)."""
+        seq = CBSequence("a", [9] * 101, GREEDY, 500, set(), slot_idx=5, position=100)
+        meta = build_batch_meta([Row(seq, num_new=1, start_pos=100)])
+        seeded = KVWriteMap(
+            row=torch.zeros(2, dtype=torch.long),
+            off=torch.zeros(2, dtype=torch.long),
+            slot=torch.zeros(2, dtype=torch.long),
+            pos=torch.tensor([100, 512]),
+        )
+
+        meta.seed_kv_write_map(seeded)
+
+        assert meta.kv_write_map is seeded
+
+    def test_seed_after_first_use_raises(self):
+        seq = CBSequence("a", [9] * 101, GREEDY, 500, set(), slot_idx=5, position=100)
+        meta = build_batch_meta([Row(seq, num_new=1, start_pos=100)])
+        derived = meta.kv_write_map
+        fresh = KVWriteMap(*(torch.zeros(1, dtype=torch.long) for _ in range(4)))
+
+        with pytest.raises(ValueError, match="already set"):
+            meta.seed_kv_write_map(fresh)
+        assert meta.kv_write_map is derived
+        # and seeding twice is the same footgun
+        meta2 = build_batch_meta([Row(seq, num_new=1, start_pos=100)])
+        meta2.seed_kv_write_map(fresh)
+        with pytest.raises(ValueError, match="already set"):
+            meta2.seed_kv_write_map(fresh)
+
+    def test_seed_rejects_malformed_maps(self):
+        seq = CBSequence("a", [9] * 101, GREEDY, 500, set(), slot_idx=5, position=100)
+        meta = build_batch_meta([Row(seq, num_new=1, start_pos=100)])
+        with pytest.raises(ValueError, match="1-D and aligned"):
+            meta.seed_kv_write_map(KVWriteMap(
+                row=torch.zeros(2, dtype=torch.long),
+                off=torch.zeros(3, dtype=torch.long),  # misaligned
+                slot=torch.zeros(2, dtype=torch.long),
+                pos=torch.zeros(2, dtype=torch.long),
+            ))
+        with pytest.raises(ValueError, match="int64"):
+            meta.seed_kv_write_map(KVWriteMap(
+                row=torch.zeros(2, dtype=torch.long),
+                off=torch.zeros(2, dtype=torch.long),
+                slot=torch.zeros(2, dtype=torch.long),
+                pos=torch.zeros(2, dtype=torch.int32),  # not an index dtype
+            ))
 
     def test_constructor_rejects_mismatched_capacities(self):
         config = BatchingConfig(max_batch=2, max_seq_len=64, max_tokens_per_step=8)

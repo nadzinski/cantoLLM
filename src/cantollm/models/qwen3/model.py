@@ -374,9 +374,14 @@ class Qwen3(nn.Module):
             raise ValueError(
                 f"pool has {pool.num_layers} layers but model has {num_blocks} blocks"
             )
-        if (meta.num_new < 0).any():
+        # Validate from meta.rows (the host-side copy of the same facts, per
+        # BatchMeta's contract) rather than the device tensors: reading a
+        # device tensor into a Python bool/int forces a GPU sync per step,
+        # and inside CUDA-graph capture it invalidates the recording
+        # (cuda-graphs-design.md §4).
+        if any(n < 0 for _, _, n in meta.rows):
             raise ValueError("num_new must be >= 0 (0 marks a filler row)")
-        derived_history = int((meta.start_pos + meta.num_new).max())
+        derived_history = max((s + n for _, s, n in meta.rows), default=0)
         if meta.max_history_len < derived_history:
             raise ValueError(
                 f"meta.max_history_len={meta.max_history_len} but rows imply "

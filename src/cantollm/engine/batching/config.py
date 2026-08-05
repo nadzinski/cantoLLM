@@ -50,6 +50,13 @@ class BatchingConfig:
     costs (cuDNN plan compiles, later graph captures) are paid at startup,
     never on a live request. Requires all three bucket knobs."""
 
+    cuda_graphs: bool = False
+    """Capture one CUDA graph per decode shape (width-1 vocabulary entries)
+    at engine build time and replay it for matching steps
+    (cuda-graphs-design.md). Requires `warmup_shapes` (and so the bucket
+    knobs): capture must follow the eager warm so recordings hold the warm
+    kernel choices, and an unbounded vocabulary cannot be captured."""
+
     def __post_init__(self) -> None:
         if self.max_batch <= 0:
             raise ValueError(f"max_batch must be positive, got {self.max_batch}")
@@ -101,6 +108,13 @@ class BatchingConfig:
                 "warmup_shapes requires prefill_widths, kv_bucket, and "
                 "batch_buckets to all be set — an unbounded vocabulary "
                 "cannot be enumerated"
+            )
+        if self.cuda_graphs and not self.warmup_shapes:
+            raise ValueError(
+                "cuda_graphs requires warmup_shapes (and the bucket knobs): "
+                "capture must follow the eager warm-up so recordings hold "
+                "warm kernel choices, and one graph is captured per decode "
+                "shape of the bounded vocabulary"
             )
 
     @property

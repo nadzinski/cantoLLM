@@ -85,6 +85,45 @@ class BatchMeta:
     The other tensor fields stay host-side; advanced indexing accepts
     either, at the cost of an implicit transfer per use."""
 
+    def seed_kv_write_map(self, write_map: KVWriteMap) -> None:
+        """Install `write_map` as this meta's `kv_write_map`, bypassing the
+        derived construction.
+
+        Exists for CUDA-graph capture (cuda-graphs-design.md §4): a
+        recording bakes the *addresses* of the map tensors it saw, so the
+        meta that flows through capture must carry the caller's static
+        buffers — the derived map would allocate fresh tensors at addresses
+        no replay reads. The caller owns the alignment contract that
+        derivation normally guarantees, and the seeded map may deliberately
+        disagree with `rows` (the graph path pads it to the batch bucket,
+        filler entries pointing at the pool's scratch column).
+
+        Seeding must happen before first use: once `kv_write_map` has been
+        read (or seeded), kernels and recordings may hold the existing
+        tensors, so replacing the map would silently split the two — that
+        case raises instead.
+        """
+        if "kv_write_map" in self.__dict__:
+            raise ValueError(
+                "kv_write_map is already set (derived or seeded); seeding "
+                "after first use would leave stale tensors in flight"
+            )
+        lengths = {t.shape for t in write_map}
+        if len(lengths) != 1 or write_map.row.dim() != 1:
+            raise ValueError(
+                f"write map columns must be 1-D and aligned, got shapes "
+                f"{[tuple(t.shape) for t in write_map]}"
+            )
+        if any(t.dtype != torch.long for t in write_map):
+            raise ValueError(
+                f"write map columns must be int64 (index tensors), got "
+                f"{[t.dtype for t in write_map]}"
+            )
+        # cached_property stores through the instance __dict__, which the
+        # frozen dataclass's __setattr__ block does not cover — this is the
+        # same slot the property itself writes.
+        self.__dict__["kv_write_map"] = write_map
+
     @cached_property
     def kv_write_map(self) -> KVWriteMap:
         """The ragged KV write as data instead of control flow.

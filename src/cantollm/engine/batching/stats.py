@@ -59,6 +59,7 @@ class StepStats:
     fwd_rows: int | None = None    # forward's batch dim (incl. filler rows)
     fwd_width: int | None = None   # forward's num_new_max (incl. pad columns)
     fwd_kv_len: int | None = None  # forward's max_history_len (post-bucketing)
+    graph_replayed: bool | None = None  # this step rode a CUDA graph; None = graphs off
 
 
 @dataclass(frozen=True)
@@ -86,6 +87,7 @@ class StepStatsCollector:
         self._snapshot: dict[str, tuple[int, int]] = {}
         self._pending_count = 0
         self._queue_depth = 0
+        self._graph_hits: int | None = None
         self._t0 = 0.0
 
     @classmethod
@@ -106,6 +108,13 @@ class StepStatsCollector:
         }
         self._pending_count = len(scheduler.pending_events)
         self._queue_depth = len(scheduler.queued)
+        # The graphed forward keeps cumulative hit/miss counters (the SDPA
+        # tripwire lesson: fast paths that can silently fall back need
+        # proof they ran); snapshotting hits around step() turns them into
+        # a per-step replayed/eager flag.
+        self._graph_hits = getattr(
+            getattr(scheduler, "forward_fn", None), "hits", None
+        )
         self._t0 = time.perf_counter()
 
     def after_step(self, scheduler, events: list[TokenEvent]) -> StepStats:
@@ -145,6 +154,13 @@ class StepStatsCollector:
         # the shape the kernel saw, which bucketing changes and `rows`
         # (real sequences) cannot reconstruct. None when no forward ran.
         fwd_shape = getattr(scheduler, "last_forward_shape", None) or (None,) * 3
+        hits_now = getattr(
+            getattr(scheduler, "forward_fn", None), "hits", None
+        )
+        graph_replayed = (
+            None if hits_now is None or self._graph_hits is None
+            else hits_now > self._graph_hits
+        )
         stats = StepStats(
             seq=self._seq,
             t_wall=time.time(),
@@ -159,6 +175,7 @@ class StepStatsCollector:
             fwd_rows=fwd_shape[0],
             fwd_width=fwd_shape[1],
             fwd_kv_len=fwd_shape[2],
+            graph_replayed=graph_replayed,
         )
         self._seq += 1
         return stats

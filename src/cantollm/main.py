@@ -95,9 +95,19 @@ def cmd_serve(args):
             args.warmup_shapes if args.warmup_shapes is not None
             else shape_buckets and on_cuda
         )
+        cuda_graphs = (
+            args.cuda_graphs if args.cuda_graphs is not None
+            else warmup_shapes and on_cuda
+        )
         if warmup_shapes and not shape_buckets:
             sys.exit("error: --warmup-shapes requires shape buckets "
                      "(an unbounded shape vocabulary cannot be enumerated)")
+        if cuda_graphs and not warmup_shapes:
+            sys.exit("error: --cuda-graphs requires shape buckets and "
+                     "warm-up (capture must follow the eager warm, one "
+                     "graph per decode shape of the bounded vocabulary)")
+        if cuda_graphs and not on_cuda:
+            sys.exit("error: --cuda-graphs needs a CUDA device")
         if attention == "sdpa" and not shape_buckets:
             print("warning: sdpa without --shape-buckets recompiles a cuDNN "
                   "plan per step shape — expect stall tails "
@@ -110,6 +120,7 @@ def cmd_serve(args):
                 args.max_batch, args.max_tokens_per_step
             )
             bucket_kwargs["warmup_shapes"] = warmup_shapes
+            bucket_kwargs["cuda_graphs"] = cuda_graphs
         config = BatchingConfig(
             max_batch=args.max_batch,
             max_seq_len=args.batch_max_seq_len,
@@ -145,7 +156,8 @@ def cmd_serve(args):
             f"slot={config.max_seq_len} tok, "
             f"budget={config.max_tokens_per_step} tok/step, "
             f"attention={attention}, shape_buckets={'on' if shape_buckets else 'off'}, "
-            f"warmup={'on' if warmup_shapes else 'off'})"
+            f"warmup={'on' if warmup_shapes else 'off'}, "
+            f"cuda_graphs={'on' if cuda_graphs else 'off'})"
         )
     else:
         if args.speculative:
@@ -334,6 +346,14 @@ def parse_args():
                                    "readiness) so every shape is warm before traffic "
                                    "(default: on when shape buckets are on for CUDA; "
                                    "--no-warmup-shapes for faster dev starts)")
+    serve_parser.add_argument("--cuda-graphs", default=None,
+                              action=argparse.BooleanOptionalAction,
+                              help="Batched engine: capture one CUDA graph per decode "
+                                   "shape at startup (after the warm-up sweep, behind "
+                                   "readiness) and replay it for matching steps — "
+                                   "collapses the per-step launch flood to one call "
+                                   "(default: on when warm-up is on for CUDA; "
+                                   "--no-cuda-graphs to serve eager)")
     serve_parser.add_argument("--in-process", action="store_true",
                               help="Batched engine: run the scheduler inside the API "
                                    "process (debugging aid; default is a dedicated "

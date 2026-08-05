@@ -217,7 +217,7 @@ def serve_argv(variant: ServerVariant, extra: list[str] | None = None) -> list[s
     # Tri-state serve flags: absent = the server's device-based default
     # (on for CUDA), so an explicit false must be SAID (--no-...), not
     # merely omitted — else a config that means "off" silently runs "on".
-    for key in ("shape_buckets", "warmup_shapes"):
+    for key in ("shape_buckets", "warmup_shapes", "cuda_graphs"):
         if key in cfg and cfg[key] is not None:
             flag = key.replace("_", "-")
             argv.append(f"--{flag}" if cfg[key] else f"--no-{flag}")

@@ -385,7 +385,7 @@ The target is worth optimizing because its shape is stable — no major refactor
 invalidate the work (paged KV in Phase 4 _will_ reshape the attention path, but in a
 well-contained way).
 
-**Status (2026-07-19):** In progress. Opened with step profiling
+**Status (2026-08-05):** In progress. Opened with step profiling
 (`step-profiling.md`): the decode floor is CPU dispatch — ~2700 CUDA API calls
 per step, GPU ~60% idle — and the top two sinks are fixed (ragged KV write
 vectorized to one gather+scatter per tensor via `KVWriteMap`; sampling
@@ -421,11 +421,22 @@ and a 477-shape warm-up sweep behind Ready. Second A/B
 102 s of warm-up at server start. **sdpa + shape buckets + warm-up is now
 the CUDA default** (`--attention padded` / `--no-shape-buckets` /
 `--no-warmup-shapes` opt out; Mac/CPU stays padded, exact v1 geometry;
-pre-existing bench configs pinned to what they measured). Open:
-`torch.compile`; CUDA graphs — the shape vocabulary is their groundwork,
-with one known wrinkle: the KV-scatter index length still varies within a
-shape, so capture will want write-map padding or piecewise (body-only)
-graphs; the H100 day.
+pre-existing bench configs pinned to what they measured). CUDA graphs
+design note landed 2026-08-05 (`cuda-graphs-design.md`): forward-only
+capture of the decode shapes (width 1), riding the shape vocabulary and
+its warm-up sweep; the KV-scatter wrinkle resolved to write-map padding
+with a scratch position column (the scatter lives inside `forward_batched`,
+so piecewise capture would have meant restructuring the method template);
+one shared graph memory pool; predictions on record in the note. The
+implementation landed same day (delegated to Claude in review-sized
+chunks): `GraphedBatchedForward` + scratch position column on the pool +
+`BatchMeta.seed_kv_write_map` + engine/CLI/bench wiring, cuda_graphs
+default-on for CUDA alongside sdpa+buckets+warmup, suite green on CPU
+with the CUDA tests skipped. The viz CUDA-graphs tab was rebuilt as a
+full textbook chapter (gr-learning format) as the learning run-up; the
+toy exercise session is deferred, not dropped. Open: 5090 validation
+(CUDA tests, profile_step recheck, ab_5090_cudagraphs A/B vs the design
+note's §6 predictions); `torch.compile`; the H100 day.
 
 **Core:**
 

@@ -26,6 +26,7 @@ max_tokens_per_step = 512
 # buckets (that was the point — it exposed the plan churn); re-runs must
 # reproduce that, not the new CUDA default.
 shape_buckets = false
+cuda_graphs = false
 
 [server.matrix]
 attention = ["padded", "sdpa"]

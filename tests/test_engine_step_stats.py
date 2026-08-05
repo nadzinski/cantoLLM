@@ -151,3 +151,41 @@ def test_finish_on_final_prefill_chunk_counts_as_prefill():
     assert s.rows == 1
     assert (s.prefill_tokens, s.decode_tokens) == (4, 0)
     assert s.occupied_slots == 0
+
+
+def test_graph_replayed_none_without_counters():
+    # Graphs off: the forward_fn (ToyStepper) has no hit counters, so the
+    # flag is None, distinguishing "graphs off" from "graphs on, eager step".
+    sched = make_scheduler()
+    collector = StepStatsCollector.for_scheduler(sched)
+    sched.add_request(request("r1", [1, 2]))
+    _, s = stepped(sched, collector)
+    assert s.graph_replayed is None
+
+
+def test_graph_replayed_tracks_the_hit_counter():
+    # A forward_fn with GraphedBatchedForward's counter surface: the flag is
+    # the per-step delta of cumulative hits.
+    sched = make_scheduler()
+    inner = sched.forward_fn
+
+    class Counting:
+        def __init__(self):
+            self.hits = 0
+            self.replay_next = True
+
+        def __call__(self, input_ids, meta, pool):
+            if self.replay_next:
+                self.hits += 1
+            return inner(input_ids, meta, pool)
+
+    sched.forward_fn = Counting()
+    collector = StepStatsCollector.for_scheduler(sched)
+    sched.add_request(request("r1", [1, 2], max_tokens=3))
+
+    _, s = stepped(sched, collector)
+    assert s.graph_replayed is True
+
+    sched.forward_fn.replay_next = False     # an eager (miss) step
+    _, s = stepped(sched, collector)
+    assert s.graph_replayed is False

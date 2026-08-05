@@ -69,6 +69,7 @@ def scheduler_from_runtime(
     from cantollm.engine.batching.scheduler import ContinuousBatchingScheduler
 
     pool = runtime.new_kv_pool(config)
+    forward_fn = runtime.forward_batched
     if config.warmup_shapes:
         # Behind Ready in the process split (the factory runs before the
         # Ready handshake) and before from_runtime returns in-process: no
@@ -76,8 +77,25 @@ def scheduler_from_runtime(
         from cantollm.engine.batching.warmup import warmup_shape_vocabulary
 
         warmup_shape_vocabulary(runtime.forward_batched, pool, config)
+    if config.cuda_graphs:
+        # Strictly after the eager warm-up (config validation enforces the
+        # pairing): capture must record warm kernel choices, not one-time
+        # setup. Also behind Ready, so instantiation cost joins the same
+        # startup bill as the plan compiles (cuda-graphs-design.md §3).
+        import time as _time
+
+        from cantollm.engine.batching.graphs import GraphedBatchedForward
+
+        graphed = GraphedBatchedForward(runtime.forward_batched, config)
+        t0 = _time.perf_counter()
+        captured = graphed.capture_decode_shapes(pool)
+        logger.info(
+            "CUDA graphs: captured %d decode shapes in %.1f s",
+            captured, _time.perf_counter() - t0,
+        )
+        forward_fn = graphed
     return ContinuousBatchingScheduler(
-        forward_fn=runtime.forward_batched,
+        forward_fn=forward_fn,
         pool=pool,
         allocator=SlotAllocator(config.max_batch),
         config=config,

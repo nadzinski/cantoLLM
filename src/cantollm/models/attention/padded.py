@@ -96,8 +96,10 @@ class PaddedAttentionMethod:
           returns: (B, num_new_max, groups, heads_per_group, head_dim)
         """
         # ragged KV write — validate every row before mutating the pool, so a
-        # bad row can't leave a half-written step behind
-        slot_capacity = layer_k.shape[1]
+        # bad row can't leave a half-written step behind. The view's last
+        # position is the pool's scratch column (graph-replay parking spot,
+        # kv_pool.py), not real capacity — rows may not write into it.
+        slot_capacity = layer_k.shape[1] - 1
         for r, (slot_idx, start_pos, num_new) in enumerate(meta.rows):
             if start_pos + num_new > slot_capacity:
                 raise ValueError(

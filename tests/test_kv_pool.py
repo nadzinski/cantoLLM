@@ -26,17 +26,20 @@ def make_pool(**overrides) -> PaddedKVPool:
 
 class TestPaddedKVPool:
     def test_shapes_dtype_and_zero_init(self):
+        # 17 positions = 16 logical + the scratch column (graph-replay
+        # parking spot for filler-row writes; gathers never read it).
         pool = make_pool()
-        assert pool.k.shape == (2, 3, 16, 4, 8)
-        assert pool.v.shape == (2, 3, 16, 4, 8)
+        assert pool.k.shape == (2, 3, 17, 4, 8)
+        assert pool.v.shape == (2, 3, 17, 4, 8)
         assert pool.k.dtype == torch.float32
         assert torch.all(pool.k == 0) and torch.all(pool.v == 0)
         assert pool.max_batch == 3 and pool.max_seq_len == 16
+        assert pool.scratch_pos == 16
 
     def test_layer_returns_writable_views(self):
         pool = make_pool()
         k1, v1 = pool.layer(1)
-        assert k1.shape == (3, 16, 4, 8)
+        assert k1.shape == (3, 17, 4, 8)
         k1[2, 5] = 7.0
         v1[0, 0] = -1.0
         # Writes through the view land in the pool storage (no copy) ...
@@ -98,7 +101,7 @@ class TestRuntimeNewKVPool:
         pool = runtime.new_kv_pool(config)
 
         assert pool.k.shape == (
-            TINY_ARCH["num_transformers"], 2, 32,
+            TINY_ARCH["num_transformers"], 2, 33,
             TINY_ARCH["num_groups"], TINY_ARCH["head_dim"],
         )
         assert pool.k.dtype == spec.dtype

@@ -114,6 +114,21 @@ def test_serve_argv_maps_flags():
     assert "--in-process" in argv
 
 
+def test_serve_argv_says_tristate_flags_both_ways():
+    # Absent = the server's device default, so a pinned false must be SAID.
+    cfg = deep({"server": {
+        "shape_buckets": True, "warmup_shapes": True, "cuda_graphs": False,
+    }})
+    argv = serve_argv(parse_run_config(cfg).cells[0].server)
+    assert "--shape-buckets" in argv
+    assert "--warmup-shapes" in argv
+    assert "--no-cuda-graphs" in argv
+
+    cfg = deep({"server": {"cuda_graphs": True}})
+    argv = serve_argv(parse_run_config(cfg).cells[0].server)
+    assert "--cuda-graphs" in argv
+
+
 def test_load_from_toml_file(tmp_path):
     p = tmp_path / "smoke.toml"
     p.write_text(

@@ -51,7 +51,10 @@ def round_up_to(value: int, menu: list[int] | tuple[int, ...]) -> int:
 FILLER_SPEC = (0, 0, 0)
 """A filler row's (slot, start_pos, num_new): reads slot 0's history under
 the causal mask, writes nothing, and its output row is garbage nobody
-gathers. Appended after the real rows, so real row indices are stable."""
+gathers. Appended after the real rows, so real row indices are stable.
+(One exception to "writes nothing": on the CUDA-graph replay path the
+write map is padded to the batch bucket, so a filler row writes garbage
+to the pool's scratch position column — kv_pool.py, graphs.py.)"""
 
 
 def shape_step(

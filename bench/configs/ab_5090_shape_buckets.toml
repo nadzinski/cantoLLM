@@ -26,6 +26,7 @@ batch_max_seq_len = 10240
 max_tokens_per_step = 512
 shape_buckets = true
 warmup_shapes = true
+cuda_graphs = false
 
 [server.matrix]
 attention = ["padded", "sdpa"]
