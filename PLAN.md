@@ -435,9 +435,9 @@ default-on for CUDA alongside sdpa+buckets+warmup, suite green on CPU
 with the CUDA tests skipped. The viz CUDA-graphs tab was rebuilt as a
 full textbook chapter (gr-learning format) as the learning run-up; the
 toy exercise session is deferred, not dropped. 5090 validation ran
-2026-08-07 (`ab_5090_cudagraphs{,_longctx}` run dirs + their
-`agent-summary.md` are the record; `cuda-graphs-results.md` write-up
-still owed): first hardware contact caught one real bug — the device-move
+2026-08-07 (`cuda-graphs-results.md` is the write-up; the
+`ab_5090_cudagraphs{,_longctx}` run dirs + their `agent-summary.md` are
+the raw record): first hardware contact caught one real bug — the device-move
 gate in `ModelRuntime.forward_batched` dropped the seeded write map and
 invalidated capture, the design note's own §4 hazard (fixed, 40fbcf9) —
 then everything cleared with room to spare: launches/step 1859 → 50,
