@@ -1,11 +1,14 @@
 # Design note: CUDA graphs for steady-state decode (Phase 3)
 
-**Status: implemented 2026-08-05, awaiting 5090 validation.** Landed as
-designed (wrapper `engine/batching/graphs.py`, write-map padding with the
-scratch position column, `BatchMeta.seed_kv_write_map`, engine/CLI/bench
-wiring; suite green on CPU). Still owed: the CUDA-marked tests, the
-`profile_step` recheck, and the A/B (`ab_5090_cudagraphs{,_longctx}.toml`)
-against §6's predictions, which stand unedited. Background reading: the viz
+**Status: implemented 2026-08-05, validated on the 5090 2026-08-07.**
+Landed as designed (wrapper `engine/batching/graphs.py`, write-map padding
+with the scratch position column, `BatchMeta.seed_kv_write_map`,
+engine/CLI/bench wiring). The validation record is
+`cuda-graphs-results.md`: every §7 gate cleared; §6's predictions stand
+unedited below and are graded there (two missed, both conservatively).
+First hardware contact also cashed in §4's cached-property hazard for
+real — a device-compare `replace()` upstream dropped the seeded write map
+and invalidated capture (fixed, `40fbcf9`). Background reading: the viz
 CUDA-graphs chapter (`viz/index.html#/cudagraphs`) and its committed capture
 record (`viz/captures/cudagraphs-2026-07-26/`); `step-profiling.md` for the
 target.
