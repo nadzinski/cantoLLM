@@ -340,9 +340,15 @@ class Qwen3(nn.Module):
 
         The last-token gather happens BEFORE output_RMSNorm + output_layer,
         so (B, S, vocab) logits are never materialized (~150 MB per 512-wide
-        row for Qwen3's 151k vocab in bf16). v1 runs the lm_head for every
-        row, including mid-prefill ones; skipping those is a Phase 3 perf
-        TODO. The attention math itself lives on the method's
+        row for Qwen3's 151k vocab in bf16). The lm_head still runs for
+        every row, including mid-prefill ones whose logits nobody samples:
+        skipping them was considered and dropped (2026-08-08,
+        torch-compile-design.md §9). The projection is bound by its single
+        weight read (~311 MB in bf16 at 0.6B), not by row count, so the
+        skip saves under 1% and only on all-mid-prefill steps, while making
+        "rows needing logits" a data-dependent shape where the shape
+        vocabulary, graph capture, and torch.compile all want uniformity.
+        The attention math itself lives on the method's
         `forward_batched` (step 5).
         """
         self._validate_batched(meta, pool)

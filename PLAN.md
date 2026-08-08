@@ -385,7 +385,7 @@ The target is worth optimizing because its shape is stable — no major refactor
 invalidate the work (paged KV in Phase 4 _will_ reshape the attention path, but in a
 well-contained way).
 
-**Status (2026-08-07):** In progress. Opened with step profiling
+**Status (2026-08-08):** In progress. Opened with step profiling
 (`step-profiling.md`): the decode floor is CPU dispatch — ~2700 CUDA API calls
 per step, GPU ~60% idle — and the top two sinks are fixed (ragged KV write
 vectorized to one gather+scatter per tensor via `KVWriteMap`; sampling
@@ -434,7 +434,7 @@ chunks): `GraphedBatchedForward` + scratch position column on the pool +
 default-on for CUDA alongside sdpa+buckets+warmup, suite green on CPU
 with the CUDA tests skipped. The viz CUDA-graphs tab was rebuilt as a
 full textbook chapter (gr-learning format) as the learning run-up; the
-toy exercise session is deferred, not dropped. 5090 validation ran
+toy exercise session was permanently deferred (2026-08-08). 5090 validation ran
 2026-08-07 (`cuda-graphs-results.md` is the write-up; the
 `ab_5090_cudagraphs{,_longctx}` run dirs + their `agent-summary.md` are
 the raw record): first hardware contact caught one real bug — the device-move
@@ -446,7 +446,17 @@ then everything cleared with room to spare: launches/step 1859 → 50,
 rate 100%, greedy token streams bit-identical across arms, and the two
 §6 misses were both conservative (capture bill 3.4–5 s, not 40–90 s;
 long_context +15–88%, not noise — its decode tail was dispatch-bound
-too). Open: `torch.compile`; the H100 day.
+too). torch.compile design note landed 2026-08-08
+(`torch-compile-design.md`): compile the model's batched forward with the
+host-side loops hoisted, dynamic dims with the artifact count (fully
+dynamic vs per batch bucket) as the A/B experiment, prefill served by the
+same artifacts, graph capture recording the fused kernels; default off
+until the A/B; predictions on record in the note. The lm_head
+mid-prefill-row skip (model.py TODO) was dropped the same day: the
+projection is bound by its single weight read, not row count, so the
+skip saves under 1% and would add a data-dependent shape where the
+shape work wants uniformity; the model.py docstring records it. Open:
+the compile implementation + 5090 A/B per the note; the H100 day.
 
 **Core:**
 
