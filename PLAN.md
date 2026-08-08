@@ -385,7 +385,7 @@ The target is worth optimizing because its shape is stable — no major refactor
 invalidate the work (paged KV in Phase 4 _will_ reshape the attention path, but in a
 well-contained way).
 
-**Status (2026-08-05):** In progress. Opened with step profiling
+**Status (2026-08-07):** In progress. Opened with step profiling
 (`step-profiling.md`): the decode floor is CPU dispatch — ~2700 CUDA API calls
 per step, GPU ~60% idle — and the top two sinks are fixed (ragged KV write
 vectorized to one gather+scatter per tensor via `KVWriteMap`; sampling
@@ -434,9 +434,19 @@ chunks): `GraphedBatchedForward` + scratch position column on the pool +
 default-on for CUDA alongside sdpa+buckets+warmup, suite green on CPU
 with the CUDA tests skipped. The viz CUDA-graphs tab was rebuilt as a
 full textbook chapter (gr-learning format) as the learning run-up; the
-toy exercise session is deferred, not dropped. Open: 5090 validation
-(CUDA tests, profile_step recheck, ab_5090_cudagraphs A/B vs the design
-note's §6 predictions); `torch.compile`; the H100 day.
+toy exercise session is deferred, not dropped. 5090 validation ran
+2026-08-07 (`ab_5090_cudagraphs{,_longctx}` run dirs + their
+`agent-summary.md` are the record; `cuda-graphs-results.md` write-up
+still owed): first hardware contact caught one real bug — the device-move
+gate in `ModelRuntime.forward_batched` dropped the seeded write map and
+invalidated capture, the design note's own §4 hazard (fixed, 40fbcf9) —
+then everything cleared with room to spare: launches/step 1859 → 50,
+16-row decode p50 10.43 → 5.93 ms (the GPU-busy floor), short_chat c=16
+1457 → 2466 tok/s (+69% vs the +30–55% predicted), decode-step replay
+rate 100%, greedy token streams bit-identical across arms, and the two
+§6 misses were both conservative (capture bill 3.4–5 s, not 40–90 s;
+long_context +15–88%, not noise — its decode tail was dispatch-bound
+too). Open: `torch.compile`; the H100 day.
 
 **Core:**
 
