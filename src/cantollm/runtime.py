@@ -96,13 +96,19 @@ class ModelRuntime:
         they move to the model's device.
         """
         input_ids = input_ids.to(self.device)
-        if meta.positions.device != self.device:
+        # Move-gate by `.to` identity, not device equality: a bare "cuda"
+        # self.device compares unequal to a tensor's resolved "cuda:0", and
+        # `replace` on an already-on-device meta would drop a seeded
+        # kv_write_map (graph capture's static buffers) and rebuild it
+        # mid-recording — the H2D copy invalidates the capture.
+        positions = meta.positions.to(self.device)
+        if positions is not meta.positions:
             meta = replace(
                 meta,
                 slots=meta.slots.to(self.device),
                 start_pos=meta.start_pos.to(self.device),
                 num_new=meta.num_new.to(self.device),
-                positions=meta.positions.to(self.device),
+                positions=positions,
             )
         return self.model.forward_batched(input_ids, meta, pool)
 
