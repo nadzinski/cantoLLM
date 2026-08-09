@@ -14,12 +14,12 @@ written. The write map, however, is NOT left at the fillers' natural
 length of zero: torch.compile artifacts guard on the map length, 0-sized
 dims specialize, and a sweep of empty maps would leave the first real
 request to pay a compile stall — the guard-set gap found on the 2026-08-08
-5090 round. So each meta gets a seeded map with one entry per row, every
-entry parked on the pool's scratch column (the same convention graph
-replay uses for filler rows): compile sees the traffic map lengths
-(1 specializes, >= 2 goes symbolic) and the writes land where no gather
-ever reads. Only the scratch column gets dirty; the logical pool stays
-untouched.
+5090 round. So each meta gets a seeded map whose entries all park on the
+pool's scratch column (the same convention graph replay uses for filler
+rows), with lengths chosen so compile sees both traffic populations
+(1 specializes, >= 2 goes symbolic — see the loop comment). The writes
+land where no gather ever reads: only the scratch column gets dirty, the
+logical pool stays untouched.
 
 Everything here is built as CPU tensors, exactly like the scheduler
 builds a traffic step, so the warm-up forwards enter the runtime front
@@ -67,17 +67,20 @@ def warmup_meta(
     )
 
 
-def scratch_write_map(batch: int, scratch_pos: int) -> KVWriteMap:
-    """A seeded map with one entry per row, all parked on the scratch
-    column: row r writes its offset 0 into (slot r, scratch). Gives the
-    warm-up sweep the map lengths real traffic produces without touching
-    a single logical pool position. CPU tensors; the runtime front moves
-    them with the rest of the meta."""
+def scratch_write_map(
+    length: int, batch: int, scratch_pos: int
+) -> KVWriteMap:
+    """A seeded map of `length` entries, all parked on the scratch column.
+    Rows cycle over the batch (entries stay valid for any length); offsets
+    stay 0, so entries are valid at any width. Duplicate destinations are
+    fine: every write lands on scratch cells no gather ever reads. CPU
+    tensors; the runtime front moves them with the rest of the meta."""
+    rows = torch.arange(length, dtype=torch.int64) % batch
     return KVWriteMap(
-        row=torch.arange(batch, dtype=torch.int64),
-        off=torch.zeros(batch, dtype=torch.int64),
-        slot=torch.arange(batch, dtype=torch.int64),
-        pos=torch.full((batch,), scratch_pos, dtype=torch.int64),
+        row=rows,
+        off=torch.zeros(length, dtype=torch.int64),
+        slot=rows.clone(),
+        pos=torch.full((length,), scratch_pos, dtype=torch.int64),
     )
 
 
@@ -94,10 +97,30 @@ def warmup_shape_vocabulary(
         config.kv_bucket,
     )
     t0 = time.perf_counter()
+    # Seeded map lengths alternate between 1 and max(2, batch) along each
+    # (batch, width) family's kv sweep. Compile needs BOTH artifacts per
+    # family: torch's 0/1 rule specializes a length-1 map (a step with one
+    # real new token — a lone decode row, or a lone prefill row's final
+    # short chunk), while any length >= 2 goes symbolic and serves every
+    # other real-token count. Seeding only length = batch left the
+    # batch-1 prefill families specialized at length 1, and the first
+    # 1-row prefill chunk after Ready paid a compile stall (the 2026-08-08
+    # A/B's last tripwire find). Alternating inside the family costs zero
+    # extra forwards and gives each artifact lineage the >= 2 kv values
+    # automatic dynamic needs to promote the span.
+    family = None
+    idx = 0
     for batch, width, kv_len in vocabulary:
+        if (batch, width) != family:
+            family, idx = (batch, width), 0
+        else:
+            idx += 1
+        length = 1 if idx % 2 == 0 else max(2, batch)
         input_ids = torch.zeros((batch, width), dtype=torch.int64)
         meta = warmup_meta(batch, width, kv_len, device)
-        meta.seed_kv_write_map(scratch_write_map(batch, pool.scratch_pos))
+        meta.seed_kv_write_map(
+            scratch_write_map(length, batch, pool.scratch_pos)
+        )
         forward_fn(input_ids, meta, pool)
     if device.type == "cuda":
         torch.cuda.synchronize()
