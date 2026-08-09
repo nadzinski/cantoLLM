@@ -1,0 +1,112 @@
+loading 0.6B...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_inductor/lowering.py:2156: UserWarning: Torchinductor does not support code generation for complex operators. Performance may be worse than eager.
+  warnings.warn(
+V0808 20:43:23.794000 13511 torch/_dynamo/guards.py:4514] [0/1] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 20:43:23.794000 13511 torch/_dynamo/guards.py:4514] [0/1] [__recompiles]     triggered by the following guard failure(s):
+V0808 20:43:23.794000 13511 torch/_dynamo/guards.py:4514] [0/1] [__recompiles]     - 0/0: meta.max_history_len == 256                              # j = torch.arange(meta.max_history_len, device=device)  # src/cantollm/models/attention/padded.py:67 in build_batched_mask
+V0808 20:43:41.056000 13511 torch/_dynamo/guards.py:4514] [0/2] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 20:43:41.056000 13511 torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     triggered by the following guard failure(s):
+V0808 20:43:41.056000 13511 torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 20:43:41.056000 13511 torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 20:44:22.504000 13511 torch/_dynamo/guards.py:4514] [0/3] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 20:44:22.504000 13511 torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     triggered by the following guard failure(s):
+V0808 20:44:22.504000 13511 torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/2: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 20:44:22.504000 13511 torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 20:44:22.504000 13511 torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 20:45:00.895000 13511 torch/_dynamo/guards.py:4514] [0/4] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 20:45:00.895000 13511 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     triggered by the following guard failure(s):
+V0808 20:45:00.895000 13511 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/3: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 20:45:00.895000 13511 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/2: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 20:45:00.895000 13511 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 20:45:00.895000 13511 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 20:46:22.519000 13511 torch/_dynamo/guards.py:4514] [0/5] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 20:46:22.519000 13511 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     triggered by the following guard failure(s):
+V0808 20:46:22.519000 13511 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/4: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 0, actual 64
+V0808 20:46:22.519000 13511 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/3: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 20:46:22.519000 13511 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 0, actual 64
+V0808 20:46:22.519000 13511 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 20:46:22.519000 13511 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 20:46:59.239000 13511 torch/_dynamo/guards.py:4514] [0/6] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 20:46:59.239000 13511 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     triggered by the following guard failure(s):
+V0808 20:46:59.239000 13511 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/5: 2 <= input_ids.size()[1] <= 2147483647  # causal_bound = meta.start_pos.to(device)[:, None] + i[None, :]  # src/cantollm/models/attention/padded.py:68 in build_batched_mask (_prims_common/__init__.py:314 in is_contiguous) and (_inductor/codegen/simd.py:1860 in can_use_32bit_indexing)
+V0808 20:46:59.239000 13511 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/4: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 0, actual 1
+V0808 20:46:59.239000 13511 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 0, actual 1
+V0808 20:46:59.239000 13511 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 0, actual 1
+V0808 20:46:59.239000 13511 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/1: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 0, actual 1
+V0808 20:46:59.239000 13511 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 0, actual 1
+V0808 20:48:06.170000 13511 torch/_dynamo/guards.py:4514] [0/7] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 20:48:06.170000 13511 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     triggered by the following guard failure(s):
+V0808 20:48:06.170000 13511 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/6: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 20:48:06.170000 13511 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/5: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 20:48:06.170000 13511 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/4: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 0, actual 256
+V0808 20:48:06.170000 13511 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/3: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 20:48:06.170000 13511 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/2: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 20:48:06.170000 13511 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 8
+V0808 20:48:06.170000 13511 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 8
+V0808 20:48:45.429000 13511 torch/_dynamo/guards.py:4514] [0/8] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 20:48:45.429000 13511 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     triggered by the following guard failure(s):
+V0808 20:48:45.429000 13511 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/7: 2 <= input_ids.size()[1]  # masked_attn = attn.masked_fill(broadcasted_mask, -float("inf"))  # src/cantollm/models/attention/padded.py:161 in _attend_batched (_refs/__init__.py:443 in _broadcast_shapes)
+V0808 20:48:45.429000 13511 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/6: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 20:48:45.429000 13511 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/5: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 20:48:45.429000 13511 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/4: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 0, actual 8
+V0808 20:48:45.429000 13511 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 0, actual 8
+V0808 20:48:45.429000 13511 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/2: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 20:48:45.429000 13511 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 8
+V0808 20:48:45.429000 13511 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 8
+/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/profiler/profiler.py:217: UserWarning: Warning: Profiler clears events at the end of each cycle.Only events from the current cycle will be reported.To keep events across cycles, set acc_events=True.
+  _warn_once(
+Downloading 0.6B model weights...
+Creating model...
+Loading pretrained weights...
+
+=== step() decomposition, ms/step over 200 decode steps ===
+rows   total      plan build_ids      meta  fwd_call  fwd_sync    sample      rest
+   1  224.29     0.008     0.031     0.042     4.410   219.534     0.049     0.215
+   8  224.33     0.010     0.044     0.035     4.283   219.319     0.097     0.538
+  16  226.65     0.012     0.063     0.038     4.227   221.239     0.161     0.905
+
+=== profiler, 16 rows x 20 steps ===
+cudaLaunchKernel calls/step: 218
+
+--- top 12 by self CUDA time ---
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+## Call CompiledFxGraph fvuqjq2rzw2xlxrxrbupdkcbm7bf...         0.00%       0.000us         0.00%       0.000us       0.000us        4.473s       100.36%        4.473s     223.644ms            20  
+                              triton_poi_fused_copy__76         0.00%     120.930us         0.00%     201.040us       5.026us     688.860ms        15.46%     688.860ms      17.222ms            40  
+                              triton_poi_fused_copy__76         0.00%       0.000us         0.00%       0.000us       0.000us     688.860ms        15.46%     688.860ms      17.222ms            40  
+                                    triton_poi_fused_58         0.00%     109.510us         0.00%     189.020us       4.725us     587.846ms        13.19%     587.846ms      14.696ms            40  
+                                    triton_poi_fused_58         0.00%       0.000us         0.00%       0.000us       0.000us     587.846ms        13.19%     587.846ms      14.696ms            40  
+                                    triton_poi_fused_49         0.00%     106.210us         0.00%     184.500us       4.613us     586.620ms        13.16%     586.620ms      14.666ms            40  
+                                    triton_poi_fused_49         0.00%       0.000us         0.00%       0.000us       0.000us     586.620ms        13.16%     586.620ms      14.666ms            40  
+                                    triton_poi_fused_31         0.00%     123.751us         0.00%     203.881us       5.097us     586.168ms        13.15%     586.168ms      14.654ms            40  
+                                    triton_poi_fused_31         0.00%       0.000us         0.00%       0.000us       0.000us     586.168ms        13.15%     586.168ms      14.654ms            40  
+                                    triton_poi_fused_67         0.00%     112.180us         0.00%     190.330us       4.758us     581.620ms        13.05%     581.620ms      14.540ms            40  
+                                    triton_poi_fused_67         0.00%       0.000us         0.00%       0.000us       0.000us     581.620ms        13.05%     581.620ms      14.540ms            40  
+                                    triton_poi_fused_21         0.00%     123.890us         0.00%     208.380us       5.210us     579.529ms        13.00%     579.529ms      14.488ms            40  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 4.499s
+Self CUDA time total: 4.457s
+
+
+--- top 12 by self CPU time ---
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                  cudaStreamSynchronize        97.01%        4.365s        97.01%        4.365s       8.083ms       0.000us         0.00%       0.000us       0.000us           540  
+## Call CompiledFxGraph fvuqjq2rzw2xlxrxrbupdkcbm7bf...         0.90%      40.675ms         2.67%     120.332ms       6.017ms       0.000us         0.00%        4.447s     222.361ms            20  
+                                         cuLaunchKernel         0.51%      23.025ms         0.51%      23.025ms       1.906us       0.000us         0.00%       0.000us       0.000us         12080  
+                                               aten::mm         0.26%      11.822ms         0.43%      19.242ms       4.884us      42.663ms         0.96%      42.663ms      10.828us          3940  
+                                       cudaLaunchKernel         0.21%       9.236ms         0.21%       9.236ms       2.118us       0.000us         0.00%       0.000us       0.000us          4360  
+                                            aten::index         0.08%       3.817ms         0.16%       7.014ms       6.262us       1.302ms         0.03%       1.302ms       1.162us          1120  
+                                              aten::bmm         0.08%       3.568ms         0.13%       5.674ms       5.066us       5.321ms         0.12%       5.321ms       4.750us          1120  
+                                          aten::complex         0.06%       2.742ms         0.28%      12.456ms       5.561us       1.215ms         0.03%       2.431ms       1.085us          2240  
+                                              aten::mul         0.06%       2.502ms         0.11%       4.825ms       4.308us       1.270ms         0.03%       1.271ms       1.135us          1120  
+triton_poi_fused__to_copy_cat_index_index_put_select...         0.04%       1.810ms         0.06%       2.839ms       5.069us       1.059ms         0.02%       1.059ms       1.892us           560  
+triton_poi_fused__unsafe_view_index_index_put_select...         0.04%       1.708ms         0.06%       2.746ms       4.903us       1.239ms         0.03%       1.239ms       2.212us           560  
+triton_per_fused__to_copy__unsafe_view_add_mean_mul_...         0.03%       1.519ms         0.06%       2.585ms       4.615us     637.792us         0.01%     637.792us       1.139us           560  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 4.499s
+Self CUDA time total: 4.457s
+

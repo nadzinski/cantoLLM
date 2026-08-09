@@ -1,0 +1,5 @@
+pool: 3.50 GiB, allocated 3.50 GiB
+eager  stacked:     0.29 ms  peak 3.50 GiB
+compiled stacked:  104.74 ms  peak 11.50 GiB   <- view-of-input mutation
+eager  per-layer:   0.29 ms  peak 3.50 GiB
+compiled per-layer:  0.13 ms  peak 3.50 GiB   <- direct input mutation

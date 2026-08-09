@@ -1,0 +1,57 @@
+loading 0.6B...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_inductor/lowering.py:2156: UserWarning: Torchinductor does not support code generation for complex operators. Performance may be worse than eager.
+  warnings.warn(
+Downloading 0.6B model weights...
+Creating model...
+Loading pretrained weights...
+Traceback (most recent call last):
+  File "/tmp/claude-1000/-home-nadia-personal-projects-cantoLLM/6958dca0-9879-409e-8c83-8baed8279d9a/scratchpad/profile_step_compile.py", line 105, in <module>
+    sched = scheduler_from_runtime(runtime, config48)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nadia/personal-projects/cantoLLM/src/cantollm/engine/batching/engine.py", line 88, in scheduler_from_runtime
+    warmup_shape_vocabulary(runtime.forward_batched, pool, config)
+  File "/home/nadia/personal-projects/cantoLLM/src/cantollm/engine/batching/warmup.py", line 66, in warmup_shape_vocabulary
+    forward_fn(input_ids, meta, pool)
+  File "/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nadia/personal-projects/cantoLLM/src/cantollm/runtime.py", line 127, in forward_batched
+    return self._compiled_batched(input_ids, meta, pool)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py", line 953, in compile_wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py", line 363, in forward_batched_impl
+    def forward_batched_impl(self, input_ids, meta, pool):
+  File "/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_dynamo/eval_frame.py", line 1181, in _fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_functorch/aot_autograd.py", line 1148, in forward
+    return compiled_fn(full_args)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 357, in runtime_wrapper
+    all_outs = call_func_at_runtime_with_args(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_functorch/_aot_autograd/utils.py", line 134, in call_func_at_runtime_with_args
+    out = normalize_as_list(f(args))
+                            ^^^^^^^
+  File "/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 1962, in __call__
+    return self.compiled_fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 531, in wrapper
+    return compiled_fn(runtime_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 729, in inner_fn
+    outs = compiled_fn(args)
+           ^^^^^^^^^^^^^^^^^
+  File "/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_inductor/output_code.py", line 638, in __call__
+    return self.current_callable(inputs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_inductor/utils.py", line 3220, in run
+    out = model(new_inputs)
+          ^^^^^^^^^^^^^^^^^
+  File "/tmp/torchinductor_nadia/wl/cwljpcghvcyf34awls3ffamx2fg2hhiezijtmzolytyl4dcoeehb.py", line 6008, in call
+    buf191 = empty_strided_cuda((28, 48, 4097, 8, 128), (201375744, 4195328, 1024, 128, 1), torch.bfloat16)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 10.50 GiB. GPU 0 has a total capacity of 31.32 GiB of which 4.89 GiB is free. Including non-PyTorch memory, this process has 26.05 GiB memory in use. Of the allocated memory 25.44 GiB is allocated by PyTorch, and 33.08 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

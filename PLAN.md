@@ -464,7 +464,21 @@ vocabulary (findings recorded in the note's §7); the implementation
 landed as designed in three chunks (runtime-front hoists +
 `torch_compile` config, the dynamic|batch-bucket strategy knob with dim
 marking, CLI/bench assembly + `ab_5090_compile{,_longctx}.toml`), suite
-green, default off. Open: the 5090 A/B per the note; the H100 day.
+green, default off. The 5090 A/B attempt (2026-08-08) was blocked before
+the bench runs: on the real Inductor backend (which the CPU suite's
+backend="eager" tests never exercise), the KV scatter through
+`pool.layer(i)` select views — a view-of-input mutation — gets
+functionalized into pool-scale copy chains instead of staying in-place,
+making a compiled decode step ~23x slower than eager (213 vs 9 ms at
+serve geometry, OOM at the 48-slot probe geometry); the §4 hazard, in a
+far worse form than the note predicted. Root cause isolated to a
+standalone repro that also validates the fix (per-layer pool tensors
+compile to an in-place scatter, 0.13 ms); evidence + graded predictions
+in `bench/history/2026-08-08T204000_c4c7f1e_compile-5090-blocked/`.
+Open: the pool-layout decision (per-layer tensors vs write-through-base)
+and a warm-up gap found en route (filler metas' length-0 write maps
+don't cover the traffic guard set, so first real steps recompile); then
+the A/B re-run per the note; the H100 day.
 
 **Core:**
 
