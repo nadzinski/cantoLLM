@@ -84,6 +84,19 @@ MODEL_CONFIGS: dict[str, dict] = {
         "head_dim": 128,
         "dtype": torch.bfloat16,
     },
+    # ~65.5 GB of bf16 weights: H100-class geometry only (h100-plan.md).
+    "32B": {
+        "token_count": 151_936,
+        "max_seq_len": 40_960,
+        "rope_theta": 1_000_000.0,
+        "token_embedding_dim": 5120,
+        "num_heads": 64,
+        "num_transformers": 64,
+        "expanded_dim": 25600,
+        "num_groups": 8,
+        "head_dim": 128,
+        "dtype": torch.bfloat16,
+    },
 }
 
 

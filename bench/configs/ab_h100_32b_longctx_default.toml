@@ -1,0 +1,42 @@
+# The long-context half of the 32B A/B on 1x H100 80GB, arm 1 of 2: the
+# full CUDA serve default. Pair of ab_h100_32b_longctx_eager.toml; see
+# ab_h100_32b_default.toml for why arms are paired files.
+#
+# Geometry: 2 slots x 10240 (~5.2 GB KV pool; the 5090 rounds' 4 x 10240
+# would put the pool at ~10.5 GB next to ~65.5 GB of weights, past
+# comfortable on 80 GB). Concurrency tops out at 2 to match. Repeats 2,
+# not 3: 32B long-context cells are slow, and the second workload beat
+# the third repeat in the session-time budget (h100-plan.md §3).
+schema_version = 1
+name = "ab-h100-32b-longctx-default"
+
+[server]
+model = "32B"
+engine = "batched"
+device = "cuda"
+port = 8378
+health_timeout_s = 1800
+max_batch = 2
+batch_max_seq_len = 10240
+max_tokens_per_step = 512
+attention = "sdpa"
+shape_buckets = true
+warmup_shapes = true
+cuda_graphs = true
+torch_compile = true
+torch_compile_strategy = "dynamic"
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 2
+repeats = 2
+seed = 0
+
+[[points]]
+workload = "long_context"
+mode = "closed"
+concurrency = [1, 2]
+requests_per_level = 16

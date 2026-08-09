@@ -5,6 +5,8 @@ cd "$(dirname "$0")"
 
 REGION="${REGION:-us-west-2}"
 TYPE="${INSTANCE_TYPE:-g6.xlarge}"
+ROOT_GB="${ROOT_VOLUME_GB:-100}"
+AZ="${AZ:-}" # optional AZ pin, e.g. AZ=us-west-2a for capacity dodging
 
 echo "== Pricing check: ${TYPE} in ${REGION} =="
 ONDEMAND=$(aws pricing get-products --region us-east-1 --service-code AmazonEC2 \
@@ -31,7 +33,9 @@ read -r -p "Launch ${TYPE} on-demand in ${REGION}? [y/N] " ok
 [[ "${ok}" == "y" || "${ok}" == "Y" ]] || { echo "aborted"; exit 1; }
 
 [[ -d .terraform ]] || terraform init -input=false
-terraform apply -auto-approve -var "ssh_cidr=${MYIP}/32" -var "instance_type=${TYPE}" -var "region=${REGION}"
+EXTRA_VARS=(-var "root_volume_gb=${ROOT_GB}")
+[[ -n "${AZ}" ]] && EXTRA_VARS+=(-var "availability_zone=${AZ}")
+terraform apply -auto-approve -var "ssh_cidr=${MYIP}/32" -var "instance_type=${TYPE}" -var "region=${REGION}" "${EXTRA_VARS[@]}"
 
 IP=$(terraform output -raw public_ip)
 echo

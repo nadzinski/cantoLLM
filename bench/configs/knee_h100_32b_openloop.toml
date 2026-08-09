@@ -1,0 +1,42 @@
+# Open-loop knee hunt for the 32B on 1x H100 80GB, full serve default:
+# where does one H100 serving a 32B fall over, and what does the TTFT
+# blow-up look like when a decode step costs ~20 ms instead of ~4?
+# The capacity guess (h100-plan.md §4): the bytes-over-bandwidth decode
+# floor puts the 8-slot ceiling near ~400 tok/s ~= 3 rps at 128 output
+# tokens, so the sweep straddles 1-4 rps. Repeats 2: this is the
+# purchased extra of the session, not the headline.
+schema_version = 1
+name = "knee-h100-32b-openloop"
+
+[server]
+model = "32B"
+engine = "batched"
+device = "cuda"
+port = 8377
+health_timeout_s = 1800
+max_batch = 8
+batch_max_seq_len = 4096
+max_tokens_per_step = 512
+attention = "sdpa"
+shape_buckets = true
+warmup_shapes = true
+cuda_graphs = true
+torch_compile = true
+torch_compile_strategy = "dynamic"
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 8
+repeats = 2
+seed = 0
+
+[[points]]
+workload = "short_chat"
+mode = "open"
+arrivals = "poisson"
+rate_rps = [1.0, 1.5, 2.0, 2.5, 3.0, 4.0]
+total_requests = 96
+max_inflight = 256

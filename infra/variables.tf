@@ -10,6 +10,18 @@ variable "instance_type" {
   default     = "g6.xlarge"
 }
 
+variable "root_volume_gb" {
+  description = "Root EBS volume size in GB. The DLAMI eats most of the default 100; big-model sessions (weights land in the HF cache) should raise it, e.g. ROOT_VOLUME_GB=150 for the H100 profile."
+  type        = number
+  default     = 100
+}
+
+variable "availability_zone" {
+  description = "Pin the instance to one AZ. Null lets AWS pick. Scarce types (p5.4xlarge) can hit InsufficientInstanceCapacity in a given AZ; pinning turns a capacity failure into 'try the next AZ'."
+  type        = string
+  default     = null
+}
+
 variable "ssh_public_key" {
   description = "Public key for SSH access (set in terraform.tfvars)"
   type        = string

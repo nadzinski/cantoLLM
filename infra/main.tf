@@ -75,11 +75,12 @@ resource "aws_security_group" "cantollm" {
 resource "aws_instance" "cantollm" {
   ami                    = data.aws_ami.dlami.id
   instance_type          = var.instance_type
+  availability_zone      = var.availability_zone
   key_name               = aws_key_pair.cantollm.key_name
   vpc_security_group_ids = [aws_security_group.cantollm.id]
 
   root_block_device {
-    volume_size = 100 # the DLAMI itself is large; leave headroom for the repo + wheels
+    volume_size = var.root_volume_gb # the DLAMI itself is large; leave headroom for the repo + wheels
     volume_type = "gp3"
   }
 

@@ -136,4 +136,4 @@ def test_download_weights_rejects_invalid_size():
 
 def test_valid_sizes_constant():
     """Sanity check that the exported sizes match the known Qwen3 lineup."""
-    assert VALID_SIZES == ("0.6B", "1.7B", "4B", "8B", "14B")
+    assert VALID_SIZES == ("0.6B", "1.7B", "4B", "8B", "14B", "32B")

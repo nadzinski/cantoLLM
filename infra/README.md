@@ -1,4 +1,4 @@
-# infra/ — on-demand GPU node for CUDA work
+# infra/: on-demand GPU node for CUDA work
 
 Terraform for a single GPU EC2 node in the personal AWS account, used when the
 5090 isn't reachable (travel) or when a task wants a throwaway CUDA box: the
@@ -35,3 +35,29 @@ uv environment provides CUDA torch; the AMI brings only the driver.
   `INSTANCE_TYPE=g5.xlarge ./up.sh` (A10G) as the fallback type.
 - The instance's public IP changes on every up; the scripts always read it
   from `terraform output`.
+
+## The H100 profile
+
+For big-model sessions (h100-plan.md was the first):
+
+```
+INSTANCE_TYPE=p5.4xlarge ROOT_VOLUME_GB=150 ./up.sh
+```
+
+- **p5.4xlarge** = 1x H100 80GB, 16 vCPU, 256 GiB RAM, 3.8 TB local NVMe,
+  ~$6.88/hr on-demand. At that rate an overnight forget is a ~$110 mistake:
+  `./down.sh` the moment the session ends, then verify with
+  `aws ec2 describe-instances`.
+- **Quota**: "Running On-Demand P instances" (`L-417A185B`, us-west-2) is
+  vCPU-denominated and 0 on a fresh account; p5.4xlarge needs 16. Request
+  raised 2026-08-09; approval took about a day for the G-quota equivalent.
+- **Weights go on the local NVMe**, not the root EBS volume: gp3 baseline
+  throughput is 125 MB/s and a 32B is ~65 GB. `weights.py` downloads into
+  the repo tree (`src/cantollm/models/model_data/`), so after the first
+  `./sync.sh`, symlink that dir onto the NVMe on the node **before**
+  anything downloads:
+  `mkdir -p /opt/dlami/nvme/model_data && rm -rf ~/cantoLLM/src/cantollm/models/model_data && ln -s /opt/dlami/nvme/model_data ~/cantoLLM/src/cantollm/models/model_data`
+  (also `export HF_HOME=/opt/dlami/nvme/hf` for the hub cache). The NVMe
+  is wiped on stop/terminate, which is fine: the node is a throwaway.
+- If capacity fails in one AZ, pin another with `AZ=us-west-2b ./up.sh`
+  (any of a/b/c/d) rather than retrying blind.

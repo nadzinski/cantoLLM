@@ -7,7 +7,7 @@ import torch
 from huggingface_hub import hf_hub_download, snapshot_download
 from safetensors.torch import load_file
 
-VALID_SIZES = ("0.6B", "1.7B", "4B", "8B", "14B")
+VALID_SIZES = ("0.6B", "1.7B", "4B", "8B", "14B", "32B")
 MODEL_DATA_DIR = Path(__file__).parent.parent / "model_data"
 
 
@@ -40,7 +40,7 @@ def download_weights(
     """Download Qwen3 weights from HuggingFace and return the local dir and weight dict.
 
     Args:
-        model_size: One of "0.6B", "1.7B", "4B", "8B", "14B".
+        model_size: One of "0.6B", "1.7B", "4B", "8B", "14B", "32B".
         use_instruct: If True, download the instruct model; otherwise the base model.
 
     Returns:

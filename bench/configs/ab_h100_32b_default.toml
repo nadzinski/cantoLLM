@@ -1,0 +1,56 @@
+# 32B on 1x H100 80GB, arm 1 of 2: the full CUDA serve default (sdpa +
+# shape buckets + warm-up + graphs + compile). Its pair is
+# ab_h100_32b_eager.toml, identical except every Phase-3 piece switched
+# off; the two files together are one A/B. Paired files rather than a
+# [server.matrix] because the matrix is a per-key cross product and the
+# five flags flip together (2 arms, not 32).
+#
+# The question this pair answers (h100-plan.md §1): the stack's 0.6B wins
+# came mostly from erasing per-step CPU overhead; a 32B decode step is
+# ~20 ms of genuine GPU work, so how much of the win survives on a model
+# where compute dominates?
+#
+# Geometry: 8 slots x 4096 (~8.6 GB KV pool next to ~65.5 GB of weights;
+# 16 slots does not fit). OOM ladder and PYTORCH_CUDA_ALLOC_CONF are in
+# the h100-plan.md runbook. health_timeout_s is doubled: the 32B Ready
+# bill (load + warm-up sweep + capture + cold Inductor compile) is
+# itself a recorded number, predicted 5-10 min.
+schema_version = 1
+name = "ab-h100-32b-default"
+
+[server]
+model = "32B"
+engine = "batched"
+device = "cuda"
+port = 8378
+health_timeout_s = 1800
+max_batch = 8
+batch_max_seq_len = 4096
+max_tokens_per_step = 512
+attention = "sdpa"
+shape_buckets = true
+warmup_shapes = true
+cuda_graphs = true
+torch_compile = true
+torch_compile_strategy = "dynamic"
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 4
+repeats = 3
+seed = 0
+
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [4, 8]
+requests_per_level = 32
+
+[[points]]
+workload = "code"
+mode = "closed"
+concurrency = [8]
+requests_per_level = 24
