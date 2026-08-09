@@ -350,9 +350,22 @@ class Qwen3(nn.Module):
         vocabulary, graph capture, and torch.compile all want uniformity.
         The attention math itself lives on the method's
         `forward_batched` (step 5).
+
+        Validation is host-side Python over `meta.rows`; the tensor work
+        lives in `forward_batched_impl` so torch.compile can trace it
+        without host code (torch-compile-design.md §3.1). This entry stays
+        the validated front for eager callers; the compiled serving path
+        calls `_validate_batched` + the compiled impl itself.
         """
         self._validate_batched(meta, pool)
+        return self.forward_batched_impl(input_ids, meta, pool)
 
+    def forward_batched_impl(self, input_ids, meta, pool):
+        """The traced region: pure tensor dataflow, no host-side Python
+        over `meta.rows` (traced reads of the rows list guard on per-step
+        values and recompile every step) and no `kv_write_map` derivation
+        (the cached_property's miss path takes a lock Dynamo cannot
+        trace); callers validate and force the map first."""
         x = self.initial_embedding_layer(input_ids)
 
         # One mask per step — per-row history lengths are the same at every

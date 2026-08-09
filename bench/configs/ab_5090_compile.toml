@@ -1,0 +1,71 @@
+# Phase-3 A/B, round 4: does torch.compile shrink the GPU-busy residual?
+# After CUDA graphs, decode is GPU-bound (cuda-graphs-results.md: 16-row
+# step p50 5.93 ms, dispatch 0.06 ms); what remains is ~1750 kernels of
+# between-matmul tissue re-reading HBM. This run holds the serve default
+# (sdpa + buckets + warm-up + graphs) and flips torch_compile, with the
+# artifact strategy as the secondary experiment (torch-compile-design.md
+# §3.2): "dynamic" = few artifacts, dims symbolic; "batch-bucket" = one
+# artifact per batch bucket, row count baked into the fused kernels.
+#
+# The matrix is a cross product, so (torch_compile=false, batch-bucket)
+# duplicates the baseline arm: kept deliberately as the repeat-noise
+# reference, the same role the padded+buckets arm played in the
+# shape-buckets A/B.
+#
+# Geometry matches ab_5090_cudagraphs (16 slots, 4096 capacity,
+# decode-heavy workloads); long_context runs in the 10240-slot sibling
+# ab_5090_compile_longctx.toml. Record Ready time per arm cold and warm
+# (Inductor's on-disk cache): the second server spawn of each compiled
+# arm is the warm number.
+#
+# Predictions on record (torch-compile-design.md §6): 16-row decode p50
+# 5.93 -> 4.6-5.4 ms; short_chat c=16 2466 -> 2650-3050 tok/s (+8-24%);
+# kernels/step ~1750 -> 400-700; strategies within 5% of each other;
+# zero recompiles after warm-up. Gates (§7): short_chat c=16 >= +8%,
+# nothing < -3%, warm-cache Ready bill under +30 s.
+schema_version = 1
+name = "ab-5090-compile"
+
+[server]
+model = "0.6B"
+engine = "batched"
+device = "cuda"
+port = 8378
+health_timeout_s = 900
+max_batch = 16
+batch_max_seq_len = 4096
+max_tokens_per_step = 512
+shape_buckets = true
+warmup_shapes = true
+cuda_graphs = true
+
+[server.matrix]
+torch_compile = [false, true]
+torch_compile_strategy = ["dynamic", "batch-bucket"]
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 4
+repeats = 3
+seed = 0
+
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [4, 16]
+requests_per_level = 32
+
+[[points]]
+workload = "code"
+mode = "closed"
+concurrency = [8]
+requests_per_level = 32
+
+[[points]]
+workload = "multi_turn"
+mode = "closed"
+concurrency = [8]
+requests_per_level = 32

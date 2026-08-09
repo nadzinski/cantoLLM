@@ -12,8 +12,8 @@ Fill-in order per continuous-batching-plan.md:
   - `forward_batched` — step 5, hand-written (the attention math).
 Shape contracts live on the `AttentionMethod` protocol docstrings.
 
-`forward_batched` is a template: the KV-pool mechanics (validate, ragged
-write, gather) are shared by every pooled method, and the attention compute
+`forward_batched` is a template: the KV-pool mechanics (ragged write,
+gather) are shared by every pooled method, and the attention compute
 itself lives in `_attend_batched` — the single method `SDPAAttentionMethod`
 overrides. Keeping the mechanics literally the same code means an
 equivalence failure between the two can only be the attend.
@@ -81,8 +81,8 @@ class PaddedAttentionMethod:
         """Mixed prefill/decode batch against a preallocated KV pool layer.
 
         Write each row's new K/V into `layer_k/v[slot, start:start+num_new]`
-        (bounds-assert the write — one overlong row must fail loudly, not
-        corrupt a neighbor slot), then attend each row's queries against its
+        (callers bounds-check host-side before any layer runs; see the
+        comment below), then attend each row's queries against its
         own slot history `[0, start_pos + num_new)`. Vectorize the math,
         loop the writes.
 
@@ -95,18 +95,15 @@ class PaddedAttentionMethod:
           layer_v: same shape as layer_k
           returns: (B, num_new_max, groups, heads_per_group, head_dim)
         """
-        # ragged KV write — validate every row before mutating the pool, so a
-        # bad row can't leave a half-written step behind. The view's last
-        # position is the pool's scratch column (graph-replay parking spot,
-        # kv_pool.py), not real capacity — rows may not write into it.
-        slot_capacity = layer_k.shape[1] - 1
-        for r, (slot_idx, start_pos, num_new) in enumerate(meta.rows):
-            if start_pos + num_new > slot_capacity:
-                raise ValueError(
-                    f"row {r} (slot {slot_idx}) would write positions "
-                    f"[{start_pos}, {start_pos + num_new}) past slot capacity "
-                    f"{slot_capacity}"
-                )
+        # The per-row bounds check ("one overlong row must fail loudly, not
+        # corrupt a neighbor slot") lives host-side in the callers now, not
+        # here: Qwen3._validate_batched proves start + num_new <= slot
+        # capacity for every row before any layer runs (its history checks
+        # imply it), and the graph-replay path re-proves it in
+        # GraphedBatchedForward._replayable. This method must stay pure
+        # tensor dataflow: a traced loop over meta.rows would make
+        # torch.compile guard on per-step row values and recompile every
+        # step (torch-compile-design.md §3.1/§4).
 
         # Optimization: Do the ragged write in one go for all rows using
         # advanced indexing (a mapping in tensors that are created once per
@@ -131,7 +128,7 @@ class PaddedAttentionMethod:
     ) -> torch.Tensor:
         """The attend: each row's queries against its gathered history.
 
-        The KV-pool mechanics (validate, ragged write, gather) live in
+        The KV-pool mechanics (ragged write, gather) live in
         `forward_batched` and are shared by every pooled method; subclasses
         swap only this compute.
 

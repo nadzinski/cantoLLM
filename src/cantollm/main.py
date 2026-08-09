@@ -99,6 +99,11 @@ def cmd_serve(args):
             args.cuda_graphs if args.cuda_graphs is not None
             else warmup_shapes and on_cuda
         )
+        # Unlike the flags above, no device-based auto-on: default off
+        # until the A/B decides (torch-compile-design.md §3.6).
+        torch_compile = (
+            args.torch_compile if args.torch_compile is not None else False
+        )
         if warmup_shapes and not shape_buckets:
             sys.exit("error: --warmup-shapes requires shape buckets "
                      "(an unbounded shape vocabulary cannot be enumerated)")
@@ -108,6 +113,10 @@ def cmd_serve(args):
                      "graph per decode shape of the bounded vocabulary)")
         if cuda_graphs and not on_cuda:
             sys.exit("error: --cuda-graphs needs a CUDA device")
+        if torch_compile and not warmup_shapes:
+            sys.exit("error: --torch-compile requires shape buckets and "
+                     "warm-up (compiled artifacts are built by the sweep "
+                     "behind readiness, never on a live request)")
         if attention == "sdpa" and not shape_buckets:
             print("warning: sdpa without --shape-buckets recompiles a cuDNN "
                   "plan per step shape — expect stall tails "
@@ -121,6 +130,8 @@ def cmd_serve(args):
             )
             bucket_kwargs["warmup_shapes"] = warmup_shapes
             bucket_kwargs["cuda_graphs"] = cuda_graphs
+            bucket_kwargs["torch_compile"] = torch_compile
+            bucket_kwargs["torch_compile_strategy"] = args.torch_compile_strategy
         config = BatchingConfig(
             max_batch=args.max_batch,
             max_seq_len=args.batch_max_seq_len,
@@ -157,7 +168,9 @@ def cmd_serve(args):
             f"budget={config.max_tokens_per_step} tok/step, "
             f"attention={attention}, shape_buckets={'on' if shape_buckets else 'off'}, "
             f"warmup={'on' if warmup_shapes else 'off'}, "
-            f"cuda_graphs={'on' if cuda_graphs else 'off'})"
+            f"cuda_graphs={'on' if cuda_graphs else 'off'}, "
+            f"torch_compile="
+            f"{args.torch_compile_strategy if torch_compile else 'off'})"
         )
     else:
         if args.speculative:
@@ -354,6 +367,22 @@ def parse_args():
                                    "collapses the per-step launch flood to one call "
                                    "(default: on when warm-up is on for CUDA; "
                                    "--no-cuda-graphs to serve eager)")
+    serve_parser.add_argument("--torch-compile", default=None,
+                              action=argparse.BooleanOptionalAction,
+                              help="Batched engine: torch.compile the batched "
+                                   "forward (Inductor kernel fusion; artifacts "
+                                   "build during the warm-up sweep behind "
+                                   "readiness, and CUDA-graph capture records "
+                                   "the fused kernels). Default: off until the "
+                                   "A/B (torch-compile-design.md)")
+    serve_parser.add_argument("--torch-compile-strategy", default="dynamic",
+                              choices=["dynamic", "batch-bucket"],
+                              help="Artifact strategy for --torch-compile: "
+                                   "dynamic = batch/width dims symbolic, a "
+                                   "handful of artifacts cover the vocabulary; "
+                                   "batch-bucket = one artifact per batch "
+                                   "bucket with the row count baked in "
+                                   "(default: dynamic)")
     serve_parser.add_argument("--in-process", action="store_true",
                               help="Batched engine: run the scheduler inside the API "
                                    "process (debugging aid; default is a dedicated "

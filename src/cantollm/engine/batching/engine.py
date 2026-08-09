@@ -70,6 +70,15 @@ def scheduler_from_runtime(
 
     pool = runtime.new_kv_pool(config)
     forward_fn = runtime.forward_batched
+    if config.torch_compile:
+        # Before the warm-up sweep, so the sweep's per-shape forwards are
+        # what build the compiled artifacts (and, with cuda_graphs on,
+        # capture then records the fused kernels). Ordering per
+        # torch-compile-design.md §3.4.
+        runtime.enable_torch_compile(strategy=config.torch_compile_strategy)
+        logger.info("torch.compile enabled on the batched forward "
+                    "(fullgraph, strategy=%s, artifacts built during "
+                    "warm-up)", config.torch_compile_strategy)
     if config.warmup_shapes:
         # Behind Ready in the process split (the factory runs before the
         # Ready handshake) and before from_runtime returns in-process: no

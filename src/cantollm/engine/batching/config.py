@@ -57,6 +57,22 @@ class BatchingConfig:
     knobs): capture must follow the eager warm so recordings hold the warm
     kernel choices, and an unbounded vocabulary cannot be captured."""
 
+    torch_compile: bool = False
+    """Run the batched forward through torch.compile
+    (torch-compile-design.md): Inductor fuses the between-matmul kernels,
+    and graph capture then records the fused kernels. Requires
+    `warmup_shapes`: the sweep is where every compiled artifact gets
+    built, behind Ready, never on a live request. Default off until the
+    5090 A/B (design note §3.6)."""
+
+    torch_compile_strategy: str = "dynamic"
+    """How compiled artifacts map onto the shape vocabulary (design note
+    §3.2, the A/B experiment). "dynamic": batch/width dims marked dynamic
+    up front, a handful of artifacts cover the whole vocabulary (the kv
+    span is a Python int and rides automatic dynamic). "batch-bucket":
+    the batch dim is pinned static, one artifact per batch bucket with
+    the row count baked into the fused kernels as a constant."""
+
     def __post_init__(self) -> None:
         if self.max_batch <= 0:
             raise ValueError(f"max_batch must be positive, got {self.max_batch}")
@@ -115,6 +131,17 @@ class BatchingConfig:
                 "capture must follow the eager warm-up so recordings hold "
                 "warm kernel choices, and one graph is captured per decode "
                 "shape of the bounded vocabulary"
+            )
+        if self.torch_compile and not self.warmup_shapes:
+            raise ValueError(
+                "torch_compile requires warmup_shapes: compiled artifacts "
+                "must be built by the warm-up sweep behind Ready, never on "
+                "a live request"
+            )
+        if self.torch_compile_strategy not in ("dynamic", "batch-bucket"):
+            raise ValueError(
+                "torch_compile_strategy must be 'dynamic' or "
+                f"'batch-bucket', got {self.torch_compile_strategy!r}"
             )
 
     @property

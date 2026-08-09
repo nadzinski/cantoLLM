@@ -455,8 +455,16 @@ until the A/B; predictions on record in the note. The lm_head
 mid-prefill-row skip (model.py TODO) was dropped the same day: the
 projection is bound by its single weight read, not row count, so the
 skip saves under 1% and would add a data-dependent shape where the
-shape work wants uniformity; the model.py docstring records it. Open:
-the compile implementation + 5090 A/B per the note; the H100 day.
+shape work wants uniformity; the model.py docstring records it. The
+explain-day scouting and the implementation both landed same day: the
+scouting found the real break source (Python 3.11's cached_property lock
+under an untraced write-map derivation, not the sdpa pin) and confirmed
+the hoisted forward holds fullgraph=True with ~5 artifacts over the
+vocabulary (findings recorded in the note's §7); the implementation
+landed as designed in three chunks (runtime-front hoists +
+`torch_compile` config, the dynamic|batch-bucket strategy knob with dim
+marking, CLI/bench assembly + `ab_5090_compile{,_longctx}.toml`), suite
+green, default off. Open: the 5090 A/B per the note; the H100 day.
 
 **Core:**
 

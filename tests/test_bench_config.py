@@ -129,6 +129,19 @@ def test_serve_argv_says_tristate_flags_both_ways():
     assert "--cuda-graphs" in argv
 
 
+def test_serve_argv_torch_compile_flags():
+    cfg = deep({"server": {
+        "torch_compile": True, "torch_compile_strategy": "batch-bucket",
+    }})
+    argv = serve_argv(parse_run_config(cfg).cells[0].server)
+    assert "--torch-compile" in argv  # exact element, not the -strategy flag
+    assert "--torch-compile-strategy batch-bucket" in " ".join(argv)
+
+    cfg = deep({"server": {"torch_compile": False}})
+    argv = serve_argv(parse_run_config(cfg).cells[0].server)
+    assert "--no-torch-compile" in argv
+
+
 def test_load_from_toml_file(tmp_path):
     p = tmp_path / "smoke.toml"
     p.write_text(

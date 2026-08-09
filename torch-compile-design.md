@@ -1,6 +1,10 @@
 # Design note: torch.compile on the batched forward (Phase 3)
 
-**Status: proposed 2026-08-08, not yet implemented.** The last Phase 3
+**Status: proposed 2026-08-08, implemented same day, awaiting the 5090
+A/B.** Landed as designed in three chunks (hoists + `torch_compile`
+config/wiring; the §3.2 strategy knob with per-step dim marking in the
+runtime front; CLI/bench assembly with `ab_5090_compile{,_longctx}.toml`),
+suite green after each; the explain-day findings are §7. The last Phase 3
 optimization before the H100 day. Background reading:
 `cuda-graphs-results.md` for the target numbers (decode is now GPU-bound),
 `step-profiling.md` for the kernel census, `cuda-graphs-design.md` §3.9 for
@@ -95,7 +99,12 @@ is a bug the tripwire counter catches, not a stall.
    `num_new_max` / `max_history_len` are Python ints on `BatchMeta`, and
    the explain day (§7) confirms they go symbolic under automatic
    dynamic rather than specializing; if not, they get derived from
-   tensor shapes inside the region.
+   tensor shapes inside the region. *Implementation note (2026-08-08):
+   the batch dims take a hard `mark_dynamic`; the width dims take the
+   soft `maybe_mark_dynamic`, because `num_new_max` (the int) burns the
+   width into the mask arange, specializing the dim, and torch
+   hard-errors when a hard mark's promise breaks. Width goes symbolic
+   when automatic dynamic promotes the int on its second value.*
 
 3. **One compiled forward serves every shape, prefill included.** The
    width dimension is just another dynamic dim ({1} ∪ prefill menu), so
@@ -169,6 +178,12 @@ Named now so they are recognized as expected, not debugged as surprises:
 - **`inference_mode` stays outside.** The runtime front's decorator
   wraps the compiled call; compiling under it is supported, but the
   region itself should not toggle modes.
+- **The recompile limit is a hard error under fullgraph (found
+  2026-08-08).** Dynamo caps artifacts per code object at 8 by default,
+  and with `fullgraph=True` hitting the cap raises instead of falling
+  back to eager: a serve-time crash, since the batch-bucket strategy
+  alone wants one artifact per bucket plus kv/width promotions.
+  `enable_torch_compile` sizes `cache_size_limit` to 64.
 
 ## 5. Phase 4 interaction
 
@@ -225,6 +240,26 @@ Before any of that, the explain day: `torch._dynamo.explain()` on the
 batched forward, break count and guard census recorded. Dynamo tracing is
 device-independent, so this starts on the Mac; only the Inductor CUDA
 artifacts and timings need the box.
+
+**Explain-day findings (2026-08-08; torch 2.10.0, CPU, the tests' tiny
+2-layer fixture).** The current forward traces to 10 graphs with 9
+breaks, and the root cause is not the `sdpa_kernel` pin: on Python 3.11
+`functools.cached_property.__get__` takes an `RLock` when the value is
+uncached, so deriving `kv_write_map` under trace breaks the graph at the
+map read in `padded.forward_batched`, once per layer, and the resulting
+fragments guard on per-step row values (+2 recompiles across four
+start_pos values at a fixed shape, +4 across three kv spans). With the
+§3.1 hoists simulated (bounds loop out of the traced region, map
+pre-forced so the property is a cache hit), `fullgraph=True` holds: one
+graph, zero breaks, the `sdpa_kernel` context traces clean, and
+automatic dynamic covered a 16-decode-shape + 6-prefill-shape sweep
+with **5 artifacts** (the first call and the B=1 row specialize before
+the batch/kv/width dims go symbolic; every later shape hits). Traced
+outputs were bit-identical to eager on CPU, which validates trace
+fidelity only; Inductor numerics remain a box question. Net: prediction
+1's break candidate was wrong (the pin is fine, the property lock was
+the tripwire), the hoists cure it, and prediction 2's artifact count
+looks right.
 
 Success gate: short_chat c=16 aggregate +8% or better, nothing regressing
 past −3%, warm-cache Ready bill under +30 s. Correctness gate: the §4

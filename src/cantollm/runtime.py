@@ -42,6 +42,8 @@ class ModelRuntime:
         self.model = model
         self.tokenizer = tokenizer
         self.backend = backend
+        self._compiled_batched = None  # both set by enable_torch_compile()
+        self._compile_strategy = "dynamic"
 
     def new_cache(self) -> KVCache:
         return KVCache(self.spec.arch["num_transformers"])
@@ -110,7 +112,82 @@ class ModelRuntime:
                 num_new=meta.num_new.to(self.device),
                 positions=positions,
             )
-        return self.model.forward_batched(input_ids, meta, pool)
+        if self._compiled_batched is None:
+            return self.model.forward_batched(input_ids, meta, pool)
+        # The hoists (torch-compile-design.md §3.1): validation is host
+        # Python over meta.rows, and forcing kv_write_map here makes every
+        # traced read of the property a cache hit. Inside the traced region
+        # either one is poison: rows reads guard on per-step values and
+        # recompile every step; the property's miss path takes a lock
+        # Dynamo cannot trace. Force AFTER the device move: replace() drops
+        # the cache (the 40fbcf9 lesson).
+        self.model._validate_batched(meta, pool)
+        _ = meta.kv_write_map
+        self._mark_compile_dims(input_ids, meta)
+        return self._compiled_batched(input_ids, meta, pool)
+
+    def enable_torch_compile(
+        self, strategy: str = "dynamic", backend="inductor"
+    ) -> None:
+        """Swap the batched serving path onto a torch.compile'd
+        `forward_batched_impl` (torch-compile-design.md).
+
+        fullgraph=True is the tripwire: a future graph break fails loudly
+        at the first warm-up forward instead of silently fragmenting the
+        step into eager pieces. `strategy` is the §3.2 artifact question:
+        "dynamic" or "batch-bucket", validated by BatchingConfig and
+        applied per step in `_mark_compile_dims`. `backend` exists for
+        tests (a name like "eager", or a callable, exercises tracing
+        without paying Inductor); serving uses the default. Call before
+        the warm-up sweep so every artifact compiles behind Ready, never
+        on a live request.
+        """
+        # Dynamo's per-function recompile limit defaults to 8, counted on
+        # the code object, and with fullgraph=True hitting it is a hard
+        # error at serve time rather than a fallback to eager. The
+        # batch-bucket strategy alone wants one artifact per bucket plus
+        # kv/width promotions, so size the cache to the vocabulary with
+        # headroom.
+        torch._dynamo.config.cache_size_limit = 64
+        self._compile_strategy = strategy
+        self._compiled_batched = torch.compile(
+            self.model.forward_batched_impl, fullgraph=True, backend=backend
+        )
+
+    def _mark_compile_dims(self, input_ids, meta: BatchMeta) -> None:
+        """Per-step shape hints for the §3.2 strategy.
+
+        "dynamic": batch dims are marked dynamic so the first compile is
+        already symbolic, skipping automatic dynamic's static-first
+        stepping stones. mark_dynamic is a promise the dim will not
+        specialize, and torch hard-errors when the promise breaks, which
+        constrains the marking twice over: 0/1-sized dims always
+        specialize (so mark only at sizes > 1), and the width dim is tied
+        to the Python int `meta.num_new_max` (the mask arange burns it
+        in), so width gets the soft `maybe_mark_dynamic` instead and goes
+        symbolic when automatic dynamic promotes the int on its second
+        value. The kv span (`max_history_len`) is the same story with no
+        tensor dim to mark at all.
+
+        "batch-bucket": the batch dim is pinned static instead, so each
+        batch bucket compiles its own artifact with the row count baked
+        in. The write-map length still varies with the real-row count
+        inside a bucket (fillers are skipped by construction), so map
+        columns are never pinned.
+        """
+        m = meta.kv_write_map
+        batch_dim = (input_ids, meta.positions, meta.slots,
+                     meta.start_pos, meta.num_new)
+        if self._compile_strategy == "batch-bucket":
+            for t in batch_dim:
+                torch._dynamo.mark_static(t, 0)
+            return
+        for t in batch_dim + (m.row, m.off, m.slot, m.pos):
+            if t.shape[0] > 1:
+                torch._dynamo.mark_dynamic(t, 0)
+        if input_ids.shape[1] > 1:
+            torch._dynamo.maybe_mark_dynamic(input_ids, 1)
+            torch._dynamo.maybe_mark_dynamic(meta.positions, 1)
 
     async def start(self) -> None:
         pass

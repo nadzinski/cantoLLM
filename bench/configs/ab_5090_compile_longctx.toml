@@ -1,0 +1,52 @@
+# The long-context half of the torch.compile A/B (see ab_5090_compile.toml
+# for the framing). Same geometry split as every 5090 A/B: 8k prompts need
+# the 4 x 10240 slots. Two arms only, baseline vs compile-dynamic: the
+# strategy question is about how artifacts map onto batch buckets, both
+# strategies treat the kv span identically (a Python int under automatic
+# dynamic), so the decode-heavy sibling answers it and this half stays
+# lean.
+#
+# Prediction on record (torch-compile-design.md §6): long_context c=1
+# 175 -> 190-215 tok/s (the 1-2 row decode tail mirrors the 1-row probe
+# step, the worst-utilized shape and the biggest fusion win); prefill-
+# bound numbers (TTFT p50, step p99) move 0-10%. Gate (§7): > -3%.
+schema_version = 1
+name = "ab-5090-compile-longctx"
+
+[server]
+model = "0.6B"
+engine = "batched"
+device = "cuda"
+port = 8378
+health_timeout_s = 900
+max_batch = 4
+batch_max_seq_len = 10240
+max_tokens_per_step = 512
+shape_buckets = true
+warmup_shapes = true
+cuda_graphs = true
+torch_compile_strategy = "dynamic"
+
+[server.matrix]
+torch_compile = [false, true]
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 4
+repeats = 3
+seed = 0
+
+[[points]]
+workload = "long_context"
+mode = "closed"
+concurrency = [1, 2, 4]
+requests_per_level = 16
+
+[[points]]
+workload = "long_context"
+mode = "closed"
+concurrency = [4]
+requests_per_level = 32
