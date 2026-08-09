@@ -148,6 +148,7 @@ class GraphedBatchedForward:
                 return False
         return True
 
+    @torch.inference_mode()
     def _marshal(
         self,
         entry: _CapturedShape,
@@ -160,6 +161,10 @@ class GraphedBatchedForward:
 
         Replaces the eager path's per-step `.to(device)` moves, which
         create fresh tensors at fresh addresses a graph cannot follow.
+        Under `inference_mode` because the static buffers are inference
+        tensors (allocated so, to keep compile guards consistent with
+        traffic) and `copy_` into an inference tensor is only legal
+        inside inference mode.
         The write map needs no host loop: row k writes offset 0 of its own
         row (the baked `map_row`/`map_off` constants), real rows into
         `(slots[k], start_pos[k])`, filler rows into the scratch position
@@ -212,11 +217,19 @@ class GraphedBatchedForward:
             self._capture_one(batch, kv_len, pool, device)
         return len(shapes)
 
+    @torch.inference_mode()
     def _alloc_entry(
         self, batch: int, kv_len: int, device: torch.device
     ) -> _CapturedShape:
         """Static buffers for one decode shape, filled with the capture-time
-        dummy geometry: row k writes the last position of slot k."""
+        dummy geometry: row k writes the last position of slot k.
+
+        Allocated under `inference_mode` so the compiled forward sees the
+        same tensor dispatch keys during capture warm/record as it does
+        from traffic (whose meta tensors become inference tensors in the
+        runtime front's move) — otherwise capture would compile a
+        duplicate artifact set behind the warm-up sweep's back (same
+        guard-leak family the 2026-08-08 A/B caught on warm-up metas)."""
         long = dict(dtype=torch.int64, device=device)
         last = kv_len - 1
         return _CapturedShape(

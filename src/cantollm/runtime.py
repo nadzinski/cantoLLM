@@ -105,6 +105,13 @@ class ModelRuntime:
         # mid-recording — the H2D copy invalidates the capture.
         positions = meta.positions.to(self.device)
         if positions is not meta.positions:
+            # A seeded kv_write_map (warm-up's scratch maps; capture metas
+            # never take this branch, their tensors are already on-device)
+            # must survive the replace: `replace` builds a fresh instance
+            # whose cached_property slot is empty, and re-deriving would
+            # produce an EMPTY map for all-filler rows — silently
+            # un-seeding the sweep. Move the columns with the meta.
+            seeded = meta.__dict__.get("kv_write_map")
             meta = replace(
                 meta,
                 slots=meta.slots.to(self.device),
@@ -112,6 +119,10 @@ class ModelRuntime:
                 num_new=meta.num_new.to(self.device),
                 positions=positions,
             )
+            if seeded is not None:
+                meta.seed_kv_write_map(
+                    type(seeded)(*(t.to(self.device) for t in seeded))
+                )
         if self._compiled_batched is None:
             return self.model.forward_batched(input_ids, meta, pool)
         # The hoists (torch-compile-design.md §3.1): validation is host

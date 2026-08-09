@@ -20,6 +20,16 @@ replay uses for filler rows): compile sees the traffic map lengths
 (1 specializes, >= 2 goes symbolic) and the writes land where no gather
 ever reads. Only the scratch column gets dirty; the logical pool stays
 untouched.
+
+Everything here is built as CPU tensors, exactly like the scheduler
+builds a traffic step, so the warm-up forwards enter the runtime front
+through the same device move traffic takes. That is deliberate and
+guard-load-bearing: the front's move runs under `inference_mode`, and
+Dynamo artifacts guard on the tensors' dispatch key set — warm-up tensors
+that skip the move (e.g. pre-built on device) carry ADInplaceOrView where
+traffic's moved tensors do not, and every artifact the sweep builds gets
+rejected and recompiled by the first live request (the §3 recompile
+tripwire caught exactly this on the 2026-08-08 A/B).
 """
 
 from __future__ import annotations
@@ -42,39 +52,32 @@ def warmup_meta(
 ) -> BatchMeta:
     """All-filler geometry for one vocabulary shape: `batch` rows of
     (slot 0, start 0, num_new 0), tensor width `width`, KV span `kv_len`.
-
-    Tensors are built on `device` directly: the runtime front only keeps a
-    seeded `kv_write_map` when no device move is needed (a move `replace`s
-    the meta, dropping the seed — the 40fbcf9 lesson), and the sweep's
-    seeded scratch maps must survive into the traced region.
-    """
-    zeros = torch.zeros(batch, dtype=torch.int64, device=device)
+    CPU tensors, like a scheduler-built step; `device` is only where a
+    derived map would land (the seeded map makes that moot)."""
+    zeros = torch.zeros(batch, dtype=torch.int64)
     return BatchMeta(
         rows=[(0, 0, 0)] * batch,
         slots=zeros.clone(),
         start_pos=zeros.clone(),
         num_new=zeros.clone(),
-        positions=torch.arange(width, device=device)[None, :]
-        .expand(batch, -1).clone(),
+        positions=torch.arange(width)[None, :].expand(batch, -1).clone(),
         num_new_max=width,
         max_history_len=kv_len,
         device=device,
     )
 
 
-def scratch_write_map(
-    batch: int, scratch_pos: int, device: torch.device | None
-) -> KVWriteMap:
+def scratch_write_map(batch: int, scratch_pos: int) -> KVWriteMap:
     """A seeded map with one entry per row, all parked on the scratch
     column: row r writes its offset 0 into (slot r, scratch). Gives the
     warm-up sweep the map lengths real traffic produces without touching
-    a single logical pool position."""
-    long = dict(dtype=torch.int64, device=device)
+    a single logical pool position. CPU tensors; the runtime front moves
+    them with the rest of the meta."""
     return KVWriteMap(
-        row=torch.arange(batch, **long),
-        off=torch.zeros(batch, **long),
-        slot=torch.arange(batch, **long),
-        pos=torch.full((batch,), scratch_pos, **long),
+        row=torch.arange(batch, dtype=torch.int64),
+        off=torch.zeros(batch, dtype=torch.int64),
+        slot=torch.arange(batch, dtype=torch.int64),
+        pos=torch.full((batch,), scratch_pos, dtype=torch.int64),
     )
 
 
@@ -92,9 +95,9 @@ def warmup_shape_vocabulary(
     )
     t0 = time.perf_counter()
     for batch, width, kv_len in vocabulary:
-        input_ids = torch.zeros((batch, width), dtype=torch.int64, device=device)
+        input_ids = torch.zeros((batch, width), dtype=torch.int64)
         meta = warmup_meta(batch, width, kv_len, device)
-        meta.seed_kv_write_map(scratch_write_map(batch, pool.scratch_pos, device))
+        meta.seed_kv_write_map(scratch_write_map(batch, pool.scratch_pos))
         forward_fn(input_ids, meta, pool)
     if device.type == "cuda":
         torch.cuda.synchronize()
