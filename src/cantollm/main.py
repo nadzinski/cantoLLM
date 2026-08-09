@@ -60,6 +60,17 @@ def select_device(requested: str = "auto") -> torch.device:
 
 def cmd_serve(args):
     """Start the inference server."""
+    # torch.compile's on-disk caches default to /tmp/torchinductor_$USER,
+    # and systemd empties /tmp at every boot (tmpfiles.d `D /tmp`), so a
+    # box reboot silently demotes the next start from the warm compile
+    # bill (~+21 s behind Ready) to the cold one (~+147 s). Park the
+    # cache somewhere that survives. Set before the engine process
+    # spawns (it inherits the environment) and before any Inductor use;
+    # an explicit TORCHINDUCTOR_CACHE_DIR still wins.
+    os.environ.setdefault(
+        "TORCHINDUCTOR_CACHE_DIR",
+        os.path.expanduser("~/.cache/cantollm/inductor"),
+    )
     import uvicorn
 
     from cantollm.api import create_app

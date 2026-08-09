@@ -500,7 +500,11 @@ temperature-0 outputs change vs the eager engine). The author accepted
 the drift 2026-08-09 ("eager isn't ground truth either") and
 **torch_compile is now the fifth piece of the CUDA serve default**
 (strategy dynamic; `--no-torch-compile` opts out; the three
-pre-compile-round A/B configs pinned `torch_compile = false`).
+pre-compile-round A/B configs pinned `torch_compile = false`; serve
+parks the Inductor cache in `~/.cache/cantollm/inductor` since systemd
+empties /tmp at boot — reboots keep the +21 s warm bill instead of
+falling back to the cold one; broader §9 cache persistence stays
+deferred).
 Open: `torch-compile-results.md` (back home, from the run records);
 the H100 day.
 
