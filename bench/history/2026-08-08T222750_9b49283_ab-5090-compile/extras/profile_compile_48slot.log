@@ -1,0 +1,195 @@
+loading 0.6B...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_inductor/lowering.py:2156: UserWarning: Torchinductor does not support code generation for complex operators. Performance may be worse than eager.
+  warnings.warn(
+V0808 21:41:06.210000 22729 torch/_dynamo/guards.py:4514] [0/1] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 21:41:06.210000 22729 torch/_dynamo/guards.py:4514] [0/1] [__recompiles]     triggered by the following guard failure(s):
+V0808 21:41:06.210000 22729 torch/_dynamo/guards.py:4514] [0/1] [__recompiles]     - 0/0: meta.max_history_len == 256                              # j = torch.arange(meta.max_history_len, device=device)  # src/cantollm/models/attention/padded.py:67 in build_batched_mask
+V0808 21:41:18.971000 22729 torch/_dynamo/guards.py:4514] [0/2] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 21:41:18.971000 22729 torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     triggered by the following guard failure(s):
+V0808 21:41:18.971000 22729 torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 21:41:18.971000 22729 torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 21:41:41.716000 22729 torch/_dynamo/guards.py:4514] [0/3] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 21:41:41.716000 22729 torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     triggered by the following guard failure(s):
+V0808 21:41:41.716000 22729 torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/2: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 21:41:41.716000 22729 torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 21:41:41.716000 22729 torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 21:42:04.183000 22729 torch/_dynamo/guards.py:4514] [0/4] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 21:42:04.183000 22729 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     triggered by the following guard failure(s):
+V0808 21:42:04.183000 22729 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/3: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 21:42:04.183000 22729 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/2: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 21:42:04.183000 22729 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 21:42:04.183000 22729 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 21:42:46.640000 22729 torch/_dynamo/guards.py:4514] [0/5] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 21:42:46.640000 22729 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     triggered by the following guard failure(s):
+V0808 21:42:46.640000 22729 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/4: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:42:46.640000 22729 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/3: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:42:46.640000 22729 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/2: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:42:46.640000 22729 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/1: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:42:46.640000 22729 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/0: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:09.352000 22729 torch/_dynamo/guards.py:4514] [0/6] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 21:43:09.352000 22729 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     triggered by the following guard failure(s):
+V0808 21:43:09.352000 22729 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/5: 2 <= input_ids.size()[1] <= 2147483647  # causal_bound = meta.start_pos.to(device)[:, None] + i[None, :]  # src/cantollm/models/attention/padded.py:68 in build_batched_mask (_prims_common/__init__.py:314 in is_contiguous) and (_inductor/codegen/simd.py:1860 in can_use_32bit_indexing)
+V0808 21:43:09.352000 22729 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/4: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:09.352000 22729 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/3: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:09.352000 22729 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/2: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:09.352000 22729 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/1: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:09.352000 22729 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/0: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:24.564000 22729 torch/_dynamo/guards.py:4514] [0/7] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 21:43:24.564000 22729 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     triggered by the following guard failure(s):
+V0808 21:43:24.564000 22729 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/6: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 21:43:24.564000 22729 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/5: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 21:43:24.564000 22729 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/4: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:24.564000 22729 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/3: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:24.564000 22729 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/2: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:24.564000 22729 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/1: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:24.564000 22729 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/0: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:28.243000 22729 torch/_dynamo/guards.py:4514] [0/8] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 21:43:28.243000 22729 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     triggered by the following guard failure(s):
+V0808 21:43:28.243000 22729 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/7: 2 <= input_ids.size()[1]  # masked_attn = attn.masked_fill(broadcasted_mask, -float("inf"))  # src/cantollm/models/attention/padded.py:165 in _attend_batched (_refs/__init__.py:443 in _broadcast_shapes)
+V0808 21:43:28.243000 22729 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/6: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 21:43:28.243000 22729 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/5: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 21:43:28.243000 22729 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/4: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:28.243000 22729 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/3: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:28.243000 22729 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/2: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:28.243000 22729 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/1: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:28.243000 22729 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/0: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:43:42.260000 22729 torch/_dynamo/guards.py:4514] [0/9] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 21:43:42.260000 22729 torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     triggered by the following guard failure(s):
+V0808 21:43:42.260000 22729 torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/8: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:43:42.260000 22729 torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/7: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:43:42.260000 22729 torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/6: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:43:42.260000 22729 torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/5: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:43:42.260000 22729 torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/4: tensor 'pool.k_layers[0]' size mismatch at index 0. expected 48, actual 16
+V0808 21:43:42.260000 22729 torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/3: tensor 'pool.k_layers[0]' size mismatch at index 0. expected 48, actual 16
+V0808 21:43:42.260000 22729 torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/2: tensor 'pool.k_layers[0]' size mismatch at index 0. expected 48, actual 16
+V0808 21:43:42.260000 22729 torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/1: tensor 'pool.k_layers[0]' size mismatch at index 0. expected 48, actual 16
+V0808 21:43:42.260000 22729 torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/0: tensor 'pool.k_layers[0]' size mismatch at index 0. expected 48, actual 16
+V0808 21:43:56.928000 22729 torch/_dynamo/guards.py:4514] [0/10] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 21:43:56.928000 22729 torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     triggered by the following guard failure(s):
+V0808 21:43:56.928000 22729 torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/9: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 21:43:56.928000 22729 torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/8: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:43:56.928000 22729 torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/7: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:43:56.928000 22729 torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/6: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:43:56.928000 22729 torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/5: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:43:56.928000 22729 torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/4: tensor 'pool.k_layers[0]' size mismatch at index 0. expected 48, actual 16
+V0808 21:43:56.928000 22729 torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/3: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 21:43:56.928000 22729 torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/2: tensor 'pool.k_layers[0]' size mismatch at index 0. expected 48, actual 16
+V0808 21:43:56.928000 22729 torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 21:43:56.928000 22729 torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 21:44:21.554000 22729 torch/_dynamo/guards.py:4514] [0/11] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 21:44:21.554000 22729 torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     triggered by the following guard failure(s):
+V0808 21:44:21.554000 22729 torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/10: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 21:44:21.554000 22729 torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/9: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 21:44:21.554000 22729 torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/8: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:44:21.554000 22729 torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/7: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:44:21.554000 22729 torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/6: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:44:21.554000 22729 torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/5: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:44:21.554000 22729 torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/4: tensor 'pool.k_layers[0]' size mismatch at index 0. expected 48, actual 16
+V0808 21:44:21.554000 22729 torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/3: tensor 'pool.k_layers[0]' size mismatch at index 0. expected 48, actual 16
+V0808 21:44:21.554000 22729 torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/2: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 21:44:21.554000 22729 torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 21:44:21.554000 22729 torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 21:44:45.028000 22729 torch/_dynamo/guards.py:4514] [0/12] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 21:44:45.028000 22729 torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     triggered by the following guard failure(s):
+V0808 21:44:45.028000 22729 torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/11: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 21:44:45.028000 22729 torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/10: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 21:44:45.028000 22729 torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/9: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 21:44:45.028000 22729 torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/8: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:44:45.028000 22729 torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/7: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:44:45.028000 22729 torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/6: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:44:45.028000 22729 torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/5: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect), actual DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView)
+V0808 21:44:45.028000 22729 torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/4: tensor 'pool.k_layers[0]' size mismatch at index 0. expected 48, actual 16
+V0808 21:44:45.028000 22729 torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/3: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 21:44:45.028000 22729 torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/2: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 21:44:45.028000 22729 torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 21:44:45.028000 22729 torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     triggered by the following guard failure(s):
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/12: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/11: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/10: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/9: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/8: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/7: tensor 'pool.k_layers[0]' size mismatch at index 0. expected 48, actual 16
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/6: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 16
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/5: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 16
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/4: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/3: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/2: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/1: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:21.003000 22729 torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/0: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     triggered by the following guard failure(s):
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/13: 2 <= input_ids.size()[1]  # masked_attn = attn.masked_fill(broadcasted_mask, -float("inf"))  # src/cantollm/models/attention/padded.py:165 in _attend_batched (_refs/__init__.py:443 in _broadcast_shapes)
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/12: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/11: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/10: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/9: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/8: tensor 'pool.k_layers[0]' size mismatch at index 0. expected 48, actual 16
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/7: tensor 'pool.k_layers[0]' size mismatch at index 0. expected 48, actual 16
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/6: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 16
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/5: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 16
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/4: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/3: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/2: tensor 'meta.slots' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/1: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+V0808 21:45:25.472000 22729 torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/0: tensor 'meta.positions' dispatch key set mismatch. expected DispatchKeySet(CUDA, BackendSelect, ADInplaceOrView), actual DispatchKeySet(CUDA, BackendSelect)
+/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/profiler/profiler.py:217: UserWarning: Warning: Profiler clears events at the end of each cycle.Only events from the current cycle will be reported.To keep events across cycles, set acc_events=True.
+  _warn_once(
+Downloading 0.6B model weights...
+Creating model...
+Loading pretrained weights...
+
+=== step() decomposition, ms/step over 200 decode steps ===
+rows   total      plan build_ids      meta  fwd_call  fwd_sync    sample      rest
+   1    3.76     0.004     0.013     0.020     3.429     0.188     0.014     0.096
+   8    4.56     0.007     0.030     0.022     3.630     0.389     0.067     0.420
+  16    6.33     0.009     0.048     0.024     3.580     1.832     0.126     0.713
+  32   10.18     0.014     0.084     0.027     3.694     4.586     0.241     1.529
+  48   17.35     0.019     0.119     0.031     3.699    10.906     0.354     2.226
+
+=== profiler, 16 rows x 20 steps ===
+cudaLaunchKernel calls/step: 218
+
+--- top 12 by self CUDA time ---
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+## Call CompiledFxGraph fzedeyl2wlhhyvcu2n5c7q44cpuw...         0.00%       0.000us         0.00%       0.000us       0.000us     106.226ms       137.81%     106.226ms       5.311ms            20  
+                                               aten::mm         8.92%      11.535ms        14.82%      19.160ms       4.863us      42.089ms        54.60%      42.097ms      10.684us          3940  
+void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_...         0.00%       0.000us         0.00%       0.000us       0.000us      38.204ms        49.56%      38.204ms       9.746us          3920  
+                                         aten::_softmax         0.43%     552.050us         0.92%       1.196ms       3.737us       9.224ms        11.97%       9.224ms      28.826us           320  
+void at::native::(anonymous namespace)::cunn_SoftMax...         0.00%       0.000us         0.00%       0.000us       0.000us       9.224ms        11.97%       9.224ms      28.826us           320  
+                                              aten::bmm         2.73%       3.530ms         4.42%       5.719ms       5.106us       5.993ms         7.77%       5.993ms       5.350us          1120  
+void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_...         0.00%       0.000us         0.00%       0.000us       0.000us       5.993ms         7.77%       5.993ms       5.350us          1120  
+void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_...         0.00%       0.000us         0.00%       0.000us       0.000us       3.884ms         5.04%       3.884ms     194.224us            20  
+triton_poi_fused_clone_index_permute_slice_unsqueeze...         0.99%       1.278ms         1.82%       2.347ms       4.192us       3.801ms         4.93%       3.801ms       6.787us           560  
+triton_poi_fused_clone_index_permute_slice_unsqueeze...         0.00%       0.000us         0.00%       0.000us       0.000us       3.801ms         4.93%       3.801ms       6.787us           560  
+triton_poi_fused_clone_index_permute_slice_unsqueeze...         0.96%       1.245ms         1.77%       2.290ms       4.090us       3.778ms         4.90%       3.778ms       6.746us           560  
+triton_poi_fused_clone_index_permute_slice_unsqueeze...         0.00%       0.000us         0.00%       0.000us       0.000us       3.778ms         4.90%       3.778ms       6.746us           560  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 129.312ms
+Self CUDA time total: 77.082ms
+
+
+--- top 12 by self CPU time ---
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+## Call CompiledFxGraph fzedeyl2wlhhyvcu2n5c7q44cpuw...        26.22%      33.903ms        80.54%     104.149ms       5.207ms       0.000us         0.00%      65.508ms       3.275ms            20  
+                                         cuLaunchKernel        15.57%      20.139ms        15.57%      20.139ms       1.886us       0.000us         0.00%       0.000us       0.000us         10680  
+                                  cudaStreamSynchronize        10.89%      14.076ms        10.89%      14.076ms      26.066us       0.000us         0.00%       0.000us       0.000us           540  
+                                               aten::mm         8.92%      11.535ms        14.82%      19.160ms       4.863us      42.089ms        54.60%      42.097ms      10.684us          3940  
+                                       cudaLaunchKernel         6.98%       9.027ms         6.98%       9.027ms       2.070us       0.000us         0.00%       0.000us       0.000us          4360  
+                                            aten::index         2.76%       3.566ms         5.14%       6.641ms       5.930us       1.237ms         1.61%       1.237ms       1.105us          1120  
+                                              aten::bmm         2.73%       3.530ms         4.42%       5.719ms       5.106us       5.993ms         7.77%       5.993ms       5.350us          1120  
+                                          aten::complex         2.07%       2.674ms         9.38%      12.131ms       5.416us       1.316ms         1.71%       2.632ms       1.175us          2240  
+triton_poi_fused__to_copy__unsafe_view_cat_index_ind...         1.83%       2.363ms         2.66%       3.434ms       6.132us     730.085us         0.95%     730.085us       1.304us           560  
+                                              aten::mul         1.82%       2.350ms         3.68%       4.756ms       4.246us       1.412ms         1.83%       1.413ms       1.262us          1120  
+triton_per_fused__to_copy__unsafe_view_add_mean_mul_...         1.15%       1.484ms         1.98%       2.556ms       4.564us     660.799us         0.86%     660.799us       1.180us           560  
+                                     aten::view_as_real         1.00%       1.293ms         1.00%       1.293ms       0.577us       0.000us         0.00%       0.000us       0.000us          2240  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 129.312ms
+Self CUDA time total: 77.082ms
+

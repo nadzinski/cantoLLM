@@ -1,0 +1,70 @@
+loading 0.6B (sdpa)...
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/tokenizer.json "HTTP/1.1 302 Found"
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+INFO:cantollm.engine.batching.engine:torch.compile enabled on the batched forward (fullgraph, strategy=dynamic, artifacts built during warm-up)
+INFO:cantollm.engine.batching.warmup:warming 48 shapes (batch buckets (1, 2, 4, 8), widths {1} + (128, 256), kv step 256)
+/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_inductor/lowering.py:2156: UserWarning: Torchinductor does not support code generation for complex operators. Performance may be worse than eager.
+  warnings.warn(
+V0808 22:25:10.202000 39352 torch/_dynamo/guards.py:4514] [0/1] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:25:10.202000 39352 torch/_dynamo/guards.py:4514] [0/1] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:25:10.202000 39352 torch/_dynamo/guards.py:4514] [0/1] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:25:20.043000 39352 torch/_dynamo/guards.py:4514] [0/2] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:25:20.043000 39352 torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:25:20.043000 39352 torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     - 0/1: 2 <= meta.kv_write_map.row.size()[0] <= 2147483647  # layer_k[m.slot, m.pos] = keys[m.row, m.off]  # src/cantollm/models/attention/padded.py:117 in forward_batched (user code shown is first use of this value--the guard itself is not due user code but due to 0/1 specialization in the framework; to avoid specialization try torch._dynamo.decorators.mark_unbacked(tensor, dim)) and (_inductor/codegen/simd.py:1860 in can_use_32bit_indexing)
+V0808 22:25:20.043000 39352 torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     - 0/0: meta.max_history_len == 256                              # j = torch.arange(meta.max_history_len, device=device)  # src/cantollm/models/attention/padded.py:67 in build_batched_mask
+V0808 22:25:30.634000 39352 torch/_dynamo/guards.py:4514] [0/3] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:25:30.634000 39352 torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:25:30.634000 39352 torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:25:30.634000 39352 torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:25:30.634000 39352 torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:25:47.516000 39352 torch/_dynamo/guards.py:4514] [0/4] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:25:47.516000 39352 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:25:47.516000 39352 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:25:47.516000 39352 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:25:47.516000 39352 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:25:47.516000 39352 torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:07.467000 39352 torch/_dynamo/guards.py:4514] [0/5] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:26:07.467000 39352 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:26:07.467000 39352 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:07.467000 39352 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/3: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:07.467000 39352 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:07.467000 39352 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:07.467000 39352 torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:23.365000 39352 torch/_dynamo/guards.py:4514] [0/6] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:26:23.365000 39352 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:26:23.365000 39352 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/5: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:23.365000 39352 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:23.365000 39352 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:23.365000 39352 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:23.365000 39352 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:23.365000 39352 torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:41.235000 39352 torch/_dynamo/guards.py:4514] [0/7] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:26:41.235000 39352 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:26:41.235000 39352 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:26:41.235000 39352 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/5: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:26:41.235000 39352 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:41.235000 39352 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/3: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:41.235000 39352 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:41.235000 39352 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:26:41.235000 39352 torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:27:02.977000 39352 torch/_dynamo/guards.py:4514] [0/8] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:27:02.977000 39352 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:27:02.977000 39352 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/7: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:27:02.977000 39352 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:27:02.977000 39352 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/5: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:27:02.977000 39352 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:27:02.977000 39352 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:27:02.977000 39352 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:27:02.977000 39352 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:27:02.977000 39352 torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+INFO:cantollm.engine.batching.warmup:shape warm-up done: 48 shapes in 149.2 s
+INFO:cantollm.engine.batching.engine:CUDA graphs: captured 16 decode shapes in 0.2 s
+Downloading 0.6B model weights...
+Creating model...
+Loading pretrained weights...
+artifacts after warm-up+capture: 9
+44 traffic steps; artifacts after traffic: 9
+graph replay hits/misses: 38/6
+CLEAN: zero recompiles during traffic

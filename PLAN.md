@@ -464,21 +464,36 @@ vocabulary (findings recorded in the note's §7); the implementation
 landed as designed in three chunks (runtime-front hoists +
 `torch_compile` config, the dynamic|batch-bucket strategy knob with dim
 marking, CLI/bench assembly + `ab_5090_compile{,_longctx}.toml`), suite
-green, default off. The 5090 A/B attempt (2026-08-08) was blocked before
-the bench runs: on the real Inductor backend (which the CPU suite's
-backend="eager" tests never exercise), the KV scatter through
-`pool.layer(i)` select views — a view-of-input mutation — gets
-functionalized into pool-scale copy chains instead of staying in-place,
-making a compiled decode step ~23x slower than eager (213 vs 9 ms at
-serve geometry, OOM at the 48-slot probe geometry); the §4 hazard, in a
-far worse form than the note predicted. Root cause isolated to a
-standalone repro that also validates the fix (per-layer pool tensors
-compile to an in-place scatter, 0.13 ms); evidence + graded predictions
-in `bench/history/2026-08-08T204000_c4c7f1e_compile-5090-blocked/`.
-Open: the pool-layout decision (per-layer tensors vs write-through-base)
-and a warm-up gap found en route (filler metas' length-0 write maps
-don't cover the traffic guard set, so first real steps recompile); then
-the A/B re-run per the note; the H100 day.
+green, default off. The 5090 validation ran 2026-08-08 in two acts. Act
+one (record: `bench/history/2026-08-08T204000_c4c7f1e_compile-5090-
+blocked/`): the as-landed implementation was blocked on the real
+Inductor backend — the KV scatter through `pool.layer(i)` select views
+got functionalized into pool-scale copy chains (§4's hazard at its
+worst: 213 ms compiled decode steps, OOM at 48 slots), invisible to the
+CPU suite's backend="eager" tests. Act two, same day: `PaddedKVPool`
+restructured to per-layer tensors (direct input mutations stay
+in-place; the production static-cache pattern), plus two guard-leak
+fixes the §3 recompile tripwire caught in successive A/B attempts
+(warm-up tensors must take traffic's inference-mode device move so
+dispatch-key guards match; every batch/width family needs both the
+length-1-specialized and length-N-symbolic write-map artifacts, seeded
+by alternating lengths in the sweep), plus a real-Inductor CUDA
+tripwire test. The clean A/B (record: `bench/history/
+2026-08-08T222750_9b49283_ab-5090-compile/` + longctx sibling, with
+`agent-summary.md`) exceeded every §6 performance prediction —
+short_chat c=16 2461 → 3683 tok/s (+49.6%), long_context c=1 179 → 294
+(+64%), 16-row decode step 5.93 → 4.0 ms, kernels/step 1859 → 218,
+zero traffic recompiles, 100% decode replay under compile — but two
+gates failed: the warm-cache Ready bill is +66 s (gate: < +30 s;
+Dynamo/AOT re-tracing isn't disk-cached — §9's deferred
+cache-persistence item is the remedy path), and greedy streams are not
+token-identical vs eager (bf16 argmax ties at 0.0625 margins flip
+under fused-kernel reordering; drift quantified benign, but
+temperature-0 outputs change). Agent recommendation recorded:
+torch_compile stays opt-in, strategy default dynamic; default-flip is
+the author's call after the results write-up. Open:
+`torch-compile-results.md` (back home, from the run records); the
+default/gates decision; the H100 day.
 
 **Core:**
 

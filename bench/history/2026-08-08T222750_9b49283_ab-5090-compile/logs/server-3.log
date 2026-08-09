@@ -1,0 +1,535 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+INFO:     Started server process [41110]
+INFO:     Waiting for application startup.
+Using device: cuda (NVIDIA GeForce RTX 5090)
+
+CantoLLM server starting on http://127.0.0.1:8378
+  POST /v1/messages  — Anthropic-compatible Messages API
+  GET  /health       — Health check
+  GET  /docs         — OpenAPI docs
+
+Model: qwen3-0.6B  ·  Engine: continuous batching, engine process (max_batch=16, slot=4096 tok, budget=512 tok/step, attention=sdpa, shape_buckets=on, warmup=on, cuda_graphs=on, torch_compile=dynamic)
+
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/tokenizer.json "HTTP/1.1 302 Found"
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+INFO:cantollm.engine.batching.engine:torch.compile enabled on the batched forward (fullgraph, strategy=dynamic, artifacts built during warm-up)
+INFO:cantollm.engine.batching.warmup:warming 315 shapes (batch buckets (1, 2, 4, 8, 16), widths {1} + (128, 256, 512), kv step 256)
+/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_inductor/lowering.py:2156: UserWarning: Torchinductor does not support code generation for complex operators. Performance may be worse than eager.
+  warnings.warn(
+V0808 22:32:11.252000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/1] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:32:11.252000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/1] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:32:11.252000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/1] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:32:22.642000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/2] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:32:22.642000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:32:22.642000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     - 0/1: 2 <= meta.kv_write_map.row.size()[0] <= 2147483647  # layer_k[m.slot, m.pos] = keys[m.row, m.off]  # src/cantollm/models/attention/padded.py:117 in forward_batched (user code shown is first use of this value--the guard itself is not due user code but due to 0/1 specialization in the framework; to avoid specialization try torch._dynamo.decorators.mark_unbacked(tensor, dim)) and (_inductor/codegen/simd.py:1860 in can_use_32bit_indexing)
+V0808 22:32:22.642000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     - 0/0: meta.max_history_len == 256                              # j = torch.arange(meta.max_history_len, device=device)  # src/cantollm/models/attention/padded.py:67 in build_batched_mask
+V0808 22:32:37.061000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/3] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:32:37.061000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:32:37.061000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:32:37.061000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:32:37.061000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:32:56.173000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/4] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:32:56.173000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:32:56.173000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:32:56.173000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:32:56.173000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:32:56.173000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:33:23.375000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/5] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:33:23.375000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:33:23.375000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/3: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:33:23.375000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:33:23.375000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:33:23.375000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:33:23.375000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:33:41.736000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:33:41.736000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:33:41.736000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/5: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:33:41.736000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:33:41.736000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:33:41.736000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:33:41.736000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:33:41.736000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:34:03.256000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:34:03.256000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:34:03.256000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:34:03.256000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/5: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:34:03.256000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/3: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:34:03.256000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:34:03.256000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:34:03.256000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:34:03.256000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:34:24.354000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:34:24.354000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:34:24.354000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/7: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:34:24.354000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:34:24.354000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/5: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:34:24.354000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:34:24.354000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:34:24.354000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:34:24.354000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:34:24.354000 41145 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+INFO:cantollm.engine.batching.warmup:shape warm-up done: 315 shapes in 218.0 s
+INFO:cantollm.engine.batching.engine:CUDA graphs: captured 80 decode shapes in 1.7 s
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8378 (Press CTRL+C to quit)
+INFO:     127.0.0.1:38490 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38496 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38496 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38496 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38512 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38496 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38522 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38524 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38526 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38538 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38530 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38540 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38552 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38560 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38544 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38564 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38576 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38576 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38588 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38604 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38584 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38620 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38634 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38640 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38644 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38654 - "GET /debug/engine-stats?since=301 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38654 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38666 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38670 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38674 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38676 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38684 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38686 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38694 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38700 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38706 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38720 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38710 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38732 - "GET /debug/engine-stats?since=627 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38732 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38740 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38746 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38754 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38768 - "GET /debug/engine-stats?since=964 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38768 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38778 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38788 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38794 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38798 - "GET /debug/engine-stats?since=1166 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38800 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38814 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38836 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38822 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38798 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38856 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38850 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38868 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38880 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38888 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38882 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38898 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38912 - "GET /debug/engine-stats?since=1294 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38912 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38928 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38938 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38942 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38946 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38956 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38950 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38960 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45458 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45484 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45470 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45494 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45506 - "GET /debug/engine-stats?since=1627 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45506 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45518 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45534 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45508 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45536 - "GET /debug/engine-stats?since=1966 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45536 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45538 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45540 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45554 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45568 - "GET /debug/engine-stats?since=2197 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45568 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45572 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45578 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45586 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45590 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45604 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45608 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45624 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45638 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45656 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45644 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45672 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45678 - "GET /debug/engine-stats?since=2300 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45678 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45686 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45682 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45692 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45698 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45704 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45708 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45722 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45726 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45738 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45736 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45742 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45750 - "GET /debug/engine-stats?since=2638 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45750 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45754 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45758 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45760 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45772 - "GET /debug/engine-stats?since=2978 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45772 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45772 - "GET /debug/engine-stats?since=3229 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45772 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45782 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45788 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45804 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45814 - "GET /debug/engine-stats?since=3229 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45814 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45818 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45832 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45844 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45842 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45850 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45866 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45870 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45880 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45892 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45908 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45910 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45922 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45938 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45950 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45958 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45964 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45966 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45970 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45978 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45982 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45990 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45998 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46004 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46008 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46010 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46018 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46032 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46038 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46042 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46046 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46040 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46060 - "GET /debug/engine-stats?since=3308 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46060 - "GET /debug/engine-stats?since=3555 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46060 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46072 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46084 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46086 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46092 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46104 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46106 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46118 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46120 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46126 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46140 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46166 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46176 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46180 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46194 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46152 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46208 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46216 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46232 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46238 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46250 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46260 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46268 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46280 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46292 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46254 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46298 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46312 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46326 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46332 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46346 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46356 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46362 - "GET /debug/engine-stats?since=3617 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46362 - "GET /debug/engine-stats?since=3782 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46362 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46376 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46388 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46392 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46406 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46408 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46424 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46438 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46448 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46450 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46456 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46470 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46480 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46486 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46490 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46492 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46494 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46502 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46514 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46534 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46540 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46546 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46528 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46560 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46566 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46620 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46622 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46574 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46586 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46588 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46604 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46608 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46636 - "GET /debug/engine-stats?since=3877 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46636 - "GET /debug/engine-stats?since=4015 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46636 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46636 - "GET /debug/engine-stats?since=4136 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46636 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46644 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46658 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46668 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46680 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46692 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46708 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46724 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46740 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46748 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46762 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46776 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46782 - "GET /debug/engine-stats?since=4136 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46782 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46796 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46806 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46818 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46832 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46840 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46846 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46848 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46856 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46868 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46872 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46874 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46884 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46890 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46892 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46908 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46918 - "GET /debug/engine-stats?since=4278 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46918 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46926 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46934 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46948 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46954 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46966 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46976 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46964 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33548 - "GET /debug/engine-stats?since=4555 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33548 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33554 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33568 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33584 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33588 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33598 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33600 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33612 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33616 - "GET /debug/engine-stats?since=4792 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33616 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33626 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33638 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33646 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33652 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33666 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33672 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33682 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33688 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33696 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33698 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33710 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33714 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33718 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33730 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33746 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33762 - "GET /debug/engine-stats?since=4827 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33762 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33776 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33786 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33796 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33800 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33808 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33822 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33826 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33840 - "GET /debug/engine-stats?since=5111 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33840 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33848 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33860 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33874 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33876 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33888 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33904 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33910 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33912 - "GET /debug/engine-stats?since=5321 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33912 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33914 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33924 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33930 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33946 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33948 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33956 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33962 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33966 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33974 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33984 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33998 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34010 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34026 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34042 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34054 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34062 - "GET /debug/engine-stats?since=5380 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34062 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34068 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34072 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34076 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34092 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34104 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34118 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34130 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34132 - "GET /debug/engine-stats?since=5649 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34132 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34132 - "GET /debug/engine-stats?since=5847 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34132 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34142 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34144 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34158 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34166 - "GET /debug/engine-stats?since=5847 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34166 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34170 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34184 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34186 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34198 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34204 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34210 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34212 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34226 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34234 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34246 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34250 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34254 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34258 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34268 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34274 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34280 - "GET /debug/engine-stats?since=5917 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34280 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34284 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34288 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34304 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34318 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34336 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34322 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34342 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34358 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34364 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34368 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34376 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34386 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34394 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34388 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34400 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34408 - "GET /debug/engine-stats?since=6155 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34408 - "GET /debug/engine-stats?since=6386 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34408 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34418 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34428 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34434 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34442 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34452 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34466 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34476 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34478 - "GET /debug/engine-stats?since=6519 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34478 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34480 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34492 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34508 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34522 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34538 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34552 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34564 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34572 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34576 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34580 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34592 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34600 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34610 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34620 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34630 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34636 - "GET /debug/engine-stats?since=6626 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34636 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34652 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34668 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34676 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34692 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34694 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34708 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34724 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34736 - "GET /debug/engine-stats?since=6829 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34736 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34748 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34764 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34778 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34792 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34806 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34814 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34830 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34840 - "GET /debug/engine-stats?since=7058 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34840 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34472 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34486 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34494 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34510 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34518 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34524 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34536 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34546 - "GET /debug/engine-stats?since=7061 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34546 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34550 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34566 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34574 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34590 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34592 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34594 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34610 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34626 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34636 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34652 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34662 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34672 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34682 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34690 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34704 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34718 - "GET /debug/engine-stats?since=7298 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34718 - "GET /debug/engine-stats?since=7496 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34718 - "GET /debug/engine-stats?since=7594 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Downloading 0.6B model weights...
+Creating model...
+Loading pretrained weights...
+INFO:     Application shutdown complete.
+INFO:     Finished server process [41110]
+/home/nadia/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 6 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

@@ -1,0 +1,60 @@
+loading 0.6B...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/profiler/profiler.py:217: UserWarning: Warning: Profiler clears events at the end of each cycle.Only events from the current cycle will be reported.To keep events across cycles, set acc_events=True.
+  _warn_once(
+Downloading 0.6B model weights...
+Creating model...
+Loading pretrained weights...
+
+=== step() decomposition, ms/step over 200 decode steps ===
+rows   total      plan build_ids      meta  fwd_call  fwd_sync    sample      rest
+   1    8.93     0.004     0.014     0.021     8.606     0.188     0.013     0.085
+   8    9.64     0.006     0.030     0.023     8.882     0.254     0.065     0.376
+  16   13.33     0.008     0.049     0.025     8.900     3.522     0.126     0.701
+  32   23.78     0.011     0.085     0.030    11.527    10.402     0.241     1.483
+  48   38.29     0.014     0.119     0.033    18.980    16.604     0.357     2.181
+
+=== profiler, 16 rows x 20 steps ===
+cudaLaunchKernel calls/step: 1859
+
+--- top 12 by self CUDA time ---
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                               aten::mm         5.73%      15.706ms         8.63%      23.671ms       6.008us      42.358ms        34.98%      42.358ms      10.751us          3940  
+void cutlass::Kernel2<cutlass_80_wmma_tensorop_bf16_...         0.00%       0.000us         0.00%       0.000us       0.000us      38.482ms        31.78%      38.482ms       9.817us          3920  
+                                            aten::copy_         4.91%      13.478ms        14.59%      40.014ms       3.560us      21.534ms        17.78%      21.538ms       1.916us         11240  
+                                         aten::_softmax         0.64%       1.749ms         1.28%       3.511ms       3.990us      10.084ms         8.33%      10.084ms      11.460us           880  
+void at::native::(anonymous namespace)::cunn_SoftMax...         0.00%       0.000us         0.00%       0.000us       0.000us       9.187ms         7.59%       9.187ms      28.708us           320  
+                                              aten::mul         4.50%      12.343ms         9.08%      24.917ms       4.019us       8.686ms         7.17%       8.686ms       1.401us          6200  
+                                            aten::index         4.00%      10.960ms         7.41%      20.312ms       6.010us       8.420ms         6.95%       8.420ms       2.491us          3380  
+void at::native::elementwise_kernel<128, 4, at::nati...         0.00%       0.000us         0.00%       0.000us       0.000us       8.361ms         6.90%       8.361ms       7.465us          1120  
+void at::native::unrolled_elementwise_kernel<at::nat...         0.00%       0.000us         0.00%       0.000us       0.000us       6.989ms         5.77%       6.989ms       2.068us          3380  
+void at::native::vectorized_elementwise_kernel<4, at...         0.00%       0.000us         0.00%       0.000us       0.000us       5.632ms         4.65%       5.632ms       0.999us          5640  
+                                             aten::mean         2.31%       6.332ms         3.97%      10.883ms       4.816us       5.172ms         4.27%       5.172ms       2.288us          2260  
+void at::native::reduce_kernel<512, 1, at::native::R...         0.00%       0.000us         0.00%       0.000us       0.000us       5.172ms         4.27%       5.172ms       2.288us          2260  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 274.277ms
+Self CUDA time total: 121.098ms
+
+
+--- top 12 by self CPU time ---
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+                                       cudaLaunchKernel        27.71%      76.010ms        27.92%      76.571ms       2.059us       0.000us         0.00%       0.896us       0.000us         37180  
+                                               aten::mm         5.73%      15.706ms         8.63%      23.671ms       6.008us      42.358ms        34.98%      42.358ms      10.751us          3940  
+                                  cudaStreamSynchronize         5.20%      14.275ms         5.20%      14.275ms      26.435us       0.000us         0.00%       0.000us       0.000us           540  
+                                            aten::copy_         4.91%      13.478ms        14.59%      40.014ms       3.560us      21.534ms        17.78%      21.538ms       1.916us         11240  
+                                              aten::mul         4.50%      12.343ms         9.08%      24.917ms       4.019us       8.686ms         7.17%       8.686ms       1.401us          6200  
+                                            aten::index         4.00%      10.960ms         7.41%      20.312ms       6.010us       8.420ms         6.95%       8.420ms       2.491us          3380  
+                                    aten::empty_strided         3.61%       9.891ms         3.61%       9.891ms       1.070us       0.000us         0.00%       0.000us       0.000us          9240  
+                                         cuLaunchKernel         3.60%       9.873ms         3.60%       9.873ms       1.951us       0.000us         0.00%       0.000us       0.000us          5060  
+                                              aten::add         2.54%       6.970ms         5.21%      14.288ms       4.153us       3.332ms         2.75%       3.333ms       0.969us          3440  
+                                              aten::bmm         2.48%       6.791ms         3.35%       9.179ms       8.196us       4.792ms         3.96%       4.792ms       4.278us          1120  
+                                             aten::mean         2.31%       6.332ms         3.97%      10.883ms       4.816us       5.172ms         4.27%       5.172ms       2.288us          2260  
+                                           aten::einsum         2.24%       6.133ms        10.65%      29.209ms      26.079us       0.000us         0.00%      13.153ms      11.744us          1120  
+-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  
+Self CPU time total: 274.277ms
+Self CUDA time total: 121.098ms
+

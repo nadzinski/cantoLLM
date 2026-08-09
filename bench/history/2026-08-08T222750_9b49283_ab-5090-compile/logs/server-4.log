@@ -1,0 +1,732 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+INFO:     Started server process [42187]
+INFO:     Waiting for application startup.
+Using device: cuda (NVIDIA GeForce RTX 5090)
+
+CantoLLM server starting on http://127.0.0.1:8378
+  POST /v1/messages  — Anthropic-compatible Messages API
+  GET  /health       — Health check
+  GET  /docs         — OpenAPI docs
+
+Model: qwen3-0.6B  ·  Engine: continuous batching, engine process (max_batch=16, slot=4096 tok, budget=512 tok/step, attention=sdpa, shape_buckets=on, warmup=on, cuda_graphs=on, torch_compile=batch-bucket)
+
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/tokenizer.json "HTTP/1.1 302 Found"
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+INFO:cantollm.engine.batching.engine:torch.compile enabled on the batched forward (fullgraph, strategy=batch-bucket, artifacts built during warm-up)
+INFO:cantollm.engine.batching.warmup:warming 315 shapes (batch buckets (1, 2, 4, 8, 16), widths {1} + (128, 256, 512), kv step 256)
+/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_inductor/lowering.py:2156: UserWarning: Torchinductor does not support code generation for complex operators. Performance may be worse than eager.
+  warnings.warn(
+V0808 22:36:21.761000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/1] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:36:21.761000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/1] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:36:21.761000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/1] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:36:26.161000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/2] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:36:26.161000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:36:26.161000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     - 0/1: 2 <= meta.kv_write_map.row.size()[0] <= 2147483647  # layer_k[m.slot, m.pos] = keys[m.row, m.off]  # src/cantollm/models/attention/padded.py:117 in forward_batched (user code shown is first use of this value--the guard itself is not due user code but due to 0/1 specialization in the framework; to avoid specialization try torch._dynamo.decorators.mark_unbacked(tensor, dim)) and (_inductor/codecache.py:1349 in _lookup_graph)
+V0808 22:36:26.161000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/2] [__recompiles]     - 0/0: meta.max_history_len == 256                              # j = torch.arange(meta.max_history_len, device=device)  # src/cantollm/models/attention/padded.py:67 in build_batched_mask
+V0808 22:36:32.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/3] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:36:32.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:36:32.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:36:32.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:36:32.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/3] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:36:41.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/4] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:36:41.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:36:41.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:36:41.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:36:41.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:36:41.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/4] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:36:59.618000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/5] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:36:59.618000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:36:59.618000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/3: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:36:59.618000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:36:59.618000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:36:59.618000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:36:59.618000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/5] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:11.811000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:37:11.811000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:37:11.811000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/5: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:11.811000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:11.811000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:11.811000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:11.811000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:11.811000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/6] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:26.190000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:37:26.190000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:37:26.190000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:37:26.190000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/5: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:37:26.190000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/3: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:26.190000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:26.190000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:26.190000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:26.190000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/7] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:46.154000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:37:46.154000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:37:46.154000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/7: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:46.154000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:37:46.154000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/5: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:46.154000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:46.154000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:46.154000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:46.154000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:37:46.154000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/8] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 2
+V0808 22:38:15.599000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/9] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:38:15.599000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:38:15.599000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/7: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 4
+V0808 22:38:15.599000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/8: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 4
+V0808 22:38:15.599000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 4
+V0808 22:38:15.599000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/5: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 4
+V0808 22:38:15.599000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/3: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:15.599000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:15.599000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:15.599000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:15.599000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/9] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:29.221000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/10] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:38:29.221000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:38:29.221000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/9: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:29.221000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/7: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:29.221000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/8: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 4
+V0808 22:38:29.221000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 4
+V0808 22:38:29.221000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/5: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:29.221000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:29.221000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:29.221000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:29.221000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:29.221000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/10] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:45.266000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/11] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:38:45.266000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:38:45.266000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/10: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:38:45.266000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/9: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:38:45.266000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/7: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 4
+V0808 22:38:45.266000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/8: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 4
+V0808 22:38:45.266000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 4
+V0808 22:38:45.266000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/5: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 4
+V0808 22:38:45.266000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/3: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:45.266000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:45.266000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:45.266000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 4
+V0808 22:38:45.266000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/11] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 4
+V0808 22:39:05.440000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/12] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:39:05.440000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:39:05.440000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/11: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 4
+V0808 22:39:05.440000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/10: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:39:05.440000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/9: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 4
+V0808 22:39:05.440000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/7: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 4
+V0808 22:39:05.440000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/8: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 4
+V0808 22:39:05.440000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 4
+V0808 22:39:05.440000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/5: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 4
+V0808 22:39:05.440000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 4
+V0808 22:39:05.440000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 4
+V0808 22:39:05.440000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 4
+V0808 22:39:05.440000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 4
+V0808 22:39:05.440000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/12] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 4
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/11: tensor 'meta.slots' size mismatch at index 0. expected 4, actual 8
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/12: tensor 'meta.slots' size mismatch at index 0. expected 4, actual 8
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/10: tensor 'meta.positions' size mismatch at index 0. expected 4, actual 8
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/9: tensor 'meta.positions' size mismatch at index 0. expected 4, actual 8
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/7: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 8
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/8: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 8
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 8
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/5: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 8
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/3: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 8
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 8
+V0808 22:39:35.284000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/13] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 8
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/13: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/11: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/12: tensor 'meta.slots' size mismatch at index 0. expected 4, actual 8
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/10: tensor 'meta.positions' size mismatch at index 0. expected 4, actual 8
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/9: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/7: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/8: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 8
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 8
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/5: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 8
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:39:48.619000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/14] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/14: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/13: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/11: tensor 'meta.slots' size mismatch at index 0. expected 4, actual 8
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/12: tensor 'meta.slots' size mismatch at index 0. expected 4, actual 8
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/10: tensor 'meta.positions' size mismatch at index 0. expected 4, actual 8
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/9: tensor 'meta.positions' size mismatch at index 0. expected 4, actual 8
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/7: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 8
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/8: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 8
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 8
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/5: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 8
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/3: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:03.852000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/15] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/15: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/14: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/13: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/11: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/12: tensor 'meta.slots' size mismatch at index 0. expected 4, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/10: tensor 'meta.positions' size mismatch at index 0. expected 4, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/9: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/7: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/8: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/5: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:24.345000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/16] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 8
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/15: tensor 'meta.slots' size mismatch at index 0. expected 8, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/16: tensor 'meta.slots' size mismatch at index 0. expected 8, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/14: tensor 'meta.positions' size mismatch at index 0. expected 8, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/13: tensor 'meta.positions' size mismatch at index 0. expected 8, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/11: tensor 'meta.slots' size mismatch at index 0. expected 4, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/12: tensor 'meta.slots' size mismatch at index 0. expected 4, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/10: tensor 'meta.positions' size mismatch at index 0. expected 4, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/9: tensor 'meta.positions' size mismatch at index 0. expected 4, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/7: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/8: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/5: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/3: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 16
+V0808 22:40:54.804000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/17] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/17: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/15: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/16: tensor 'meta.slots' size mismatch at index 0. expected 8, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/14: tensor 'meta.positions' size mismatch at index 0. expected 8, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/13: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/11: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/12: tensor 'meta.slots' size mismatch at index 0. expected 4, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/10: tensor 'meta.positions' size mismatch at index 0. expected 4, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/9: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/7: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/8: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/5: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:07.352000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/18] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/18: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/17: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/15: tensor 'meta.slots' size mismatch at index 0. expected 8, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/16: tensor 'meta.slots' size mismatch at index 0. expected 8, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/14: tensor 'meta.positions' size mismatch at index 0. expected 8, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/13: tensor 'meta.positions' size mismatch at index 0. expected 8, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/11: tensor 'meta.slots' size mismatch at index 0. expected 4, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/12: tensor 'meta.slots' size mismatch at index 0. expected 4, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/10: tensor 'meta.positions' size mismatch at index 0. expected 4, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/9: tensor 'meta.positions' size mismatch at index 0. expected 4, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/7: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/8: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/5: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/3: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/2: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:23.601000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/19] [__recompiles]     - 0/0: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles] Recompiling function forward_batched_impl in /home/nadia/personal-projects/cantoLLM/src/cantollm/models/qwen3/model.py:363
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     triggered by the following guard failure(s):
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/19: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/18: tensor 'meta.positions' size mismatch at index 1. expected 1, actual 128
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/17: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/15: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/16: tensor 'meta.slots' size mismatch at index 0. expected 8, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/14: tensor 'meta.positions' size mismatch at index 0. expected 8, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/13: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/11: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/12: tensor 'meta.slots' size mismatch at index 0. expected 4, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/10: tensor 'meta.positions' size mismatch at index 0. expected 4, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/9: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/7: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/8: tensor 'meta.slots' size mismatch at index 0. expected 2, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/6: tensor 'meta.positions' size mismatch at index 0. expected 2, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/5: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/3: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/4: tensor 'meta.slots' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/1: tensor 'meta.positions' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/2: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+V0808 22:41:44.150000 42225 .venv/lib/python3.11/site-packages/torch/_dynamo/guards.py:4514] [0/20] [__recompiles]     - 0/0: tensor 'meta.kv_write_map.off' size mismatch at index 0. expected 1, actual 16
+INFO:cantollm.engine.batching.warmup:shape warm-up done: 315 shapes in 357.7 s
+INFO:cantollm.engine.batching.engine:CUDA graphs: captured 80 decode shapes in 1.7 s
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8378 (Press CTRL+C to quit)
+INFO:     127.0.0.1:49692 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49708 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49708 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49708 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49708 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49710 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49714 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49720 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49744 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49728 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49746 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49750 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49774 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49790 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49758 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49804 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49808 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49808 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49824 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49838 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49848 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49852 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49866 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49872 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49876 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49886 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49894 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49910 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49890 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49914 - "GET /debug/engine-stats?since=338 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49914 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49924 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49930 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49932 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49940 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49946 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49962 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49968 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49984 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49994 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50000 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50016 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50024 - "GET /debug/engine-stats?since=688 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50024 - "GET /debug/engine-stats?since=1041 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50024 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50028 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50044 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50050 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50066 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50088 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50076 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50090 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50096 - "GET /debug/engine-stats?since=1157 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50096 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50100 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50102 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50104 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50106 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50108 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50118 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50128 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50130 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50148 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50144 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50158 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50160 - "GET /debug/engine-stats?since=1380 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50160 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50164 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50178 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50186 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50192 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50204 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50220 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50226 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50242 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50252 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50268 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50282 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50290 - "GET /debug/engine-stats?since=1743 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50290 - "GET /debug/engine-stats?since=2096 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50290 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50294 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50306 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50314 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50318 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50340 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50352 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50324 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50368 - "GET /debug/engine-stats?since=2189 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50368 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50384 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50392 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50408 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50414 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50416 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50424 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50438 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50444 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50456 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50466 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50478 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50486 - "GET /debug/engine-stats?since=2441 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50486 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50490 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50496 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50508 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50514 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50530 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50544 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50550 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53814 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53824 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53832 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53838 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53850 - "GET /debug/engine-stats?since=2791 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53850 - "GET /debug/engine-stats?since=3141 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53850 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53850 - "GET /debug/engine-stats?since=3225 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53850 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53866 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53882 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53886 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53892 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53904 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53910 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53942 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53922 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53928 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53934 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53938 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53960 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53968 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53972 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53970 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53958 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53976 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53984 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53978 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53998 - "GET /debug/engine-stats?since=3225 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53998 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54012 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54016 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54038 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54046 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54058 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54072 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54026 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54086 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54098 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54110 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54124 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54136 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54140 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54144 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54156 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54168 - "GET /debug/engine-stats?since=3441 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54168 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54182 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54198 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54200 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54202 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54212 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54216 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54232 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54240 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54262 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54272 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54284 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54246 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54288 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54304 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54308 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54312 - "GET /debug/engine-stats?since=3616 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54312 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54320 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54358 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54336 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54346 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54360 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54374 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54376 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54384 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54398 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54408 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54414 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54428 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54440 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54452 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54458 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54464 - "GET /debug/engine-stats?since=3683 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54464 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54468 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54472 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54476 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54492 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54508 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54490 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54510 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54522 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54542 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54556 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54572 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54580 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54592 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54600 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54528 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54612 - "GET /debug/engine-stats?since=3875 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54612 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54618 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54628 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54640 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54666 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54650 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54676 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54682 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54690 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54702 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54714 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54734 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54748 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54756 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54760 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54728 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54770 - "GET /debug/engine-stats?since=3917 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54770 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54770 - "GET /debug/engine-stats?since=4135 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54770 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54786 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54798 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54800 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54814 - "GET /debug/engine-stats?since=4135 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54814 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54828 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54840 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54850 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54864 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54876 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54890 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54906 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54916 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54918 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54928 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54934 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54948 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54960 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54962 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54970 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54976 - "GET /debug/engine-stats?since=4153 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54976 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54996 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55008 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55020 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54990 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55024 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55034 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55040 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55052 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55060 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55074 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55080 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55086 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55098 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55114 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55110 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55126 - "GET /debug/engine-stats?since=4445 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55126 - "GET /debug/engine-stats?since=4733 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55126 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55128 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55132 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55134 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55150 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55162 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55174 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55184 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55196 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55206 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55216 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55228 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55232 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55238 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55240 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55242 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55244 - "GET /debug/engine-stats?since=4795 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55244 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55250 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55264 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55278 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55284 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55288 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55302 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55310 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55320 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55322 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55330 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55338 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55348 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55354 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55368 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55380 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55388 - "GET /debug/engine-stats?since=5023 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55388 - "GET /debug/engine-stats?since=5310 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55388 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55398 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55410 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55420 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55422 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55436 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55458 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55450 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55460 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55464 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55480 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55522 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55482 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55498 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55508 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55520 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55524 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55532 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55536 - "GET /debug/engine-stats?since=5324 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55536 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55544 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55566 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55582 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55596 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55550 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39056 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39062 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39064 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39080 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39072 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39094 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39106 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39118 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39124 - "GET /debug/engine-stats?since=5588 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39124 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39124 - "GET /debug/engine-stats?since=5867 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39124 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39128 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39164 - "GET /debug/engine-stats?since=5867 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39142 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39150 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39164 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39180 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39190 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39196 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39198 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39210 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39226 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39234 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39250 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39286 - "GET /debug/engine-stats?since=5867 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39252 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39258 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39268 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39284 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39292 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39294 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39308 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39286 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39320 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39330 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39344 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39350 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39378 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39360 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39370 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39394 - "GET /debug/engine-stats?since=6135 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39394 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39398 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39412 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39422 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39430 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39444 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39458 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39438 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39472 - "GET /debug/engine-stats?since=6378 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39472 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39486 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39498 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39508 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39510 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39522 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39524 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39528 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39538 - "GET /debug/engine-stats?since=6549 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39538 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39542 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39544 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39554 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39558 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39562 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39566 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39580 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39594 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39600 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39608 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39624 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39634 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39646 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39648 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39664 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39676 - "GET /debug/engine-stats?since=6610 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39676 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39680 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39694 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39702 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39714 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39718 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39732 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39740 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39752 - "GET /debug/engine-stats?since=6828 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39752 - "GET /debug/engine-stats?since=7085 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39752 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39764 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39772 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39784 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39792 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39804 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39812 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39814 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39826 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39840 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39852 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39868 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39880 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39886 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39900 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39904 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39918 - "GET /debug/engine-stats?since=7091 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39918 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39932 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39934 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39942 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39950 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39956 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39962 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39972 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39988 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39992 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39996 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39998 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40010 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40012 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40028 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40034 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40042 - "GET /debug/engine-stats?since=7322 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40042 - "GET /debug/engine-stats?since=7533 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40042 - "GET /debug/engine-stats?since=7627 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Downloading 0.6B model weights...
+Creating model...
+Loading pretrained weights...
+INFO:     Application shutdown complete.
+INFO:     Finished server process [42187]
+/home/nadia/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 6 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

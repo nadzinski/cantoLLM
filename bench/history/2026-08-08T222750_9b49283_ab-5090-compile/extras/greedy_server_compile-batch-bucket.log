@@ -1,0 +1,40 @@
+INFO:     Started server process [51340]
+INFO:     Waiting for application startup.
+Using device: cuda (NVIDIA GeForce RTX 5090)
+
+CantoLLM server starting on http://0.0.0.0:8378
+  POST /v1/messages  — Anthropic-compatible Messages API
+  GET  /health       — Health check
+  GET  /docs         — OpenAPI docs
+
+Model: qwen3-0.6B  ·  Engine: continuous batching, engine process (max_batch=16, slot=4096 tok, budget=512 tok/step, attention=sdpa, shape_buckets=on, warmup=on, cuda_graphs=on, torch_compile=batch-bucket)
+
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/tokenizer.json "HTTP/1.1 302 Found"
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+INFO:cantollm.engine.batching.engine:torch.compile enabled on the batched forward (fullgraph, strategy=batch-bucket, artifacts built during warm-up)
+INFO:cantollm.engine.batching.warmup:warming 315 shapes (batch buckets (1, 2, 4, 8, 16), widths {1} + (128, 256, 512), kv step 256)
+/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_inductor/lowering.py:2156: UserWarning: Torchinductor does not support code generation for complex operators. Performance may be worse than eager.
+  warnings.warn(
+INFO:cantollm.engine.batching.warmup:shape warm-up done: 315 shapes in 207.3 s
+INFO:cantollm.engine.batching.engine:CUDA graphs: captured 80 decode shapes in 1.7 s
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8378 (Press CTRL+C to quit)
+INFO:     127.0.0.1:45334 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45346 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45358 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45364 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45368 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45384 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45400 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45410 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+Downloading 0.6B model weights...
+Creating model...
+Loading pretrained weights...
+INFO:     Application shutdown complete.
+INFO:     Finished server process [51340]
+/home/nadia/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 6 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

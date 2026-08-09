@@ -1,0 +1,58 @@
+[default] spawn->Ready 78.1 s
+[default] prompt 0 done (276 chars)
+[default] prompt 1 done (272 chars)
+[default] prompt 2 done (290 chars)
+[default] prompt 3 done (270 chars)
+[default] prompt 4 done (274 chars)
+[default] prompt 5 done (249 chars)
+[default] prompt 6 done (264 chars)
+[compile-dynamic] spawn->Ready 142.7 s
+[compile-dynamic] prompt 0 done (269 chars)
+[compile-dynamic] prompt 1 done (272 chars)
+[compile-dynamic] prompt 2 done (287 chars)
+[compile-dynamic] prompt 3 done (261 chars)
+[compile-dynamic] prompt 4 done (274 chars)
+[compile-dynamic] prompt 5 done (288 chars)
+[compile-dynamic] prompt 6 done (264 chars)
+[compile-batch-bucket] spawn->Ready 215.0 s
+[compile-batch-bucket] prompt 0 done (269 chars)
+[compile-batch-bucket] prompt 1 done (272 chars)
+[compile-batch-bucket] prompt 2 done (287 chars)
+[compile-batch-bucket] prompt 3 done (268 chars)
+[compile-batch-bucket] prompt 4 done (269 chars)
+[compile-batch-bucket] prompt 5 done (288 chars)
+[compile-batch-bucket] prompt 6 done (264 chars)
+DIVERGENCE arm=compile-dynamic prompt=0 at char 79:
+  default : ...'to respond appropriately. Let me think. They might be greeting me, so a simple "Hello!" would work. But maybe they want '
+  compile-dynamic: ...'to respond appropriately. Let me think. A simple greeting is good. Maybe start with "Hello!" to keep it friendly. Then, '
+DIVERGENCE arm=compile-dynamic prompt=1 at char 225:
+  default : ...' colors? Like secondary colors? Red and blue are primary, but adding yellow makes it a\x00'
+  compile-dynamic: ...' colors? Like secondary colors? Red and yellow are primary, but blue is also a primary\x00'
+DIVERGENCE arm=compile-dynamic prompt=2 at char 246:
+  default : ...'l or educational setting. "Ossify" is a term related to the process of ossification\x00'
+  compile-dynamic: ...'l or educational setting. "Ossify" is a verb meaning to make something ossified,\x00'
+DIVERGENCE arm=compile-dynamic prompt=3 at char 16:
+  default : ...'\nOkay, the user has provided a long string of "ossify" repeated multiple times. They might be tr'
+  compile-dynamic: ...'\nOkay, the user provided a long string of "ossify" repeated multiple times. They might be testin'
+DIVERGENCE arm=compile-dynamic prompt=5 at char 125:
+  default : ...'imes. Let me start by understanding the input. The string is "ossify ossify ossify ossify ossify ossify ossify ossify os'
+  compile-dynamic: ...'imes. Let me start by understanding the pattern. The string seems to be a repetition of "ossify" multiple times. The use'
+DIVERGENCE arm=compile-batch-bucket prompt=0 at char 79:
+  default : ...'to respond appropriately. Let me think. They might be greeting me, so a simple "Hello!" would work. But maybe they want '
+  compile-batch-bucket: ...'to respond appropriately. Let me think. A simple greeting is good. Maybe start with "Hello!" to keep it friendly. Then, '
+DIVERGENCE arm=compile-batch-bucket prompt=1 at char 225:
+  default : ...' colors? Like secondary colors? Red and blue are primary, but adding yellow makes it a\x00'
+  compile-batch-bucket: ...' colors? Like secondary colors? Red and yellow are primary, but blue is also a primary\x00'
+DIVERGENCE arm=compile-batch-bucket prompt=2 at char 246:
+  default : ...'l or educational setting. "Ossify" is a term related to the process of ossification\x00'
+  compile-batch-bucket: ...'l or educational setting. "Ossify" is a verb meaning to make something ossified,\x00'
+DIVERGENCE arm=compile-batch-bucket prompt=3 at char 16:
+  default : ...'\nOkay, the user has provided a long string of "ossify" repeated multiple times. They might be tr'
+  compile-batch-bucket: ...'\nOkay, the user provided a long string of "ossify" repeated multiple times. They might be trying'
+DIVERGENCE arm=compile-batch-bucket prompt=4 at char 196:
+  default : ...'c context they want me to apply. Let me start by checking the structure.\n\nFirst, I notice that "ossify" is repeated 2\x00'
+  compile-batch-bucket: ...'c context they want me to apply. Let me check the structure.\n\nFirst, I notice that "ossify" is repeated 20 times\x00'
+DIVERGENCE arm=compile-batch-bucket prompt=5 at char 125:
+  default : ...'imes. Let me start by understanding the input. The string is "ossify ossify ossify ossify ossify ossify ossify ossify os'
+  compile-batch-bucket: ...'imes. Let me start by understanding the pattern. The string seems to be a repetition of "ossify" multiple times. The use'
+STREAMS DIVERGED
