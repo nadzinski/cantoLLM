@@ -234,12 +234,41 @@ near-ties it does not.
 
 Per the design note, clearing the gates was the condition for compile
 joining the CUDA serve default. The performance gates clear decisively;
-the bill gate and the strict greedy-identity gate do not.
-Recommendation recorded for the author: keep `torch_compile` opt-in for
-v1 (the note's stated fallback) — the +48-64% is real and reproducible,
-but a default flip should wait on (a) the §9 cache-persistence item to
-cut the +66 s warm boot bill, and (b) an explicit decision that
-greedy-vs-eager token drift at bf16 ties is acceptable for the serve
-default, since temperature-0 outputs change vs the eager engine.
+at the recorded sha the bill gate and the strict greedy-identity gate
+did not — **see the addendum below: the bill gate now passes.**
 Strategy default stays `dynamic` (half the artifacts and bill;
-batch-bucket's ~3% edge doesn't cover +140 s of Ready).
+batch-bucket's ~3% edge doesn't cover +140 s of cold Ready).
+
+## Addendum (2026-08-09, sha a30f2ee): the warm bill was a cache
+## bypass, not irreducible work — gate now PASSES at +21 s
+
+Investigating "how much work is cache persistence" found the +65.6 s
+warm bill was self-inflicted: the sdpa cuDNN priority pin, traced into
+the compiled graph, plants `_backend_from_string` — an unserializable
+call target that made AOTAutograd **bypass** its cache entirely
+(counters on a warm disk cache: `autograd_cache_bypass: 9`,
+`fxgraph_cache_miss: 9`), so every boot re-ran full Inductor codegen
+(~72 s); only the Triton binary cache ever hit. The fix is design note
+§4's own contingency executed for a different reason: the pin hoisted
+out of the traced region into `AttentionMethod.execution_context()`,
+entered by the forward's entry points. Artifacts still trace inside the
+context, so cuDNN stays baked at trace time; the kernel-ran tripwire
+and a new `TestExecutionContext` (entry-point wiring + no dispatcher
+machinery in traced graphs) pin it.
+
+Measured after the hoist: warm engine build 213.5 → 91.7 s with
+`autograd_cache_hit: 9 / fxgraph_cache_hit: 9`; server respawn
+spawn→Ready **98.9 s vs baseline 77.9 s → warm bill +21.0 s, under the
++30 s gate** (previously +65.6). Zero traffic recompiles and 100%
+decode replay re-verified; 460 tests green. Notes for the record: the
+first server boot after any code change still pays the cold bill
+(~225 s Ready — cache keys differ per graph content, and, observed:
+engine-process cache keys differ from plain-process keys, so only
+server-to-server reboots share entries — the case that matters). The
+§9 cache-persistence / mega-cache item is no longer needed for this
+gate; it remains relevant only for cold-start-after-reprovision.
+
+**Revised gate tally: perf PASS, warm bill PASS, greedy token-identity
+vs eager FAIL as worded (bf16 tie drift, quantified benign).** The
+default-flip question now rests solely on whether temperature-0 output
+drift vs the eager engine is acceptable.

@@ -483,17 +483,24 @@ tripwire test. The clean A/B (record: `bench/history/
 `agent-summary.md`) exceeded every §6 performance prediction —
 short_chat c=16 2461 → 3683 tok/s (+49.6%), long_context c=1 179 → 294
 (+64%), 16-row decode step 5.93 → 4.0 ms, kernels/step 1859 → 218,
-zero traffic recompiles, 100% decode replay under compile — but two
-gates failed: the warm-cache Ready bill is +66 s (gate: < +30 s;
-Dynamo/AOT re-tracing isn't disk-cached — §9's deferred
-cache-persistence item is the remedy path), and greedy streams are not
-token-identical vs eager (bf16 argmax ties at 0.0625 margins flip
-under fused-kernel reordering; drift quantified benign, but
-temperature-0 outputs change). Agent recommendation recorded:
-torch_compile stays opt-in, strategy default dynamic; default-flip is
-the author's call after the results write-up. Open:
+zero traffic recompiles, 100% decode replay under compile — with two
+gates initially failing. The warm-bill gate (+66 s vs < +30 s) turned
+out to be a fourth latent bug, found and fixed 2026-08-09 (a30f2ee):
+the traced sdpa cuDNN pin made AOTAutograd bypass its cache outright,
+re-running Inductor codegen every boot; hoisting the pin to
+`AttentionMethod.execution_context()` (entered by the forward entry
+points, never traced — §4's own contingency) makes the compile caches
+hit, and the warm bill is now **+21 s: gate passes** (first boot after
+a code change still pays ~+147 s cold; §9's cache-persistence item now
+matters only for reprovisioned boxes). The remaining failed gate:
+greedy streams are not token-identical vs eager (bf16 argmax ties at
+0.0625 margins flip under fused-kernel reordering; drift quantified
+benign — coherent alternates, logits within 0.5 on a 15-scale — but
+temperature-0 outputs change vs the eager engine). Agent
+recommendation: torch_compile ready for default-on pending only the
+author's call on that drift; strategy default dynamic. Open:
 `torch-compile-results.md` (back home, from the run records); the
-default/gates decision; the H100 day.
+default decision; the H100 day.
 
 **Core:**
 
