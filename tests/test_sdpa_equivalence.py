@@ -114,8 +114,9 @@ class TestMixedBatch:
 
         dirty_pool = make_pool()
         torch.manual_seed(9)
-        dirty_pool.k[:, 0].normal_()  # previous occupant's leftovers
-        dirty_pool.v[:, 0].normal_()
+        for layer_k, layer_v in zip(dirty_pool.k_layers, dirty_pool.v_layers):
+            layer_k[0].normal_()  # previous occupant's leftovers
+            layer_v[0].normal_()
         dirty = batched_step(sdpa, dirty_pool, [(0, 0, PROMPT_B)])
 
         torch.testing.assert_close(dirty[0], clean[0], atol=1e-5, rtol=0)
@@ -141,8 +142,12 @@ class TestSharedMechanics:
         sdpa_pool = make_pool()
         batched_step(sdpa, sdpa_pool, [(slot, 0, PROMPT_B)])
 
-        torch.testing.assert_close(sdpa_pool.k[0], oracle_pool.k[0], atol=0, rtol=0)
-        torch.testing.assert_close(sdpa_pool.v[0], oracle_pool.v[0], atol=0, rtol=0)
+        torch.testing.assert_close(
+            sdpa_pool.k_layers[0], oracle_pool.k_layers[0], atol=0, rtol=0
+        )
+        torch.testing.assert_close(
+            sdpa_pool.v_layers[0], oracle_pool.v_layers[0], atol=0, rtol=0
+        )
 
     def test_overlong_write_is_rejected_before_anything(self):
         """The validate-before-write promise is inherited: an overlong row
@@ -158,7 +163,7 @@ class TestSharedMechanics:
         with pytest.raises(ValueError):
             batched_step(sdpa, pool, rows)
 
-        assert torch.all(pool.k == 0) and torch.all(pool.v == 0), (
+        assert torch.all(pool.stacked_k() == 0) and torch.all(pool.stacked_v() == 0), (
             "a failed step wrote into the pool — validate-before-write broken"
         )
 

@@ -346,7 +346,7 @@ class TestCaptureReplayCUDA:
         replayed = wrapper(ids, meta, pool).clone()
         assert wrapper.hits == 1
 
-        pool_after_replay = pool.k[:, :, : pool.max_seq_len].clone()
+        pool_after_replay = pool.stacked_k()[:, :, : pool.max_seq_len]
         eager = runtime.forward_batched(ids, meta, pool)
         # real row's logits identical; filler row's are garbage on both
         # paths and not compared
@@ -354,5 +354,5 @@ class TestCaptureReplayCUDA:
         # the replayed scatter left every real pool position exactly as
         # the eager step then wrote it (same destinations, same values)
         assert torch.equal(
-            pool_after_replay, pool.k[:, :, : pool.max_seq_len]
+            pool_after_replay, pool.stacked_k()[:, :, : pool.max_seq_len]
         )

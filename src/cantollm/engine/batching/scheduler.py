@@ -237,7 +237,7 @@ class ContinuousBatchingScheduler:
             return events
 
         input_ids = self._build_input_ids(rows)
-        meta = build_batch_meta(rows, device=self.pool.k.device)
+        meta = build_batch_meta(rows, device=self.pool.device)
         # Pad the planned geometry into the bounded shape vocabulary (an
         # exact no-op without the bucket knobs) — see shaping.py for why
         # kernels care about step shapes.

@@ -200,7 +200,7 @@ class GraphedBatchedForward:
         the biggest activation footprint and smaller shapes sublet it.
         Returns the number of graphs captured.
         """
-        device = pool.k.device
+        device = pool.device
         if device.type != "cuda":
             raise RuntimeError(
                 f"CUDA graphs need a CUDA pool, got device {device}"

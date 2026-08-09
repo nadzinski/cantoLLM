@@ -29,24 +29,40 @@ class TestPaddedKVPool:
         # 17 positions = 16 logical + the scratch column (graph-replay
         # parking spot for filler-row writes; gathers never read it).
         pool = make_pool()
-        assert pool.k.shape == (2, 3, 17, 4, 8)
-        assert pool.v.shape == (2, 3, 17, 4, 8)
-        assert pool.k.dtype == torch.float32
-        assert torch.all(pool.k == 0) and torch.all(pool.v == 0)
+        assert len(pool.k_layers) == 2 and len(pool.v_layers) == 2
+        for k, v in zip(pool.k_layers, pool.v_layers):
+            assert k.shape == (3, 17, 4, 8) and v.shape == (3, 17, 4, 8)
+            assert k.dtype == torch.float32
+            assert torch.all(k == 0) and torch.all(v == 0)
         assert pool.max_batch == 3 and pool.max_seq_len == 16
         assert pool.scratch_pos == 16
+        assert pool.device == pool.k_layers[0].device
 
-    def test_layer_returns_writable_views(self):
+    def test_layers_are_separate_writable_tensors(self):
+        # Per-layer separate tensors (not views of one stacked tensor) is
+        # the compile contract: AOTAutograd keeps direct input mutations
+        # in place but functionalizes view-of-input mutations into
+        # pool-scale copies (torch-compile-design.md §4).
         pool = make_pool()
         k1, v1 = pool.layer(1)
+        assert k1 is pool.k_layers[1] and v1 is pool.v_layers[1]
         assert k1.shape == (3, 17, 4, 8)
         k1[2, 5] = 7.0
         v1[0, 0] = -1.0
-        # Writes through the view land in the pool storage (no copy) ...
-        assert torch.all(pool.k[1, 2, 5] == 7.0)
-        assert torch.all(pool.v[1, 0, 0] == -1.0)
-        # ... and other layers are untouched.
-        assert torch.all(pool.k[0] == 0)
+        # Writes land in the pool storage (no copy) ...
+        assert torch.all(pool.k_layers[1][2, 5] == 7.0)
+        assert torch.all(pool.v_layers[1][0, 0] == -1.0)
+        # ... other layers are untouched, and no two layers share storage.
+        assert torch.all(pool.k_layers[0] == 0)
+        k0, _ = pool.layer(0)
+        assert k0.untyped_storage().data_ptr() != k1.untyped_storage().data_ptr()
+
+    def test_stacked_helpers_are_copies(self):
+        pool = make_pool()
+        stacked = pool.stacked_k()
+        assert stacked.shape == (2, 3, 17, 4, 8)
+        stacked[0, 0, 0] = 5.0
+        assert torch.all(pool.k_layers[0] == 0), "stacked_k must be a copy"
 
 
 class TestSlotAllocator:
@@ -100,12 +116,12 @@ class TestRuntimeNewKVPool:
 
         pool = runtime.new_kv_pool(config)
 
-        assert pool.k.shape == (
-            TINY_ARCH["num_transformers"], 2, 33,
-            TINY_ARCH["num_groups"], TINY_ARCH["head_dim"],
+        assert len(pool.k_layers) == TINY_ARCH["num_transformers"]
+        assert pool.k_layers[0].shape == (
+            2, 33, TINY_ARCH["num_groups"], TINY_ARCH["head_dim"],
         )
-        assert pool.k.dtype == spec.dtype
-        assert pool.k.device.type == "cpu"
+        assert pool.k_layers[0].dtype == spec.dtype
+        assert pool.device.type == "cpu"
 
     def test_rejects_capacity_beyond_rope_table(self):
         # TINY_ARCH's RoPE table is max_seq_len=128. A padded decode row can

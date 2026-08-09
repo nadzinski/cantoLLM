@@ -211,10 +211,13 @@ class TestOutputEquivalence:
         sched_b = make_scheduler(**BUCKETS)
         drive(sched_a, {0: [make_request("x", PROMPTS[0])]})
         drive(sched_b, {0: [make_request("x", PROMPTS[0])]})
-        torch.testing.assert_close(sched_b.pool.k, sched_a.pool.k, atol=1e-5, rtol=0)
-        torch.testing.assert_close(sched_b.pool.v, sched_a.pool.v, atol=1e-5, rtol=0)
-        written = (sched_a.pool.k != 0)
-        assert torch.all(sched_b.pool.k[~written] == 0), (
+        k_a, k_b = sched_a.pool.stacked_k(), sched_b.pool.stacked_k()
+        torch.testing.assert_close(k_b, k_a, atol=1e-5, rtol=0)
+        torch.testing.assert_close(
+            sched_b.pool.stacked_v(), sched_a.pool.stacked_v(), atol=1e-5, rtol=0
+        )
+        written = (k_a != 0)
+        assert torch.all(k_b[~written] == 0), (
             "bucketed run wrote where the unbucketed run did not"
         )
 
@@ -265,7 +268,7 @@ class TestShapeProperty:
 
 
 class TestWarmup:
-    def test_warmup_covers_vocabulary_and_writes_nothing(self):
+    def test_warmup_covers_vocabulary_and_writes_only_scratch(self):
         runtime = build_runtime(
             tiny_qwen3_spec(), torch.device("cpu"), attention="padded"
         )
@@ -273,8 +276,19 @@ class TestWarmup:
         pool = runtime.new_kv_pool(config)
         warmed = warmup_shape_vocabulary(runtime.forward_batched, pool, config)
         assert warmed == len(config.shape_vocabulary())
-        assert torch.all(pool.k == 0) and torch.all(pool.v == 0), (
-            "warm-up wrote into the pool — filler rows must not write"
+        # The seeded scratch maps (compile guard coverage: the map length
+        # must look like traffic's) park every warm-up write on the
+        # scratch column; the logical pool must stay untouched.
+        logical_k = pool.stacked_k()[:, :, : pool.max_seq_len]
+        logical_v = pool.stacked_v()[:, :, : pool.max_seq_len]
+        assert torch.all(logical_k == 0) and torch.all(logical_v == 0), (
+            "warm-up wrote into the logical pool — seeded maps must park "
+            "on the scratch column"
+        )
+        scratch_k = pool.stacked_k()[:, :, pool.scratch_pos]
+        assert torch.any(scratch_k != 0), (
+            "warm-up never exercised the scatter — the seeded maps are "
+            "not reaching the forward (compile guard coverage regressed)"
         )
 
     def test_scheduler_build_runs_warmup_then_serves(self):

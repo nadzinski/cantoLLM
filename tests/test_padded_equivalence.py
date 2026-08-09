@@ -191,16 +191,17 @@ class TestPoolState:
         cache = KVCache(TINY_ARCH["num_transformers"])
         oracle(torch.tensor([PROMPT_B]), start_pos=0, kv_cache=cache)
         for i, layer in enumerate(cache):
+            layer_k, layer_v = pool.layer(i)
             torch.testing.assert_close(
-                pool.k[i, slot, :n], layer["keys"][0], atol=1e-6, rtol=0,
+                layer_k[slot, :n], layer["keys"][0], atol=1e-6, rtol=0,
                 msg=lambda m, i=i: f"layer {i} keys: {m}",
             )
             torch.testing.assert_close(
-                pool.v[i, slot, :n], layer["values"][0], atol=1e-6, rtol=0,
+                layer_v[slot, :n], layer["values"][0], atol=1e-6, rtol=0,
                 msg=lambda m, i=i: f"layer {i} values: {m}",
             )
         # And the write stayed inside the slot's occupied region.
-        assert torch.all(pool.k[:, slot, n:] == 0)
+        assert torch.all(pool.stacked_k()[:, slot, n:] == 0)
 
     def test_stale_slot_reuse_is_clean(self):
         """Garbage from a slot's previous occupant must not affect a new
@@ -212,8 +213,9 @@ class TestPoolState:
 
         dirty_pool = make_pool()
         torch.manual_seed(9)
-        dirty_pool.k[:, 0].normal_()  # previous occupant's leftovers
-        dirty_pool.v[:, 0].normal_()
+        for layer_k, layer_v in zip(dirty_pool.k_layers, dirty_pool.v_layers):
+            layer_k[0].normal_()  # previous occupant's leftovers
+            layer_v[0].normal_()
         dirty = batched_step(padded, dirty_pool, [(0, 0, PROMPT_B)])
 
         torch.testing.assert_close(dirty[0], clean[0], atol=1e-6, rtol=0)
@@ -244,7 +246,7 @@ class TestPoolState:
         with pytest.raises(ValueError):
             batched_step(padded, pool, rows)
 
-        assert torch.all(pool.k == 0) and torch.all(pool.v == 0), (
+        assert torch.all(pool.stacked_k() == 0) and torch.all(pool.stacked_v() == 0), (
             "a failed step wrote into the pool — validate-before-write broken"
         )
 

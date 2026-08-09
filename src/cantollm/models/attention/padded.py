@@ -91,7 +91,11 @@ class PaddedAttentionMethod:
           keys:    (B, num_new_max, groups, head_dim), post-RoPE
           values:  (B, num_new_max, groups, head_dim)
           mask:    (B, num_new_max, max_history_len) bool, from build_batched_mask
-          layer_k: (max_batch, max_seq_len, groups, head_dim) pool view, written in place
+          layer_k: (max_batch, max_seq_len + 1, groups, head_dim) pool layer
+            tensor, written in place. A real per-layer tensor, never a view
+            of a stacked pool: torch.compile keeps direct input mutations
+            in place but functionalizes view-of-input mutations into
+            pool-scale copies (torch-compile-design.md §4).
           layer_v: same shape as layer_k
           returns: (B, num_new_max, groups, heads_per_group, head_dim)
         """

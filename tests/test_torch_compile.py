@@ -1,11 +1,15 @@
 """torch.compile wiring: config, hoists, and trace health (chunk 1).
 
-CPU-only on purpose: Dynamo tracing is device-independent, so fullgraph
+Mostly CPU on purpose: Dynamo tracing is device-independent, so fullgraph
 regressions, guard leaks, and hoist bugs all surface here. The compiled
 arms use backend="eager" (or a counting backend), which runs Dynamo's
 tracing and guards without paying Inductor codegen, so the suite stays
-fast. Inductor kernel quality, numerics, and graph-capture composition
-are 5090 work (torch-compile-design.md §7).
+fast. The exception is `TestInductorCUDA`: the real-backend contract that
+pool writes stay in place under AOTAutograd functionalization cannot be
+seen by backend="eager" at all (the 2026-08-08 5090 round learned this
+the expensive way), so one CUDA test pays one real Inductor compile.
+Kernel quality and graph-capture composition remain 5090 protocol work
+(torch-compile-design.md §7).
 """
 
 from __future__ import annotations
@@ -46,8 +50,12 @@ def make_pool(max_batch: int = 4) -> PaddedKVPool:
     )
 
 
-def make_meta(row_specs: list[tuple[int, int, int]]) -> BatchMeta:
-    """row_specs: [(slot, start_pos, num_new)]."""
+def make_meta(
+    row_specs: list[tuple[int, int, int]], device: torch.device = CPU
+) -> BatchMeta:
+    """row_specs: [(slot, start_pos, num_new)]. `device` is where the
+    derived kv_write_map lands (the scheduler passes the pool's device);
+    the other tensors stay CPU, moved by the runtime front."""
     start_pos = torch.tensor([r[1] for r in row_specs])
     num_new = torch.tensor([r[2] for r in row_specs])
     num_new_max = int(num_new.max())
@@ -59,7 +67,7 @@ def make_meta(row_specs: list[tuple[int, int, int]]) -> BatchMeta:
         positions=start_pos[:, None] + torch.arange(num_new_max)[None, :],
         num_new_max=num_new_max,
         max_history_len=int((start_pos + num_new).max()),
-        device=CPU,
+        device=device,
     )
 
 
@@ -138,7 +146,9 @@ class TestHoists:
             _ = meta_b.kv_write_map
             got = model.forward_batched_impl(input_ids, meta_b, pool_b)
             torch.testing.assert_close(got, want, atol=0, rtol=0)
-        torch.testing.assert_close(pool_a.k, pool_b.k, atol=0, rtol=0)
+        torch.testing.assert_close(
+            pool_a.stacked_k(), pool_b.stacked_k(), atol=0, rtol=0
+        )
 
     def test_overlong_row_rejected_before_any_write(self):
         """The bounds guarantee moved from the padded write loop to
@@ -149,7 +159,8 @@ class TestHoists:
         meta = make_meta([(0, 0, 4), (1, MAX_SEQ - 2, 4)])  # 30 + 4 > 32
         with pytest.raises(ValueError):
             model.forward_batched(ids_for(meta), meta, pool)
-        assert torch.all(pool.k == 0) and torch.all(pool.v == 0)
+        assert torch.all(pool.stacked_k() == 0)
+        assert torch.all(pool.stacked_v() == 0)
 
 
 class TestCompiledRuntime:
@@ -189,7 +200,7 @@ class TestCompiledRuntime:
         meta = make_meta([(0, MAX_SEQ - 2, 4)])
         with pytest.raises(ValueError):
             compiled.forward_batched(ids_for(meta), meta, pool)
-        assert torch.all(pool.k == 0)
+        assert torch.all(pool.stacked_k() == 0)
 
 
 class TestStrategies:
@@ -299,6 +310,80 @@ class TestEngineWiring:
         # graph break (fullgraph=True would have raised) and the
         # scheduler is servable.
         assert scheduler.is_idle()
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
+class TestInductorCUDA:
+    """The functionalization tripwire, on the real backend.
+
+    The KV scatter mutates `pool.layer(i)` inside the traced region.
+    AOTAutograd keeps that in place only because each layer is its own
+    graph input; if the layers ever become views of a shared base again
+    (or any change makes the mutation non-reinplaceable), Inductor emits
+    pool-scale rebuild kernels — a silent ~23x decode slowdown that no
+    backend="eager" test can see. The memory bound below is the tripwire:
+    the pool is sized so even one layer-sized rebuild buffer (~33 MB)
+    blows the threshold, while the legitimate step footprint (activations
+    for 16 tiny-model rows plus index scratch) is well under it.
+    """
+
+    def test_pool_writes_stay_in_place_under_inductor(self):
+        device = torch.device("cuda")
+        torch.manual_seed(1234)
+        eager_model = make_model().to(device)
+        compiled_model = make_model().to(device)
+        compiled_model.load_state_dict(eager_model.state_dict())
+
+        def rt(model):
+            return ModelRuntime(
+                spec=tiny_qwen3_spec(), device=device, model=model,
+                tokenizer=None,
+                backend=StandardBackend(model=model, device=device),
+            )
+
+        eager, compiled = rt(eager_model), rt(compiled_model)
+        compiled.enable_torch_compile()  # real Inductor backend
+
+        def big_pool() -> PaddedKVPool:
+            # 64 x 4097 x 4 x 8 fp32 = ~33.6 MB per layer tensor.
+            return PaddedKVPool(
+                num_layers=TINY_ARCH["num_transformers"], max_batch=64,
+                max_seq_len=4096, num_groups=TINY_ARCH["num_groups"],
+                head_dim=TINY_ARCH["head_dim"], dtype=torch.float32,
+                device=device,
+            )
+
+        # 16-row decode; positions stay under TINY_ARCH's 128-entry RoPE
+        # table even though the pool is 4096 deep.
+        specs = [(slot, 30, 1) for slot in range(16)]
+        pool_e, pool_c = big_pool(), big_pool()
+        ids = ids_for(make_meta(specs)).to(device)
+        want = eager.forward_batched(ids, make_meta(specs, device), pool_e)
+
+        # First call pays the Inductor compile (excluded from the memory
+        # window); the measured call replays the compiled artifact.
+        compiled.forward_batched(ids, make_meta(specs, device), pool_c)
+        torch.cuda.synchronize()
+        baseline = torch.cuda.memory_allocated()
+        torch.cuda.reset_peak_memory_stats()
+        got = compiled.forward_batched(ids, make_meta(specs, device), pool_c)
+        torch.cuda.synchronize()
+        extra = torch.cuda.max_memory_allocated() - baseline
+
+        layer_bytes = pool_c.k_layers[0].numel() * pool_c.k_layers[0].element_size()
+        assert extra < layer_bytes // 2, (
+            f"compiled step allocated {extra / 2**20:.1f} MB — pool-scale "
+            "buffers mean the KV write is being functionalized into "
+            "copies instead of staying in place (design note §4)"
+        )
+        # Numerics: Inductor fuses and reorders float math, so tolerance,
+        # not equality (the §4 'numerics move' note).
+        torch.testing.assert_close(got, want, atol=1e-4, rtol=1e-4)
+        # And the writes actually landed: both pools hold the same K/V.
+        for i in range(pool_c.num_layers):
+            torch.testing.assert_close(
+                pool_c.k_layers[i], pool_e.k_layers[i], atol=1e-4, rtol=1e-4
+            )
 
 
 class TestGuardHealth:
