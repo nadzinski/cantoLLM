@@ -474,14 +474,15 @@
   }
   @media (prefers-reduced-motion: reduce) { .cursor-caret { animation: none; } }
 
-  /* ---- CUDA graphs mini-chapter ----
+  /* ---- chapter kit (CUDA graphs, Quantization) ----
      Deliberately styled unlike the rest of the explorer: the textbook chapter
      format of ~/personal-projects/gr-learning (serif prose, def/rule boxes,
-     predict-first bars, framed interactives, end-of-chapter quiz). Everything
-     is scoped to #view-cudagraphs; the shared palette variables are remapped
-     inside this view so reused components (transport, fw-board, chips) pick
-     up the chapter's colors automatically. */
-  #view-cudagraphs {
+     predict-first bars, framed interactives, end-of-chapter quiz). The .chapter
+     rules below are shared by every chapter-format view; each view is listed in
+     the selector here so the shared palette variables are remapped inside it and
+     reused components (transport, fw-board, chips) pick up the chapter's colors
+     automatically. The JS half of the kit is chapterKit() next to makeTransport. */
+  #view-cudagraphs, #view-quant {
     --plane: #f4f2ec;
     --surface: #ffffff;
     --grid: #e3dfd3;
@@ -504,93 +505,93 @@
     --cg-wrong: #b3402e;
     --cg-serif: 'Charter', 'Iowan Old Style', 'Palatino', 'Georgia', serif;
   }
-  article.cgc {
+  article.chapter {
     max-width: 780px; margin: 0 auto; width: 100%;
     padding: 10px 4px 48px;
     font-family: var(--cg-serif); font-size: 17px; line-height: 1.65; color: var(--ink);
   }
-  .cgc .ch-kicker {
+  .chapter .ch-kicker {
     font-family: var(--sans); font-size: 0.8rem; text-transform: uppercase;
     letter-spacing: 0.1em; color: var(--sA); font-weight: 600; margin: 0 0 0.3rem;
   }
-  .cgc h1 { font-size: 2.1rem; line-height: 1.15; margin: 0 0 1.4rem; font-weight: 700; letter-spacing: 0; }
-  .cgc h2 {
+  .chapter h1 { font-size: 2.1rem; line-height: 1.15; margin: 0 0 1.4rem; font-weight: 700; letter-spacing: 0; }
+  .chapter h2 {
     font-size: 1.45rem; margin: 2.6rem 0 0.8rem; font-weight: 700;
     letter-spacing: 0; text-transform: none; color: var(--ink); scroll-margin-top: 12px;
   }
-  .cgc p { margin: 0 0 1.05rem; font-size: inherit; color: inherit; }
-  .cgc p.lede { font-size: 1.12rem; color: var(--muted); }
-  .cgc a { color: var(--sA); }
-  .cgc a[data-goto] { cursor: pointer; text-decoration: underline; text-decoration-color: var(--grid); }
-  .cgc a[data-goto]:hover { text-decoration-color: var(--sA); }
-  .cgc hr { border: none; border-top: 1px solid var(--grid); margin: 2.4rem 0; }
-  .cgc code { font-family: var(--mono); font-size: 0.82em; color: var(--ink2); }
-  .cgc pre.code {
+  .chapter p { margin: 0 0 1.05rem; font-size: inherit; color: inherit; }
+  .chapter p.lede { font-size: 1.12rem; color: var(--muted); }
+  .chapter a { color: var(--sA); }
+  .chapter a[data-goto] { cursor: pointer; text-decoration: underline; text-decoration-color: var(--grid); }
+  .chapter a[data-goto]:hover { text-decoration-color: var(--sA); }
+  .chapter hr { border: none; border-top: 1px solid var(--grid); margin: 2.4rem 0; }
+  .chapter code { font-family: var(--mono); font-size: 0.82em; color: var(--ink2); }
+  .chapter pre.code {
     font: 0.8rem/1.6 var(--mono); color: var(--ink2);
     background: var(--plane); border: 1px solid var(--grid); border-radius: 8px;
     padding: 0.7rem 1rem; overflow-x: auto; margin: 0 0 1.05rem;
   }
-  .cgc ul { margin: 0 0 1.05rem; padding-left: 1.4rem; }
-  .cgc ul li { margin-bottom: 0.45rem; }
+  .chapter ul { margin: 0 0 1.05rem; padding-left: 1.4rem; }
+  .chapter ul li { margin-bottom: 0.45rem; }
 
-  .cgc .def, .cgc .thm {
+  .chapter .def, .chapter .thm {
     padding: 0.9rem 1.15rem 0.6rem; margin: 1.4rem 0;
     border-left: 3px solid var(--sA); background: var(--cg-def-bg); border-radius: 0 8px 8px 0;
   }
-  .cgc .thm { border-left-color: var(--cg-thm-border); background: var(--cg-thm-bg); }
-  .cgc .def .label, .cgc .thm .label {
+  .chapter .thm { border-left-color: var(--cg-thm-border); background: var(--cg-thm-bg); }
+  .chapter .def .label, .chapter .thm .label {
     display: block; font-family: var(--sans); font-size: 0.72rem; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.09em; color: var(--sA); margin-bottom: 0.3rem;
   }
-  .cgc .thm .label { color: var(--cg-thm-border); }
-  .cgc aside.note {
+  .chapter .thm .label { color: var(--cg-thm-border); }
+  .chapter aside.note {
     font-size: 0.92rem; color: var(--muted); background: var(--cg-note-bg);
     border-radius: 8px; padding: 0.8rem 1.1rem; margin: 1.3rem 0;
   }
-  .cgc aside.note .label {
+  .chapter aside.note .label {
     font-family: var(--sans); font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.08em; color: var(--cg-faint); display: block; margin-bottom: 0.2rem;
   }
 
-  .cgc .widget {
+  .chapter .widget {
     margin: 1.8rem 0; border: 1px solid var(--grid); border-radius: 10px;
     background: var(--surface); overflow: hidden; font-family: var(--sans);
   }
-  .cgc .widget-title {
+  .chapter .widget-title {
     padding: 0.55rem 1rem; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
     letter-spacing: 0.07em; color: var(--muted); background: var(--plane);
     border-bottom: 1px solid var(--grid);
   }
-  .cgc .widget-body { padding: 0.9rem; position: relative; }
-  .cgc .cols-2 > * { min-width: 0; }
-  .cgc .widget > .transport {
+  .chapter .widget-body { padding: 0.9rem; position: relative; }
+  .chapter .cols-2 > * { min-width: 0; }
+  .chapter .widget > .transport {
     border: 0; border-bottom: 1px solid var(--grid); border-radius: 0;
     background: var(--plane); padding: 8px 12px;
   }
-  .cgc .widget-caption {
+  .chapter .widget-caption {
     font-family: var(--sans); font-size: 0.85rem; color: var(--muted);
     margin: -1.2rem 0 1.6rem; line-height: 1.5;
   }
-  .cgc .widget-hint { font-size: 0.78rem; color: var(--cg-faint); padding-top: 0.6rem; font-family: var(--sans); }
-  .cgc .widget-readout {
+  .chapter .widget-hint { font-size: 0.78rem; color: var(--cg-faint); padding-top: 0.6rem; font-family: var(--sans); }
+  .chapter .widget-readout {
     font-family: var(--mono); font-size: 0.78rem; color: var(--ink2);
     background: var(--plane); border-radius: 6px; padding: 0.55rem 0.8rem;
     margin-top: 0.7rem; line-height: 1.7; white-space: pre-wrap; overflow-x: auto;
   }
-  .cgc .widget-controls {
+  .chapter .widget-controls {
     display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap;
     padding: 0 0 0.7rem; font-size: 0.82rem; color: var(--muted); font-family: var(--sans);
   }
-  .cgc .widget p.panel-sub { font-size: 0.85rem; color: var(--ink2); margin: 0 0 0.6rem; font-family: var(--sans); }
-  .cgc .widget pre.code { margin: 0; font-size: 0.7rem; line-height: 1.55; }
-  .cgc .asm {
+  .chapter .widget p.panel-sub { font-size: 0.85rem; color: var(--ink2); margin: 0 0 0.6rem; font-family: var(--sans); }
+  .chapter .widget pre.code { margin: 0; font-size: 0.7rem; line-height: 1.55; }
+  .chapter .asm {
     font: 0.7rem/1.55 var(--mono); color: var(--ink2);
     background: var(--plane); border: 1px solid var(--grid); border-radius: 8px;
     padding: 0.7rem 1rem; overflow-x: auto;
   }
-  .cgc .asm .asm-ln { white-space: pre; border-radius: 4px; padding: 0 4px; margin: 0 -4px; cursor: help; }
-  .cgc .asm .asm-ln:hover { background: color-mix(in srgb, var(--sA) 13%, transparent); }
-  .cgc .veil {
+  .chapter .asm .asm-ln { white-space: pre; border-radius: 4px; padding: 0 4px; margin: 0 -4px; cursor: help; }
+  .chapter .asm .asm-ln:hover { background: color-mix(in srgb, var(--sA) 13%, transparent); }
+  .chapter .veil {
     position: absolute; inset: 0; z-index: 2;
     background: color-mix(in srgb, var(--cg-paper) 92%, transparent);
     backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
@@ -598,110 +599,110 @@
     font-family: var(--sans); font-size: 0.9rem; color: var(--muted); padding: 1rem;
   }
 
-  .cgc .predict {
+  .chapter .predict {
     border: 1px solid var(--sC); border-radius: 10px; background: var(--cg-rust-soft);
     padding: 0.8rem 1rem; margin: 1.4rem 0; font-family: var(--sans); font-size: 0.9rem;
   }
-  .cgc .predict .label {
+  .chapter .predict .label {
     font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em;
     color: var(--sC); display: block; margin-bottom: 0.25rem;
   }
-  .cgc .predict .choices { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.6rem; }
-  .cgc .predict button {
+  .chapter .predict .choices { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.6rem; }
+  .chapter .predict button {
     font: inherit; font-size: 0.85rem; padding: 0.35rem 0.9rem;
     border: 1px solid var(--sC); border-radius: 999px;
     background: var(--surface); color: var(--sC); cursor: pointer;
   }
-  .cgc .predict button:hover:not(:disabled) { background: var(--sC); color: #fff; }
-  .cgc .predict button:disabled { opacity: 0.45; cursor: default; }
-  .cgc .predict button.chosen { background: var(--sC); color: #fff; opacity: 1; }
-  .cgc .predict .verdict { margin-top: 0.6rem; font-weight: 600; }
+  .chapter .predict button:hover:not(:disabled) { background: var(--sC); color: #fff; }
+  .chapter .predict button:disabled { opacity: 0.45; cursor: default; }
+  .chapter .predict button.chosen { background: var(--sC); color: #fff; opacity: 1; }
+  .chapter .predict .verdict { margin-top: 0.6rem; font-weight: 600; }
 
-  .cgc .detail {
+  .chapter .detail {
     border: 1px solid var(--grid); border-radius: 8px; background: var(--cg-paper);
     padding: 0.7rem 0.9rem; font-family: var(--sans);
   }
-  .cgc .detail-title { font: 600 12.5px var(--mono); margin: 2px 0 8px; color: var(--ink); }
-  .cgc .detail .dline { font-size: 0.85rem; color: var(--ink2); padding: 4px 0; border-bottom: 1px dashed var(--grid); }
-  .cgc .detail .dline:last-child { border-bottom: 0; }
+  .chapter .detail-title { font: 600 12.5px var(--mono); margin: 2px 0 8px; color: var(--ink); }
+  .chapter .detail .dline { font-size: 0.85rem; color: var(--ink2); padding: 4px 0; border-bottom: 1px dashed var(--grid); }
+  .chapter .detail .dline:last-child { border-bottom: 0; }
 
-  .cgc .rule { border: 1px solid var(--grid); border-radius: 8px; margin: 0.5rem 0; background: var(--cg-paper); overflow: hidden; }
-  .cgc button.rule-head {
+  .chapter .rule { border: 1px solid var(--grid); border-radius: 8px; margin: 0.5rem 0; background: var(--cg-paper); overflow: hidden; }
+  .chapter button.rule-head {
     display: flex; align-items: baseline; gap: 0.6rem; width: 100%; text-align: left;
     font: inherit; font-size: 0.9rem; font-weight: 600; padding: 0.55rem 0.9rem;
     background: none; border: 0; cursor: pointer; color: var(--ink); flex-wrap: wrap;
   }
-  .cgc .rule-head:hover { background: color-mix(in srgb, var(--plane) 60%, transparent); }
-  .cgc .rule-head .rule-did { font-weight: 400; font-size: 0.78rem; color: var(--muted); }
-  .cgc .rule-head .rule-badge {
+  .chapter .rule-head:hover { background: color-mix(in srgb, var(--plane) 60%, transparent); }
+  .chapter .rule-head .rule-did { font-weight: 400; font-size: 0.78rem; color: var(--muted); }
+  .chapter .rule-head .rule-badge {
     margin-left: auto; flex: none; font-size: 0.62rem; font-weight: 700;
     text-transform: uppercase; letter-spacing: 0.06em; border-radius: 999px; padding: 1px 8px;
     color: var(--sC); border: 1px solid var(--sC);
   }
-  .cgc .rule-head .rule-badge.silent { color: var(--cg-wrong); border-color: var(--cg-wrong); border-style: dashed; }
-  .cgc .rule-body { padding: 0 0.9rem 0.8rem; font-size: 0.85rem; color: var(--ink2); display: none; }
-  .cgc .rule.open .rule-body { display: block; }
-  .cgc .rule .err {
+  .chapter .rule-head .rule-badge.silent { color: var(--cg-wrong); border-color: var(--cg-wrong); border-style: dashed; }
+  .chapter .rule-body { padding: 0 0.9rem 0.8rem; font-size: 0.85rem; color: var(--ink2); display: none; }
+  .chapter .rule.open .rule-body { display: block; }
+  .chapter .rule .err {
     font-family: var(--mono); font-size: 0.72rem; line-height: 1.55; white-space: pre-wrap;
     background: #faeeec; border: 1px solid #eccfc7; border-radius: 6px;
     padding: 0.5rem 0.7rem; margin: 0.2rem 0 0.6rem; color: #7c2d1e;
   }
 
-  .cgc .fact-row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 6px 8px; border-radius: 5px; align-items: baseline; }
-  .cgc .fact-row:nth-child(odd) { background: var(--plane); }
-  .cgc .fact-name { font: 600 12px var(--mono); color: var(--ink); }
-  .cgc .fact-body { font-size: 0.85rem; color: var(--ink2); }
+  .chapter .fact-row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 6px 8px; border-radius: 5px; align-items: baseline; }
+  .chapter .fact-row:nth-child(odd) { background: var(--plane); }
+  .chapter .fact-name { font: 600 12px var(--mono); color: var(--ink); }
+  .chapter .fact-body { font-size: 0.85rem; color: var(--ink2); }
 
-  .cgc .bd-grid { display: grid; grid-template-columns: 260px 1fr; gap: 12px; align-items: start; }
-  @media (max-width: 700px) { .cgc .bd-grid { grid-template-columns: 1fr; } }
-  .cgc .bd-list { display: flex; flex-direction: column; gap: 5px; }
-  .cgc button.bd-stage {
+  .chapter .bd-grid { display: grid; grid-template-columns: 260px 1fr; gap: 12px; align-items: start; }
+  @media (max-width: 700px) { .chapter .bd-grid { grid-template-columns: 1fr; } }
+  .chapter .bd-list { display: flex; flex-direction: column; gap: 5px; }
+  .chapter button.bd-stage {
     display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left;
     font-family: var(--sans); padding: 0.45rem 0.7rem; border-radius: 8px; cursor: pointer;
     background: var(--cg-paper); border: 1px dashed var(--axis); color: var(--ink);
   }
-  .cgc .bd-stage b { font-size: 0.82rem; font-weight: 600; }
-  .cgc .bd-stage small { font-size: 0.7rem; color: var(--muted); font-family: var(--mono); }
-  .cgc .bd-stage.zone-graph { border: 1px solid var(--sA); background: color-mix(in srgb, var(--sA) 8%, var(--surface)); }
-  .cgc .bd-stage.zone-door { border: 1px solid var(--sC); background: color-mix(in srgb, var(--sC) 8%, var(--surface)); }
-  .cgc .bd-stage.zone-wrinkle { border: 1px solid var(--cg-thm-border); background: color-mix(in srgb, var(--cg-thm-border) 12%, var(--surface)); }
-  .cgc .bd-stage.cur { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .chapter .bd-stage b { font-size: 0.82rem; font-weight: 600; }
+  .chapter .bd-stage small { font-size: 0.7rem; color: var(--muted); font-family: var(--mono); }
+  .chapter .bd-stage.zone-graph { border: 1px solid var(--sA); background: color-mix(in srgb, var(--sA) 8%, var(--surface)); }
+  .chapter .bd-stage.zone-door { border: 1px solid var(--sC); background: color-mix(in srgb, var(--sC) 8%, var(--surface)); }
+  .chapter .bd-stage.zone-wrinkle { border: 1px solid var(--cg-thm-border); background: color-mix(in srgb, var(--cg-thm-border) 12%, var(--surface)); }
+  .chapter .bd-stage.cur { outline: 2px solid var(--ink); outline-offset: 1px; }
 
-  .cgc .quiz { margin-top: 3rem; font-family: var(--sans); }
-  .cgc .quiz > h2 { font-family: var(--cg-serif); }
-  .cgc .quiz-item { border: 1px solid var(--grid); border-radius: 10px; padding: 1rem 1.2rem; margin: 1rem 0; background: var(--surface); }
-  .cgc .quiz-item .q-prompt { font-size: 0.95rem; margin-bottom: 0.7rem; }
-  .cgc .quiz-item ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
-  .cgc .quiz-item ul li { margin: 0; }
-  .cgc .quiz-item li button {
+  .chapter .quiz { margin-top: 3rem; font-family: var(--sans); }
+  .chapter .quiz > h2 { font-family: var(--cg-serif); }
+  .chapter .quiz-item { border: 1px solid var(--grid); border-radius: 10px; padding: 1rem 1.2rem; margin: 1rem 0; background: var(--surface); }
+  .chapter .quiz-item .q-prompt { font-size: 0.95rem; margin-bottom: 0.7rem; }
+  .chapter .quiz-item ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+  .chapter .quiz-item ul li { margin: 0; }
+  .chapter .quiz-item li button {
     font: inherit; font-size: 0.88rem; text-align: left; width: 100%;
     padding: 0.5rem 0.8rem; border: 1px solid var(--grid); border-radius: 8px;
     background: var(--cg-paper); color: var(--ink); cursor: pointer; line-height: 1.45;
   }
-  .cgc .quiz-item li button:hover:not(:disabled) { border-color: var(--sA); }
-  .cgc .quiz-item li button:disabled { cursor: default; }
-  .cgc .quiz-item li button.right { border-color: var(--sB); background: #edf6f0; }
-  .cgc .quiz-item li button.wrong { border-color: var(--cg-wrong); background: #faeeec; }
-  .cgc .quiz-item li button.reveal-right { border-color: var(--sB); border-style: dashed; }
-  .cgc .quiz-item .explain {
+  .chapter .quiz-item li button:hover:not(:disabled) { border-color: var(--sA); }
+  .chapter .quiz-item li button:disabled { cursor: default; }
+  .chapter .quiz-item li button.right { border-color: var(--sB); background: #edf6f0; }
+  .chapter .quiz-item li button.wrong { border-color: var(--cg-wrong); background: #faeeec; }
+  .chapter .quiz-item li button.reveal-right { border-color: var(--sB); border-style: dashed; }
+  .chapter .quiz-item .explain {
     font-size: 0.85rem; color: var(--muted); margin-top: 0.7rem;
     border-top: 1px dashed var(--grid); padding-top: 0.6rem;
   }
-  .cgc .quiz-item .numeric-row { display: flex; gap: 0.6rem; align-items: center; }
-  .cgc .quiz-item input[type='text'] {
+  .chapter .quiz-item .numeric-row { display: flex; gap: 0.6rem; align-items: center; }
+  .chapter .quiz-item input[type='text'] {
     font-family: var(--mono); font-size: 0.9rem; padding: 0.4rem 0.6rem;
     border: 1px solid var(--grid); border-radius: 8px; width: 9em;
     background: var(--cg-paper); color: var(--ink);
   }
-  .cgc .quiz-item input.right { border-color: var(--sB); background: #edf6f0; }
-  .cgc .quiz-item input.wrong { border-color: var(--cg-wrong); background: #faeeec; }
-  .cgc .quiz-score { font-size: 0.85rem; color: var(--muted); margin-top: 0.8rem; }
-  .cgc button.btn {
+  .chapter .quiz-item input.right { border-color: var(--sB); background: #edf6f0; }
+  .chapter .quiz-item input.wrong { border-color: var(--cg-wrong); background: #faeeec; }
+  .chapter .quiz-score { font-size: 0.85rem; color: var(--muted); margin-top: 0.8rem; }
+  .chapter button.btn {
     font-family: var(--sans); font-size: 0.85rem; padding: 0.42rem 1rem;
     border: 1px solid var(--sA); border-radius: 8px; background: var(--surface);
     color: var(--sA); cursor: pointer;
   }
-  .cgc button.btn:hover { background: var(--cg-accent-soft); }
+  .chapter button.btn:hover { background: var(--cg-accent-soft); }
 </style>
 </head>
 <body>
@@ -724,6 +725,7 @@
       <a href="#/flash" data-route="flash">FlashAttention</a>
       <a href="#/flashwalk" data-route="flashwalk">Flash walkthrough</a>
       <a href="#/cudagraphs" data-route="cudagraphs">CUDA graphs</a>
+      <a href="#/quant" data-route="quant">Quantization</a>
     </nav>
   </header>
 
@@ -876,6 +878,14 @@
     <div id="cg-body"></div>
   </section>
 
+  <!-- ================= QUANTIZATION ================= -->
+  <!-- Chapter-format view (same textbook kit as CUDA graphs): the whole
+       article is built in initQuant(); styles come from the shared .chapter
+       block plus the per-view palette remap. -->
+  <section id="view-quant" data-view hidden>
+    <div id="qt-body"></div>
+  </section>
+
   <footer id="foot"></footer>
 </div>
 
@@ -971,6 +981,276 @@ function missingPanel(cmd, extra) {
   return m;
 }
 
+
+/* =============== chapter kit ===============
+   Shared framework for the textbook mini-chapter views (CUDA graphs,
+   Quantization): persistence, widget frames, predict-first bars with gated
+   reveals, chart primitives, DAG renderer, and the quiz builder. Each chapter
+   calls chapterKit(<its own localStorage key>) and destructures what it needs;
+   the CSS half is the .chapter block in the stylesheet. */
+
+function chapterKit(storageKey) {
+  const NS3 = 'http://www.w3.org/2000/svg';
+
+  /* ---------- persistence ---------- */
+  const store = (() => {
+    let data = {};
+    try { data = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; } catch (e) { data = {}; }
+    return {
+      get: (k) => data[k],
+      set: (k, v) => { data[k] = v; try { localStorage.setItem(storageKey, JSON.stringify(data)); } catch (e) {} },
+    };
+  })();
+
+  /* ---------- dom / svg ---------- */
+  const html = (tag, cls, markup) => { const n = el(tag, cls); if (markup !== undefined) n.innerHTML = markup; return n; };
+  const smk = (tag, attrs, text, parent) => {
+    const n = document.createElementNS(NS3, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (text !== undefined && text !== null) n.textContent = text;
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+  const svgIn = (w, h, minW) => {
+    const svg = smk('svg', { viewBox: `0 0 ${w} ${h}` });
+    svg.style.cssText = `display:block;width:100%;height:auto;min-width:${minW === undefined ? 640 : minW}px;`;
+    const scroll = el('div', 'kv-scroll');
+    scroll.appendChild(svg);
+    return [svg, scroll];
+  };
+  const widget = (title) => {
+    const box = el('div', 'widget');
+    box.appendChild(html('div', 'widget-title', title));
+    const body = el('div', 'widget-body');
+    box.appendChild(body);
+    return { box, body };
+  };
+
+  /* predict-gated reveals: predict id -> unveil() */
+  const reveals = {};
+  const gate = (body, pid, msg) => {
+    if (store.get('predict:' + pid) !== undefined) return;
+    const veil = el('div', 'veil', msg || 'Commit to the prediction above to reveal the measurement.');
+    body.appendChild(veil);
+    reveals[pid] = () => { veil.remove(); delete reveals[pid]; };
+  };
+
+  const predictBar = (mount, opts) => {
+    const bar = el('div', 'predict');
+    bar.appendChild(el('span', 'label', 'Predict first'));
+    bar.appendChild(html('div', '', opts.question));
+    const row = el('div', 'choices');
+    const verdict = el('div', 'verdict');
+    verdict.style.display = 'none';
+    const btns = [];
+    const answer = (idx, fresh) => {
+      btns.forEach((b, i) => { b.disabled = true; b.classList.toggle('chosen', i === idx); });
+      let text = '';
+      if (opts.correct !== undefined) {
+        text = idx === opts.correct ? '✓ Your instinct was right. '
+          : '✗ In fact: “' + opts.choices[opts.correct] + '”. ';
+      }
+      if (opts.explain) text += opts.explain;
+      if (text) { verdict.innerHTML = text; verdict.style.display = ''; }
+      if (fresh) store.set('predict:' + opts.id, idx);
+      if (reveals[opts.id]) reveals[opts.id]();
+    };
+    opts.choices.forEach((c, i) => {
+      const b = el('button', null, c);
+      b.addEventListener('click', () => answer(i, true));
+      btns.push(b);
+      row.appendChild(b);
+    });
+    bar.append(row, verdict);
+    mount.appendChild(bar);
+    const saved = store.get('predict:' + opts.id);
+    if (typeof saved === 'number' && saved >= 0 && saved < opts.choices.length) answer(saved, false);
+  };
+
+  /* ---------- chart primitives ---------- */
+  const fmtT = (us) => us >= 2500 ? (us / 1000).toFixed(2) + ' ms' : us + ' µs';
+  const barRow = (label, val, max, color, sub, tipText) => {
+    const row = el('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;margin:5px 0;';
+    const lab = el('span', null, label);
+    lab.style.cssText = 'font:11.5px var(--mono);color:var(--muted);width:148px;text-align:right;flex:none;';
+    const track = el('div');
+    track.style.cssText = 'flex:1;background:var(--plane);border-radius:4px;height:14px;overflow:hidden;';
+    const fill = el('div');
+    fill.style.cssText = `width:${Math.max(1.2, val / max * 100)}%;background:color-mix(in srgb, ${color} 72%, #fff);height:100%;border-radius:0 4px 4px 0;`;
+    track.appendChild(fill);
+    const num = html('span', null, `<b>${fmtT(val)}</b>${sub ? ` <small style="color:var(--muted)">${sub}</small>` : ''}`);
+    num.style.cssText = 'font:11.5px var(--mono);flex:none;width:212px;color:var(--ink2);';
+    row.append(lab, track, num);
+    if (tipText) tipify(track, tipText);
+    return row;
+  };
+  const legend = (items) => {
+    const box = el('div');
+    box.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font:11.5px var(--sans);color:var(--ink2);align-items:center;';
+    items.forEach(([style, label]) => {
+      const s = el('span');
+      const sw = el('span');
+      sw.style.cssText = 'width:11px;height:11px;border-radius:2px;display:inline-block;vertical-align:-1px;margin-right:5px;' + style;
+      s.append(sw, document.createTextNode(label));
+      box.appendChild(s);
+    });
+    return box;
+  };
+  const swInside = (c, pct) => `background:color-mix(in srgb, ${c} ${pct || 30}%, var(--surface));border:1px solid ${c};`;
+
+  /* Shared DAG renderer. nodes: {op, pos?[col,row]}, edges: [[a,b]]. */
+  const drawDag = (nodes, edges, opts) => {
+    const o = Object.assign({ w: 740, h: 128, W: 126, H: 40, ncols: null, onClick: null, minW: 640 }, opts || {});
+    const [svg, scroll] = svgIn(o.w, o.h, o.minW);
+    const posOf = (nd, i) => {
+      const col = nd.pos ? nd.pos[0] : i;
+      const rowv = nd.pos ? nd.pos[1] : 0.5;
+      const ncols = o.ncols || (nd.pos ? 4 : nodes.length);
+      return [16 + col * ((o.w - 32 - o.W) / (ncols - 1)), 10 + rowv * (o.h - 20 - o.H)];
+    };
+    const defs = smk('defs', {}, null, svg);
+    const mid = 'ch-arr-' + (chapterKit.arrSeq = (chapterKit.arrSeq || 0) + 1);
+    defs.innerHTML = `<marker id="${mid}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--axis)"/></marker>`;
+    edges.forEach(([a, b]) => {
+      const [ax, ay] = posOf(nodes[a], a);
+      const [bx, by] = posOf(nodes[b], b);
+      const vertical = by > ay + o.H;
+      const [x1, y1, x2, y2] = vertical
+        ? [ax + o.W / 2, ay + o.H, bx + o.W / 2, by - 3]
+        : [ax + o.W, ay + o.H / 2, bx - 3, by + o.H / 2];
+      smk('line', { x1, y1, x2, y2, style: 'stroke:var(--axis);stroke-width:1.6', 'marker-end': `url(#${mid})` }, null, svg);
+    });
+    nodes.forEach((nd, i) => {
+      const [x, y] = posOf(nd, i);
+      const g = smk('g', { style: o.onClick ? 'cursor:pointer' : '' }, null, svg);
+      smk('rect', { x, y, width: o.W, height: o.H, rx: 8,
+        style: 'fill:color-mix(in srgb, var(--sA) 9%, var(--surface));stroke:var(--sA);stroke-width:1.4' }, null, g);
+      smk('text', { x: x + o.W / 2, y: y + 18, style: 'font:600 11.5px var(--sans);fill:var(--ink);text-anchor:middle' }, nd.op, g);
+      smk('text', { x: x + o.W / 2, y: y + 32, style: 'font:9.5px var(--mono);fill:var(--muted);text-anchor:middle' }, `node ${i} · KERNEL`, g);
+      if (o.onClick) g.addEventListener('click', () => o.onClick(i));
+    });
+    return scroll;
+  };
+
+  /* ---------- article wiring ---------- */
+  /* in-page navigation without touching the location hash (it routes tabs) */
+  const wireGoto = (article) => {
+    article.addEventListener('click', (e) => {
+      const a = e.target.closest('[data-goto]');
+      if (!a) return;
+      e.preventDefault();
+      const t = article.querySelector('#' + a.dataset.goto);
+      if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+  const mountWidgets = (article, W) => {
+    article.querySelectorAll('[data-widget]').forEach((ph) => {
+      const fn = W[ph.dataset.widget];
+      if (fn) fn(ph);
+    });
+  };
+  const mountPredicts = (article, PREDICTS) => {
+    article.querySelectorAll('[data-predict]').forEach((ph) => {
+      const id = ph.dataset.predict;
+      const opts = PREDICTS[id];
+      if (!opts) return;
+      const mountPoint = el('div');
+      ph.replaceWith(mountPoint);
+      predictBar(mountPoint, Object.assign({ id }, opts));
+    });
+  };
+  const buildQuiz = (article, QUIZ, anchorId) => {
+    const quizHost = article.querySelector('[data-quiz]');
+    quizHost.classList.add('quiz');
+    quizHost.appendChild(el('h2', null, 'Check your understanding'));
+    quizHost.id = anchorId === undefined ? 's-quiz' : anchorId;
+    const score = el('div', 'quiz-score');
+    const states = new Map();
+    const updateScore = () => {
+      const answered = states.size;
+      const correct = [...states.values()].filter(Boolean).length;
+      score.textContent = answered === 0
+        ? `${QUIZ.length} questions`
+        : `${correct} / ${QUIZ.length} correct (${answered} answered)`;
+    };
+    QUIZ.forEach((item, idx) => {
+      const boxq = el('div', 'quiz-item');
+      boxq.appendChild(html('div', 'q-prompt', `<strong>${idx + 1}.</strong> ${item.prompt}`));
+      const saved = store.get('quiz:' + item.id);
+      if (item.type === 'numeric') {
+        const row = el('div', 'numeric-row');
+        const input = el('input');
+        input.type = 'text';
+        input.placeholder = 'your answer';
+        const unit = el('span', null, item.unit || '');
+        const check = el('button', 'btn', 'Check');
+        const explain = el('div', 'explain');
+        explain.innerHTML = item.explain || '';
+        explain.style.display = 'none';
+        const grade = (val) => {
+          const x = parseFloat(val);
+          if (!Number.isFinite(x)) return undefined;
+          const ok = Math.abs(x - item.answer) <= item.tol;
+          input.classList.remove('right', 'wrong');
+          input.classList.add(ok ? 'right' : 'wrong');
+          if (item.explain) explain.style.display = '';
+          states.set(item.id, ok);
+          updateScore();
+          return ok;
+        };
+        check.addEventListener('click', () => {
+          const ok = grade(input.value);
+          if (ok !== undefined) store.set('quiz:' + item.id, input.value);
+        });
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') check.click(); });
+        row.append(input, unit, check);
+        boxq.append(row, explain);
+        if (typeof saved === 'string') { input.value = saved; grade(saved); }
+      } else {
+        const ul = el('ul');
+        const btns = [];
+        const explain = el('div', 'explain');
+        explain.style.display = 'none';
+        const grade = (choiceIdx) => {
+          const chosen = item.choices[choiceIdx];
+          const ok = !!chosen.correct;
+          btns.forEach((bb, i) => {
+            bb.disabled = true;
+            bb.classList.remove('right', 'wrong', 'reveal-right');
+            if (i === choiceIdx) bb.classList.add(ok ? 'right' : 'wrong');
+            else if (item.choices[i].correct && !ok) bb.classList.add('reveal-right');
+          });
+          const text = chosen.explain || (item.choices.find((c) => c.correct) || {}).explain || '';
+          if (text) {
+            explain.innerHTML = (ok ? '<strong>Right.</strong> ' : '<strong>Not quite.</strong> ') + text;
+            explain.style.display = '';
+          }
+          states.set(item.id, ok);
+          updateScore();
+        };
+        item.choices.forEach((c, i) => {
+          const li = el('li');
+          const bb = el('button');
+          bb.innerHTML = c.html;
+          bb.addEventListener('click', () => { grade(i); store.set('quiz:' + item.id, i); });
+          btns.push(bb);
+          li.appendChild(bb);
+          ul.appendChild(li);
+        });
+        boxq.append(ul, explain);
+        if (typeof saved === 'number' && item.choices[saved]) grade(saved);
+      }
+      quizHost.appendChild(boxq);
+    });
+    quizHost.appendChild(score);
+    updateScore();
+  };
+
+  return { store, html, smk, svgIn, widget, gate, predictBar, fmtT, barRow, legend,
+           swInside, drawDag, wireGoto, mountWidgets, mountPredicts, buildQuiz };
+}
+
 /* =============== data =============== */
 
 const TF = window.TRACE_FORWARD || null;      // model forward + shapes
@@ -1000,6 +1280,7 @@ const VIEW_INIT = {
   'flash': initFlash,
   'flashwalk': initFlashWalk,
   'cudagraphs': initCudaGraphs,
+  'quant': initQuant,
 };
 
 function route() {
@@ -4533,150 +4814,12 @@ function initFlashWalk() {
  */
 function initCudaGraphs() {
   const REC = 'viz/captures/cudagraphs-2026-07-26/';
-  const NS3 = 'http://www.w3.org/2000/svg';
-
-  /* ---------- infra: persistence, dom, svg ---------- */
-  const store = (() => {
-    const KEY = 'cantollm-viz-cg-chapter';
-    let data = {};
-    try { data = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { data = {}; }
-    return {
-      get: (k) => data[k],
-      set: (k, v) => { data[k] = v; try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} },
-    };
-  })();
-  const html = (tag, cls, markup) => { const n = el(tag, cls); if (markup !== undefined) n.innerHTML = markup; return n; };
-  const smk = (tag, attrs, text, parent) => {
-    const n = document.createElementNS(NS3, tag);
-    for (const k in attrs) n.setAttribute(k, attrs[k]);
-    if (text !== undefined && text !== null) n.textContent = text;
-    if (parent) parent.appendChild(n);
-    return n;
-  };
-  const svgIn = (w, h, minW) => {
-    const svg = smk('svg', { viewBox: `0 0 ${w} ${h}` });
-    svg.style.cssText = `display:block;width:100%;height:auto;min-width:${minW === undefined ? 640 : minW}px;`;
-    const scroll = el('div', 'kv-scroll');
-    scroll.appendChild(svg);
-    return [svg, scroll];
-  };
-  const widget = (title) => {
-    const box = el('div', 'widget');
-    box.appendChild(html('div', 'widget-title', title));
-    const body = el('div', 'widget-body');
-    box.appendChild(body);
-    return { box, body };
-  };
-
-  /* predict-gated reveals: predict id -> unveil() */
-  const reveals = {};
-  const gate = (body, pid, msg) => {
-    if (store.get('predict:' + pid) !== undefined) return;
-    const veil = el('div', 'veil', msg || 'Commit to the prediction above to reveal the measurement.');
-    body.appendChild(veil);
-    reveals[pid] = () => { veil.remove(); delete reveals[pid]; };
-  };
-
-  const predictBar = (mount, opts) => {
-    const bar = el('div', 'predict');
-    bar.appendChild(el('span', 'label', 'Predict first'));
-    bar.appendChild(html('div', '', opts.question));
-    const row = el('div', 'choices');
-    const verdict = el('div', 'verdict');
-    verdict.style.display = 'none';
-    const btns = [];
-    const answer = (idx, fresh) => {
-      btns.forEach((b, i) => { b.disabled = true; b.classList.toggle('chosen', i === idx); });
-      let text = '';
-      if (opts.correct !== undefined) {
-        text = idx === opts.correct ? '✓ Your instinct was right. '
-          : '✗ In fact: “' + opts.choices[opts.correct] + '”. ';
-      }
-      if (opts.explain) text += opts.explain;
-      if (text) { verdict.innerHTML = text; verdict.style.display = ''; }
-      if (fresh) store.set('predict:' + opts.id, idx);
-      if (reveals[opts.id]) reveals[opts.id]();
-    };
-    opts.choices.forEach((c, i) => {
-      const b = el('button', null, c);
-      b.addEventListener('click', () => answer(i, true));
-      btns.push(b);
-      row.appendChild(b);
-    });
-    bar.append(row, verdict);
-    mount.appendChild(bar);
-    const saved = store.get('predict:' + opts.id);
-    if (typeof saved === 'number' && saved >= 0 && saved < opts.choices.length) answer(saved, false);
-  };
-
-  /* ---------- chart primitives ---------- */
-  const fmtT = (us) => us >= 2500 ? (us / 1000).toFixed(2) + ' ms' : us + ' µs';
-  const barRow = (label, val, max, color, sub, tipText) => {
-    const row = el('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:10px;margin:5px 0;';
-    const lab = el('span', null, label);
-    lab.style.cssText = 'font:11.5px var(--mono);color:var(--muted);width:148px;text-align:right;flex:none;';
-    const track = el('div');
-    track.style.cssText = 'flex:1;background:var(--plane);border-radius:4px;height:14px;overflow:hidden;';
-    const fill = el('div');
-    fill.style.cssText = `width:${Math.max(1.2, val / max * 100)}%;background:color-mix(in srgb, ${color} 72%, #fff);height:100%;border-radius:0 4px 4px 0;`;
-    track.appendChild(fill);
-    const num = html('span', null, `<b>${fmtT(val)}</b>${sub ? ` <small style="color:var(--muted)">${sub}</small>` : ''}`);
-    num.style.cssText = 'font:11.5px var(--mono);flex:none;width:212px;color:var(--ink2);';
-    row.append(lab, track, num);
-    if (tipText) tipify(track, tipText);
-    return row;
-  };
-  const legend = (items) => {
-    const box = el('div');
-    box.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font:11.5px var(--sans);color:var(--ink2);align-items:center;';
-    items.forEach(([style, label]) => {
-      const s = el('span');
-      const sw = el('span');
-      sw.style.cssText = 'width:11px;height:11px;border-radius:2px;display:inline-block;vertical-align:-1px;margin-right:5px;' + style;
-      s.append(sw, document.createTextNode(label));
-      box.appendChild(s);
-    });
-    return box;
-  };
-  const swInside = (c, pct) => `background:color-mix(in srgb, ${c} ${pct || 30}%, var(--surface));border:1px solid ${c};`;
-
-  /* Shared DAG renderer. nodes: {op, pos?[col,row]}, edges: [[a,b]]. */
-  const drawDag = (nodes, edges, opts) => {
-    const o = Object.assign({ w: 740, h: 128, W: 126, H: 40, ncols: null, onClick: null, minW: 640 }, opts || {});
-    const [svg, scroll] = svgIn(o.w, o.h, o.minW);
-    const posOf = (nd, i) => {
-      const col = nd.pos ? nd.pos[0] : i;
-      const rowv = nd.pos ? nd.pos[1] : 0.5;
-      const ncols = o.ncols || (nd.pos ? 4 : nodes.length);
-      return [16 + col * ((o.w - 32 - o.W) / (ncols - 1)), 10 + rowv * (o.h - 20 - o.H)];
-    };
-    const defs = smk('defs', {}, null, svg);
-    const mid = 'cgc-arr-' + (drawDag.seq = (drawDag.seq || 0) + 1);
-    defs.innerHTML = `<marker id="${mid}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--axis)"/></marker>`;
-    edges.forEach(([a, b]) => {
-      const [ax, ay] = posOf(nodes[a], a);
-      const [bx, by] = posOf(nodes[b], b);
-      const vertical = by > ay + o.H;
-      const [x1, y1, x2, y2] = vertical
-        ? [ax + o.W / 2, ay + o.H, bx + o.W / 2, by - 3]
-        : [ax + o.W, ay + o.H / 2, bx - 3, by + o.H / 2];
-      smk('line', { x1, y1, x2, y2, style: 'stroke:var(--axis);stroke-width:1.6', 'marker-end': `url(#${mid})` }, null, svg);
-    });
-    nodes.forEach((nd, i) => {
-      const [x, y] = posOf(nd, i);
-      const g = smk('g', { style: o.onClick ? 'cursor:pointer' : '' }, null, svg);
-      smk('rect', { x, y, width: o.W, height: o.H, rx: 8,
-        style: 'fill:color-mix(in srgb, var(--sA) 9%, var(--surface));stroke:var(--sA);stroke-width:1.4' }, null, g);
-      smk('text', { x: x + o.W / 2, y: y + 18, style: 'font:600 11.5px var(--sans);fill:var(--ink);text-anchor:middle' }, nd.op, g);
-      smk('text', { x: x + o.W / 2, y: y + 32, style: 'font:9.5px var(--mono);fill:var(--muted);text-anchor:middle' }, `node ${i} · KERNEL`, g);
-      if (o.onClick) g.addEventListener('click', () => o.onClick(i));
-    });
-    return scroll;
-  };
+  const { store, html, smk, svgIn, widget, gate, predictBar, fmtT, barRow, legend,
+          swInside, drawDag, wireGoto, mountWidgets, mountPredicts, buildQuiz } =
+    chapterKit('cantollm-viz-cg-chapter');
 
   /* ---------- the chapter ---------- */
-  const article = el('article', 'cgc');
+  const article = el('article', 'chapter');
   article.innerHTML = `
 <p class="ch-kicker">cantoLLM · Phase 3 · a mini-chapter</p>
 <h1>CUDA Graphs</h1>
@@ -5235,22 +5378,14 @@ the KV-scatter wrinkle resolved by padding the write map into a scratch position
 column, one shared graph pool, capture riding the shape vocabulary&rsquo;s warm-up
 sweep), the implementation landed 2026-08-05, and the 5090 validation ran 2026-08-07
 (<code>cuda-graphs-results.md</code> is the record): launches/step 1859 &rarr; 50,
-16-row decode p50 10.43 &rarr; 5.93 ms, short_chat c=16 +69% — the chapter&rsquo;s
+16-row decode p50 10.43 &rarr; 5.93 ms, short_chat c=16 +69%: the chapter&rsquo;s
 2066 &rarr; 134 &micro;s toy replay, grown to engine scale.
 Sources: <code>${REC}</code> (README, timings, failures, DOT dumps),
 <code>step-profiling.md</code>, <code>sdpa-results.md</code>,
 <code>shape-buckets-results.md</code>, and PLAN.md Phase 3.</aside>
 `;
   $('cg-body').appendChild(article);
-
-  /* in-page navigation without touching the location hash (it routes tabs) */
-  article.addEventListener('click', (e) => {
-    const a = e.target.closest('[data-goto]');
-    if (!a) return;
-    e.preventDefault();
-    const t = article.querySelector('#' + a.dataset.goto);
-    if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
+  wireGoto(article);
 
   /* ---------- widgets ---------- */
   const W = {};
@@ -5975,10 +6110,7 @@ Sources: <code>${REC}</code> (README, timings, failures, DOT dumps),
   };
 
   /* ---------- mount widgets and predict bars ---------- */
-  article.querySelectorAll('[data-widget]').forEach((ph) => {
-    const fn = W[ph.dataset.widget];
-    if (fn) fn(ph);
-  });
+  mountWidgets(article, W);
 
   const PREDICTS = {
     'p-cost': {
@@ -6018,14 +6150,7 @@ Sources: <code>${REC}</code> (README, timings, failures, DOT dumps),
       explain: 'Measured submit: 2066 µs of 2066. The GPU work is so small that the step is, to measurement precision, pure toll.',
     },
   };
-  article.querySelectorAll('[data-predict]').forEach((ph) => {
-    const id = ph.dataset.predict;
-    const opts = PREDICTS[id];
-    if (!opts) return;
-    const mountPoint = el('div');
-    ph.replaceWith(mountPoint);
-    predictBar(mountPoint, Object.assign({ id }, opts));
-  });
+  mountPredicts(article, PREDICTS);
 
   /* ---------- quiz ---------- */
   const QUIZ = [
@@ -6087,90 +6212,1785 @@ Sources: <code>${REC}</code> (README, timings, failures, DOT dumps),
         { html: 'cuDNN requires bucketed shapes before it will allow capture' },
       ] },
   ];
-  const quizHost = article.querySelector('[data-quiz]');
-  quizHost.classList.add('quiz');
-  quizHost.appendChild(el('h2', null, 'Check your understanding'));
-  quizHost.id = 's-quiz';
-  const score = el('div', 'quiz-score');
-  const states = new Map();
-  const updateScore = () => {
-    const answered = states.size;
-    const correct = [...states.values()].filter(Boolean).length;
-    score.textContent = answered === 0
-      ? `${QUIZ.length} questions`
-      : `${correct} / ${QUIZ.length} correct (${answered} answered)`;
+  buildQuiz(article, QUIZ);
+}
+
+/* =============== quantization mini-chapter =============== */
+
+function initQuant() {
+  const REC = 'viz/captures/quant-2026-08-08/';
+  const { store, html, smk, svgIn, widget, gate, predictBar, fmtT, barRow, legend,
+          swInside, drawDag, wireGoto, mountWidgets, mountPredicts, buildQuiz } =
+    chapterKit('cantollm-viz-qt-chapter');
+
+  /* ---------- curated data ----------
+     Checkpoint facts from trace_weights.py's safetensors reads; layer statistics
+     transcribed from the committed capture record (viz/captures/quant-2026-08-08/,
+     regenerate with viz/capture_quant.py); engine numbers from bench/history via
+     cuda-graphs-results.md and step-profiling.md; hardware sheet numbers verified
+     at authoring time (see the closing note for sources). */
+  const GiB = 1024 ** 3;
+  const MODELS = [
+    /* the four downloaded checkpoints; kvB = KV-cache bytes/token at bf16 */
+    { name: 'Qwen3-0.6B', params: 751632384,  layers: 28, dim: 1024, kvB: 114688, here: true },
+    { name: 'Qwen3-1.7B', params: 2031739904, layers: 28, dim: 2048, kvB: 114688, here: true },
+    { name: 'Qwen3-4B',   params: 4022468096, layers: 36, dim: 2560, kvB: 147456, here: true },
+    { name: 'Qwen3-8B',   params: 8190735360, layers: 36, dim: 4096, kvB: 147456, here: true },
+    /* the roadmap's targets (PLAN.md phases 7, 8, 11); param counts from the model cards */
+    { name: 'Qwen3-30B-A3B',     params: 30.5e9, kvB: 196608, plan: 'Phase 7 · MoE, 3.3B active' },
+    { name: 'GPT-OSS-20B',       params: 20.9e9, kvB: null,   plan: 'Phase 11 · ships in MXFP4' },
+    { name: 'DeepSeek-V2-Lite',  params: 15.7e9, kvB: null,   plan: 'Phase 8 · MLA, INT4 target' },
+  ];
+  const HW = {
+    /* RTX 5090: 512-bit GDDR7 @ 28 Gbps; dense tensor rates, fp32 accumulate */
+    bw: 1.792e12, vramGiB: 32,
+    tflopsBF16: 209.5e12, tflopsINT8: 838e12, tflopsFP8: 419e12, tflopsFP4: 1676e12,
+    bwL4: 300e9, bwH100: 3.35e12,
   };
-  QUIZ.forEach((item, idx) => {
-    const boxq = el('div', 'quiz-item');
-    boxq.appendChild(html('div', 'q-prompt', `<strong>${idx + 1}.</strong> ${item.prompt}`));
-    const saved = store.get('quiz:' + item.id);
-    if (item.type === 'numeric') {
-      const row = el('div', 'numeric-row');
-      const input = el('input');
-      input.type = 'text';
-      input.placeholder = 'your answer';
-      const unit = el('span', null, item.unit || '');
-      const check = el('button', 'btn', 'Check');
-      const explain = el('div', 'explain');
-      explain.innerHTML = item.explain || '';
-      explain.style.display = 'none';
-      const grade = (val) => {
-        const x = parseFloat(val);
-        if (!Number.isFinite(x)) return undefined;
-        const ok = Math.abs(x - item.answer) <= item.tol;
-        input.classList.remove('right', 'wrong');
-        input.classList.add(ok ? 'right' : 'wrong');
-        if (item.explain) explain.style.display = '';
-        states.set(item.id, ok);
-        updateScore();
-        return ok;
-      };
-      check.addEventListener('click', () => {
-        const ok = grade(input.value);
-        if (ok !== undefined) store.set('quiz:' + item.id, input.value);
-      });
-      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') check.click(); });
-      row.append(input, unit, check);
-      boxq.append(row, explain);
-      if (typeof saved === 'string') { input.value = saved; grade(saved); }
+  const SERVE = {
+    /* the 0.6B serve geometry and its measured anchors */
+    slots: 16, cap: 4096, poolGiB: 7.00, pool48GiB: 21.01, observedMiB: 12443,
+    stepEagerMs: 10.43, stepGraphMs: 5.93, oneRowMs: 3.63,
+  };
+  /* layer-0 down_proj of the 0.6B, from the capture record */
+  const LAYER = {
+    tensor: 'model.layers.0.mlp.down_proj.weight', rows: 1024, cols: 3072,
+    absmax: 0.417969, p999: 0.094727, std: 0.026240,
+    rowQ: { q0: 0.0752, q50: 0.1040, q90: 0.1260, q99: 0.2103, q100: 0.4180 },
+    top: [[0.418, 35, 1957], [-0.396, 35, 309], [-0.352, 35, 67], [-0.342, 312, 290], [0.328, 35, 701]],
+    /* symmetric absmax RTN, computed by capture_quant.py in fp32 (not a JS toy) */
+    err: {
+      'int8/tensor':  { rmse: 9.498e-4, used: 0.635 },
+      'int8/channel': { rmse: 2.553e-4, used: 1.0 },
+      'int8/group':   { rmse: 1.794e-4, used: 1.0 },
+      'int4/tensor':  { rmse: 1.680e-2, used: 0.933 },
+      'int4/channel': { rmse: 4.625e-3, used: 1.0 },
+      'int4/group':   { rmse: 3.253e-3, used: 1.0 },
+    },
+    histCounts: [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 2, 2, 1, 4, 3, 1, 3, 6, 2, 5, 1, 3, 6, 6, 15, 9, 11, 21, 31, 41, 85, 123, 197, 368, 734, 1676, 3056, 5926, 10928, 20330, 34692, 59469, 88850, 131483, 181330, 240367, 292505, 328647, 343906, 329276, 291950, 240058, 181203, 131672, 89189, 58882, 34239, 20715, 11144, 5990, 3129, 1666, 775, 417, 211, 105, 70, 35, 37, 19, 21, 7, 12, 8, 6, 5, 6, 1, 5, 5, 1, 3, 1, 1, 1, 2, 1, 1, 1, 0, 0, 0, 2, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    group: 128,
+  };
+  const BLOCK = {
+    typical: [-0.01331, 0.00812, 0.01794, -0.01074, 0.01831, -0.00665, -0.0625, 0.00693,
+              -0.0155, 0.01483, 0.0076, -0.02893, -0.03931, 0.04858, 0.01007, -0.00525],
+    outlier: [-0.04492, 0.00763, -0.01843, 0.00989, 0.04053, 0.41797, 0.05103, 0.06494,
+              0.02783, 0.00702, 0.02637, 0.06055, -0.00122, -0.00055, 0.09961, 0.01477],
+    outlierLoc: 'row 35, cols 1952-1967',
+  };
+  const RANKING = [
+    ['down_proj', 4.4], ['q_proj', 4.1], ['up_proj', 4.1], ['o_proj', 3.3],
+    ['k_proj', 2.8], ['gate_proj', 2.6], ['v_proj', 1.8],
+  ];
+
+  /* ---------- format math ----------
+     IEEE-like decode for a (sign, e exponent bits, m mantissa bits) format.
+     Presets carry spec overrides where the standard formula is wrong for the
+     real format (e4m3 reclaims its all-ones exponent for NaN, so its max is
+     448, not the formula's 480). */
+  const fmtProps = (e, m, ovr) => {
+    const bias = Math.pow(2, e - 1) - 1;
+    const p = {
+      e, m, bias,
+      max: (2 - Math.pow(2, -m)) * Math.pow(2, bias),
+      minNormal: Math.pow(2, 1 - bias),
+      minSub: Math.pow(2, 1 - bias - m),
+      eps: Math.pow(2, -m),
+      intExact: Math.pow(2, m + 1),
+      perBinade: Math.pow(2, m),
+    };
+    return Object.assign(p, ovr || {});
+  };
+  const FORMATS = {
+    fp32: Object.assign(fmtProps(8, 23), { label: 'fp32', bits: 32 }),
+    tf32: Object.assign(fmtProps(8, 10), { label: 'tf32', bits: 19, note: 'compute format' }),
+    fp16: Object.assign(fmtProps(5, 10), { label: 'fp16', bits: 16 }),
+    bf16: Object.assign(fmtProps(8, 7),  { label: 'bf16', bits: 16 }),
+    e4m3: Object.assign(fmtProps(4, 3, { max: 448 }), { label: 'fp8 e4m3', bits: 8, note: 'no inf; top code is NaN' }),
+    e5m2: Object.assign(fmtProps(5, 2), { label: 'fp8 e5m2', bits: 8 }),
+    e2m1: Object.assign(fmtProps(2, 1), { label: 'fp4 e2m1', bits: 4 }),
+  };
+  const FP4_LEVELS = [0, 0.5, 1, 1.5, 2, 3, 4, 6];  /* e2m1 magnitudes */
+  const fnum = (x) => {
+    if (x === 0) return '0';
+    const a = Math.abs(x);
+    if (a >= 1e5 || a < 1e-4) return x.toExponential(2).replace('e', ' × 10^').replace('+', '');
+    if (a >= 1000) return x.toLocaleString('en-US');
+    return String(Math.round(x * 1e6) / 1e6);
+  };
+  const gib = (bytes, dp) => (bytes / GiB).toFixed(dp === undefined ? 2 : dp);
+
+  /* ---------- the chapter ---------- */
+  const article = el('article', 'chapter');
+  article.innerHTML = `
+<p class="ch-kicker">cantoLLM · reading ahead: Phases 7 &amp; 11 · a mini-chapter</p>
+<h1>Quantization</h1>
+<p class="lede">Every number in our models is a bfloat16: two bytes, chosen once in
+<code>spec.py</code> and never questioned since. This chapter questions it. Decode speed is
+bytes divided by bandwidth, capacity is bytes times count, and the fastest kernel is the one
+handed smaller numbers. The craft is shrinking every number until just before the model
+notices.</p>
+
+<aside class="note"><span class="label">How this chapter works</span>
+Unlike the CUDA graphs chapter, this one is read-ahead: the engine work it describes is
+Phases 7 and 11, still unbuilt. The numbers are real anyway. Checkpoint arithmetic comes
+from the downloaded safetensors, the specimen layer statistics from a committed capture of
+the real 0.6B weights (<code>viz/capture_quant.py</code>, record at <code>${REC}</code>),
+engine anchors from the bench records, and hardware figures from vendor spec sheets,
+checked at authoring time. The interactives are part of the argument: play with each one,
+and commit to the &ldquo;predict first&rdquo; prompts before revealing. Predictions and quiz
+answers are saved locally in this browser.</aside>
+
+<aside class="note"><span class="label">Contents</span>
+<a data-goto="qs-puzzle">The puzzle</a> ·
+<a data-goto="qs-float">What two bytes can say</a> ·
+<a data-goto="qs-numberline">The number line</a> ·
+<a data-goto="qs-refuses">Where bf16 already fails</a> ·
+<a data-goto="qs-memory">Bytes and ceilings</a> ·
+<a data-goto="qs-idea">The idea</a> ·
+<a data-goto="qs-granularity">Granularity</a> ·
+<a data-goto="qs-weightonly">Weight-only</a> ·
+<a data-goto="qs-w8a8">W8A8 and FP8</a> ·
+<a data-goto="qs-kv">The KV cache</a> ·
+<a data-goto="qs-fp4">FP4 and microscaling</a> ·
+<a data-goto="qs-awq">GPTQ and AWQ</a> ·
+<a data-goto="qs-quality">Did it hurt?</a> ·
+<a data-goto="qs-engine">Our engine</a> ·
+<a data-goto="qs-exercises">Exercises</a> ·
+<a data-goto="qs-quiz">Quiz</a></aside>
+
+<h2 id="qs-puzzle">A puzzle to start: 751,632,384 numbers, 1.40 gibibytes</h2>
+
+<p>Run <code>ls -l</code> over the four downloaded checkpoints and the sizes read 1.40,
+3.78, 7.49, and 15.26 GiB. Divide each by its parameter count and the mystery evaporates:
+every file is its parameter count times exactly two bytes, plus a few kilobytes of header.
+A checkpoint is not code, not a graph, not anything clever. It is the numbers, laid end to
+end, two bytes each.</p>
+
+<pre class="code">751,632,384 params × 2 bytes = 1,503,264,768 bytes = 1.40 GiB   # Qwen3-0.6B, exactly</pre>
+
+<p>That factor of two is the subject of this chapter. It is not a law of nature; it is a
+choice, made once per model in <code>spec.py</code> (<code>"dtype": torch.bfloat16</code>)
+and inherited by every linear layer, the KV pool, and every activation flowing between
+them. Two stakes hang on it:</p>
+
+<ul>
+<li><strong>Fit.</strong> The roadmap&rsquo;s Phase 7 model, Qwen3-30B-A3B, is 30.5 billion
+parameters: 61 GB at two bytes each. The 5090 has 32. At one byte per parameter it still
+does not fit alongside its KV cache; at half a byte it does, with room to breathe. Whether
+that model runs locally at all is a bytes-per-parameter question.</li>
+<li><strong>Speed.</strong> The stranger claim, and the CUDA graphs chapter set it up. That
+chapter ended with the dispatch toll gone and the 16-row decode step pinned at 5.93 ms of
+pure GPU work. This chapter asks what the GPU is <em>doing</em> for those milliseconds, and
+the answer is mostly not arithmetic. It is moving those two-byte numbers. Halve the bytes
+and the floor itself moves.</li>
+</ul>
+
+<p>To earn both claims we need to know two things the engine has never had to articulate:
+what exactly lives inside those two bytes, and what a byte costs to move. Formats first.</p>
+
+<h2 id="qs-float">What two bytes can say: a ladder and a curve</h2>
+
+<p>Start with the format quantization aims at, the integer. An <code>int8</code> spends all
+eight of its bits on one job: 256 codes, evenly spaced, a ladder with 256 rungs. (Two&rsquo;s
+complement just decides which rung is which: the top bit means &ldquo;subtract 128,&rdquo;
+giving a range of &minus;128 to 127.) Uniform spacing is the whole personality: between
+&minus;128 and 127 in steps of 1, every value is represented with the same absolute error,
+and nothing outside the range is representable at all.</p>
+
+<p>A floating-point format spends its bits differently, and the spend is the entire
+story.</p>
+
+<div class="def"><span class="label">Definition · sign, exponent, mantissa</span>
+A floating-point number is <strong>(&minus;1)<sup>s</sup> × 1.f × 2<sup>E&minus;bias</sup></strong>:
+one <strong>sign</strong> bit, an <strong>exponent</strong> field <em>E</em> of <em>e</em> bits
+choosing a power-of-two window (the <em>binade</em>), and a <strong>mantissa</strong> field
+<em>f</em> of <em>m</em> bits placing the value on 2<sup>m</sup> evenly spaced points inside
+that window. Exponent bits buy <em>range</em>; mantissa bits buy <em>precision</em>.</div>
+
+<p>The consequence: a float&rsquo;s rungs are not evenly spaced. Inside one binade they are;
+step into the next binade and the spacing doubles. Floats put dense rungs near zero, where
+neural-network numbers overwhelmingly live, and sparse rungs out at the magnitudes that
+rarely occur. An integer format is a ruler; a float is a curve that hugs the distribution.</p>
+
+<p>Every named format is nothing but a choice of <em>e</em> and <em>m</em>. fp32 is e8m23.
+Chop its mantissa to ten bits and you have tf32; chop to seven and you have bf16; steal
+three exponent bits back for the mantissa and you have fp16 (e5m10). The interactive below
+lets you make the choice yourself: spend a bit budget on exponent versus mantissa, and
+watch what each allocation buys.</p>
+
+<div data-widget="w-designer"></div>
+<p class="widget-caption"><strong>Interactive.</strong> Top: the bits of one value in the
+selected format; click any bit to flip it and watch the decoded value. Bottom: move the
+sliders to design your own format inside an 8- or 16-bit budget, or snap to a real format
+with the presets. The readouts (largest finite value, smallest normal, spacing at 1.0,
+largest exact integer) are the four numbers that decide whether a format survives contact
+with a model.</p>
+
+<h2 id="qs-numberline">The number line under a microscope</h2>
+
+<p>Lay the formats on a shared, logarithmic number line and the trade becomes physical.
+Each format covers a stretch of the line (its range) with a certain rung density
+(2<sup>m</sup> values per binade). Sixteen bits buy a fixed number of rungs; e and m only
+decide where the rungs go.</p>
+
+<p>The two 16-bit formats are the canonical fork in the road. fp16 (e5m10) has 1,024 rungs
+per binade but only 40 binades: it is precise and short. Its largest finite value is
+<strong>65,504</strong>, and early LLM training found that cliff the hard way: attention
+logits and gradient norms walk past 65k routinely, and beyond it sits inf. bf16 (e8m7) keeps
+fp32&rsquo;s full 256-binade range and pays with a coarse mantissa: 128 rungs per binade,
+spacing 1/128 of the binade&rsquo;s base. Networks tolerate coarse rungs far better than
+they tolerate a nearby cliff, which is why serving today defaults to bf16 and why
+<code>spec.py</code> says what it says.</p>
+
+<div data-predict="p-count"></div>
+<div data-widget="w-numberline"></div>
+<p class="widget-caption"><strong>Interactive.</strong> Every representable magnitude of the
+selected formats, drawn on one log-scaled line: each vertical band is a binade, its shade the
+rung density. Toggle formats to overlay them; hover a band for its spacing. The flags mark
+each format&rsquo;s largest finite value: the fp16 cliff at 65,504, e4m3&rsquo;s at 448,
+e5m2&rsquo;s at 57,344.</p>
+
+<p>The same fork repeats one octave down. The two 8-bit float formats split exactly like
+their 16-bit parents: e4m3 (dense, short, max 448) for values that stay near zero, e5m2
+(sparse, long, max 57,344, an fp16 with its mantissa shaved) for values that swing.
+Inference activations sit comfortably inside e4m3; e5m2 earns its range in training, where
+gradients swing wider. And at the bottom of the ladder sits fp4 (e2m1), a format so small
+it can be enumerated in one breath: &plusmn;{0, 0.5, 1, 1.5, 2, 3, 4, 6}. Eight magnitudes.
+Hold that thought; it returns with a bodyguard in the microscaling section.</p>
+
+<aside class="note"><span class="label">tf32, the compute-only format</span>
+tf32 (e8m10) never lives in memory: it is what an Ampere-and-later tensor core does to fp32
+inputs on the way through a matmul, chopping the mantissa to 10 bits to run faster while
+keeping fp32 range. It matters here as a precedent: the storage format and the arithmetic
+format were separated years ago, and quantized inference leans on exactly that separation.</aside>
+
+<h2 id="qs-refuses">Where our model already refuses to go low</h2>
+
+<p>Before shrinking anything further, notice that the codebase already treats bf16 as
+too small for certain jobs. Four places in the repository refuse it, and each is a
+preview of a failure mode this chapter has to respect:</p>
+
+<ul>
+<li><strong>RMSNorm upcasts.</strong> <code>model.py</code> computes every norm in fp32
+(<code>x.to(torch.float32)</code>, normalize, cast back). A mean of squares over 1,024
+values accumulates rounding; at seven mantissa bits the accumulated drift is enough to
+move logits.</li>
+<li><strong>RoPE upcasts.</strong> <code>rope.py</code> builds its rotations in fp32 and
+casts the result back to the input dtype. Small-angle trigonometry is exactly where a
+coarse mantissa hurts.</li>
+<li><strong>Attention accumulates in fp32.</strong> The FlashAttention chapter&rsquo;s
+kernels read bf16 tiles from memory but keep every running sum in fp32 registers, rounding
+once at the very end instead of once per tile.</li>
+<li><strong>The rejection sampler guards against underflow.</strong>
+<code>speculative.py</code> keeps a <code>p_draft &gt; 0.0</code> check with a comment about
+bf16 underflow: a probability that is small-but-real in fp32 can round to exactly zero in
+bf16, and a zero in a denominator is a crash, not a rounding error.</li>
+</ul>
+
+<div class="def"><span class="label">Definition · storage dtype, compute dtype</span>
+The <strong>storage dtype</strong> is what a tensor occupies in memory; the
+<strong>compute dtype</strong> is what the arithmetic runs in. They are separate decisions,
+made per operation. Our engine already runs a mixed system (bf16 storage, fp32 where it
+counts), and every quantization scheme in this chapter is a more aggressive point on the
+same axis: storage keeps shrinking; compute shrinks only where the hardware makes it safe
+and fast.</div>
+
+<h2 id="qs-memory">The journey of a byte, and the two ceilings</h2>
+
+<p>Now the other half of the puzzle: what a byte costs. The CUDA graphs chapter built the
+compute side of the machine (SMs, warps, kernels); this section builds the memory side,
+because it is the side quantization acts on.</p>
+
+<p>The 1.40 GiB of weights live in the card&rsquo;s <strong>GDDR7</strong>, the DRAM
+soldered around the GPU die: vast (32 GiB) and, by GPU standards, far away. Between it and
+the arithmetic sit two more stops. Each SM owns a slice of on-chip <strong>SRAM</strong>
+(cache and scratch space, a few hundred KiB per SM, roughly a thousand times smaller than
+the DRAM) and, closest of all, the <strong>registers</strong> feeding the tensor cores.
+Nothing is computed where it is stored: every weight that participates in a matmul is
+copied DRAM &rarr; SRAM &rarr; register &rarr; tensor core, and the first hop dominates.
+The 5090 makes that hop at up to <strong>1.79 TB/s</strong>. It sounds enormous until you
+divide by it.</p>
+
+<div class="def"><span class="label">Definition · memory-bound, compute-bound, arithmetic intensity</span>
+A kernel is <strong>memory-bound</strong> when the bytes it must move take longer than the
+math it must do, <strong>compute-bound</strong> when the reverse holds. The ratio of work to
+traffic (FLOPs per byte moved) is its <strong>arithmetic intensity</strong>. The 5090 can do
+roughly 117 bf16 floating-point operations in the time it moves one byte
+(209 TFLOPS ÷ 1.79 TB/s), so a kernel needs an intensity above ~117 to keep the
+arithmetic units fed. Below that, the tensor cores wait on the bus.</div>
+
+<p>Now aim that definition at decode. To produce one token, the model multiplies its input
+through every weight matrix once: each of the 751 million weights is read from DRAM,
+used in <em>two</em> floating-point operations (one multiply, one add), and discarded.
+Intensity: 2 FLOPs per 2-byte weight, i.e. <strong>1 FLOP per byte</strong>, a hundred times
+short of the line. Single-stream decode is one of the most memory-bound workloads in
+computing, and no kernel cleverness changes that; the bytes simply must arrive.</p>
+
+<div data-predict="p-ceiling"></div>
+<div data-widget="w-ceiling"></div>
+<p class="widget-caption"><strong>Interactive.</strong> The two ceilings for one decode
+step: the time the bytes need at 1.79 TB/s (weights plus KV read at the chosen context)
+versus the time the math needs at 209 dense bf16 TFLOPS. Whichever bar is longer bounds the
+step; the readout converts it to a tokens-per-second ceiling. The measured 0.6B points ride
+above both bars: a small model&rsquo;s step is dominated by per-kernel overheads that
+neither ceiling counts (that story was the previous chapter). Watch the 8B column at
+batch 1: its bytes bar is 9.1 ms against 0.08 ms of math, and its measured pace on this
+card would hug the byte bar.</p>
+
+<div class="thm"><span class="label">Rule · the batch twist</span>
+Weight bytes are read <strong>once per step</strong>, however many sequences share the
+batch; KV bytes are read <strong>once per sequence</strong>. Batching therefore raises
+arithmetic intensity on the weights (16 rows reuse every loaded tile 16 times) but does
+nothing of the sort for the cache. This one asymmetry explains why the batched engine
+exists, why weight quantization pays most at low batch on big models, and why KV
+quantization takes over at exactly the operating point where weight quantization stops
+paying.</div>
+
+<div class="thm"><span class="label">Rule of thumb</span>
+Quantization shrinks bytes, so it buys what bytes cost: <strong>capacity always,
+bandwidth-bound time proportionally, compute-bound time only when the arithmetic itself
+changes format.</strong> Keep this sentence; every serving decision in the second half of
+the chapter is an application of it.</div>
+
+<p>The board below runs one real decode step of our serve geometry with two odometers
+attached, then re-runs it twice with smaller numbers. The rest of the chapter is spent
+earning the right to those two replays.</p>
+
+<div data-widget="w-odometer"></div>
+<p class="widget-caption"><strong>Interactive.</strong> One 16-row decode step of the 0.6B
+at the serve geometry (16 slots, mid-run context ~1,024), stepped stage by stage with the
+buttons, slider, or arrow keys. The odometers count DRAM traffic and floating-point work;
+the time readout prices the bytes at 1.79 TB/s. Steps 8 and 9 replay the same step with
+INT8 weights, then FP8 KV as well: watch which line item shrinks each time, and which one
+becomes the biggest.</p>
+
+<h2 id="qs-idea">The idea: a grid and a scale</h2>
+
+<p>Everything so far says smaller numbers are worth real money. Here is the machine that
+makes them. Take a tensor of bf16 values, almost all of them within a few hundredths of
+zero. Lay a uniform grid of 256 rungs over its range, snap every value to its nearest
+rung, and store only the rung indices, one byte each, plus one number that says how wide
+the grid is.</p>
+
+<div class="def"><span class="label">Definition · quantize, scale, dequantize</span>
+Symmetric integer quantization with <em>b</em> bits stores
+<strong>q = round(w / s)</strong>, clamped to [&minus;(2<sup>b&minus;1</sup>&minus;1),
+2<sup>b&minus;1</sup>&minus;1], with <strong>scale s = absmax(w) / (2<sup>b&minus;1</sup>&minus;1)</strong>.
+Reconstruction (<strong>dequantization</strong>) is <strong>w&#770; = q · s</strong>. The
+scale is the exchange rate between integer rungs and real values; choosing it from the
+absolute maximum (<em>absmax</em>) guarantees nothing clips.</div>
+
+<p>The whole scheme has exactly two error sources. Values inside the range are moved to
+their nearest rung: <strong>rounding error</strong>, at most half a rung. Values outside
+the range (there are none under absmax scaling, but hold on) would be clamped to the edge:
+<strong>clipping error</strong>, unbounded. Rounding error is well behaved enough to have
+a closed form worth keeping.</p>
+
+<div class="thm"><span class="label">The one theorem: what rounding costs</span>
+Round-to-nearest onto a grid of spacing <strong>&Delta;</strong> makes an error
+approximately uniform on [&minus;&Delta;/2, +&Delta;/2], with mean square
+<strong>&Delta;&sup2;/12</strong> (root-mean-square &Delta;/&radic;12 &asymp; 0.29&Delta;).
+Everything a quantization method does, all of it, is a scheme for making the
+<em>effective</em> &Delta; smaller where it matters: fewer values per grid, a grid shaped
+like the data, or a grid that outliers cannot stretch.</div>
+
+<p>And outliers stretch it. The scale is set by the single largest magnitude in the tensor.
+One rogue value doubles the grid spacing for <em>every other value</em>, doubling
+everyone&rsquo;s rounding error to buy headroom only the rogue needed. Drag the outlier in
+the figure and watch it tax the population.</p>
+
+<div data-widget="w-hist"></div>
+<p class="widget-caption"><strong>Interactive.</strong> A bell-shaped population of weights
+(&sigma; = 0.02, the typical scale of our layer-0 projections) under an int8 or int4 absmax
+grid. Drag the red outlier to the right: the grid stretches with it, the rung spacing
+&Delta; grows, and the RMS error of the 4,095 well-behaved weights grows in lockstep, while
+most of the 256 rungs end up covering values that never occur.</p>
+
+<aside class="note"><span class="label">Symmetric, asymmetric, and where zero sits</span>
+Weights are near enough zero-centered that a symmetric grid (zero on a rung, one scale)
+is standard. Skewed distributions (post-ReLU activations, for instance) get an
+<strong>asymmetric</strong> variant with a <em>zero-point</em> offset so the grid spends no
+rungs below the minimum. One more integer per tensor, same machinery. A subtlety either
+way: exact zero must land on a rung, because padding, masks, and sparsity all produce
+exact zeros that must survive the round trip.</aside>
+
+<aside class="note"><span class="label">PTQ, QAT, and where the bf16 numbers come from</span>
+Everything in this chapter quantizes a model that was <em>trained</em> in high precision:
+post-training quantization, <strong>PTQ</strong>. The alternative,
+quantization-aware training (<strong>QAT</strong>), simulates the grid during training so
+the weights learn to live on it; it buys quality at the extreme low end and costs a
+training run, which is why PTQ owns the serving world. The chapter returns to the QAT
+frontier exactly once, at 1.58 bits.</aside>
+
+<h2 id="qs-granularity">Who shares a scale: the granularity ladder</h2>
+
+<p>If one scale for 3.1 million values lets one outlier tax them all, share less. Give
+every output channel (every row of the weight matrix) its own scale, and a rogue row taxes
+only itself. Split each row into groups of 128 and a rogue value taxes 127 neighbors. The
+blast radius shrinks with the sharing.</p>
+
+<div class="def"><span class="label">Definition · granularity, group</span>
+The <strong>granularity</strong> of a scheme is the set of values that share one scale:
+<strong>per-tensor</strong> (one scale), <strong>per-channel</strong> (one per matrix row),
+<strong>per-group</strong> (one per <em>g</em> consecutive weights, <em>g</em> typically
+128 or 64). Finer granularity means more scales to store, so the true cost of a scheme is
+its <strong>effective bits per weight</strong>: int4 with one fp16 scale per 128-group is
+4 + 16/128 = <strong>4.125 bits</strong>, not 4.</div>
+
+<p>This is the point where the chapter stops using synthetic bell curves, because the
+repository contains three million real weights with a genuine outlier problem.
+<code>model.layers.0.mlp.down_proj.weight</code> of the 0.6B: absolute maximum 0.418,
+99.9th percentile 0.095. One weight, in row 35, sits 4.4&times; beyond the percentile that
+99.9% of its 3.1 million colleagues live under. (Row 35 is a genuine problem child: it owns
+four of the tensor&rsquo;s five largest magnitudes.)</p>
+
+<div data-predict="p-outlier"></div>
+<div data-widget="w-layer"></div>
+<p class="widget-caption"><strong>Interactive.</strong> The real distribution of layer
+0&rsquo;s <code>down_proj</code> (121-bin histogram of all 3,145,728 weights, log-scaled
+counts), with the 99.9th percentile and the absmax flagged. Choose bits and granularity:
+the error readout is the RMS reconstruction error computed offline on the real tensor by
+<code>viz/capture_quant.py</code>, not a browser approximation. Per-channel already cuts
+per-tensor&rsquo;s error 3.7&times;; groups of 128 cut it 5.3&times;.</p>
+
+<div class="thm"><span class="label">Rule · the four responses to outliers</span>
+Every quantization method in production is one of four answers to the same enemy:
+<strong>(1) shrink the blast radius</strong> (per-channel, groups, microscaled blocks);
+<strong>(2) keep the outliers</strong> in high precision and quantize the rest (LLM.int8());
+<strong>(3) move the difficulty</strong> somewhere with headroom before quantizing
+(SmoothQuant, AWQ); <strong>(4) spend the grid better</strong> (distribution-shaped levels
+like NF4, error-compensating rounding like GPTQ). The rest of the chapter is these four
+families, in that order.</div>
+
+<aside class="note"><span class="label">Where the scales live, and quantizing the scales</span>
+Scales are tensors too. Group-128 int4 stores one fp16 scale per group: a 3&percnt; memory
+tax and one extra multiply in the kernel. QLoRA&rsquo;s <em>double quantization</em> goes
+one step further and quantizes the scales themselves (fp32 scales &rarr; int8 with a
+per-256-group meta-scale), clawing back about 0.37 bits per weight. Bookkeeping all the way
+down; the trick is knowing when the bookkeeping costs more than it saves.</aside>
+
+<h2 id="qs-weightonly">Weight-only: store small, compute big</h2>
+
+<p>Family 1 is enough to build the first serving scheme, the one PLAN.md schedules for
+Phase 7. Quantize the <em>weights</em> to int8 or int4 with per-channel or group scales,
+at load time, once. Leave activations, KV, and every unit of arithmetic in bf16. The matmul
+kernel reads the int weights from DRAM (a quarter of the bytes), dequantizes them
+<em>inside the kernel</em>, in registers, on the way to the multiply, and the tensor cores
+never know anything happened: they eat bf16, exactly as before.</p>
+
+<p>Follow the rule of thumb to see where this pays. Decode at low batch is
+bandwidth-bound on weight bytes, so int4 weights push the byte ceiling nearly 4&times;
+higher: our 8B&rsquo;s single-stream ceiling climbs from 109 tokens/s toward the
+low 400s. Prefill is the other regime entirely: hundreds of tokens per step raise the
+arithmetic intensity past the compute-bound line, the tensor cores are the bottleneck, and
+they are still doing bf16 math at bf16 rates. Weight-only quantization speeds up prefill
+by approximately nothing (the extra dequant work can even nick it), and this is a feature
+of the analysis, not a flaw of the scheme: know which wall you are pushing.</p>
+
+<div data-predict="p-scales"></div>
+<div data-widget="w-membars"></div>
+<p class="widget-caption"><strong>Interactive.</strong> Every checkpoint the roadmap cares
+about, priced at four storage formats (effective bits include group-128 fp16 scales),
+against the 5090&rsquo;s 32 GiB. bf16 rules out everything past 8B. int4 is the door
+Phase 7 walks through: 30.5B parameters at 4.125 effective bits is 15.7 GB, model on the
+card with room for a cache.</p>
+
+<aside class="note"><span class="label">How int4 physically packs</span>
+There is no int4 in the memory system; the kernel stores two 4-bit codes per byte and
+unpacks with a shift and a mask. Formats below a byte are a software convention plus a
+kernel idiom, which is exactly why the scales-and-blocks bookkeeping can be redesigned so
+freely (and why, in the FP4 section, the hardware finally absorbing that convention is
+news).</aside>
+
+<aside class="note"><span class="label">NF4: a grid shaped like the weights</span>
+Family 4&rsquo;s first member fits here. QLoRA&rsquo;s <strong>NF4</strong> keeps 4-bit
+codes but abandons uniform spacing: its 16 levels sit at the quantiles of a standard
+normal distribution, so each code is used equally often when the weights are
+Gaussian-ish, which weight tensors famously are. Same 16 rungs, placed where the
+population actually lives. The GPTQ-and-AWQ section&rsquo;s widget lets you watch a
+shaped grid beat a uniform one on the real layer.</aside>
+
+<h2 id="qs-w8a8">Quantizing the activations too: W8A8 and FP8</h2>
+
+<p>To speed up the compute-bound regime, the tensor core itself has to eat the small
+format, and that means both operands: weights <em>and</em> activations, W8A8. The 5090&rsquo;s
+tensor cores consume int8 pairs (accumulating exactly, in int32) and fp8 pairs
+(accumulating at fp32 width, nominally) at a large multiple of their bf16 rate; the exact
+ladder, with its consumer-card fine print, is in the aside. This is the only branch of
+quantization that moves the <em>compute</em> ceiling; everything else in this chapter moves
+bytes.</p>
+
+<aside class="note"><span class="label">The whitepaper ladder, dense, no marketing</span>
+From NVIDIA&rsquo;s RTX Blackwell whitepaper, dense rates with fp32 accumulation: bf16
+<strong>209.5</strong> TFLOPS, fp8 <strong>419</strong>, int8 <strong>838</strong> TOPS,
+fp4 <strong>1,676</strong>. Two wrinkles worth knowing. GeForce cards have run
+fp16/bf16/fp8 with fp32 accumulation at <em>half</em> the fp16-accumulate rate since
+Ampere, which is why fp8 &ldquo;only&rdquo; doubles bf16 here while int8 and fp4 quadruple
+and octuple it. And the headline &ldquo;3,352 AI TOPS&rdquo; is fp4 <em>with 2:4
+sparsity</em>: divide marketing by two before doing arithmetic with it.</aside>
+
+<div class="thm"><span class="label">The one sentence</span>
+<strong>Storage quantization pays in bytes; compute quantization pays only when the tensor
+core natively eats the format.</strong> Weight-only int4 on this card computes in bf16 after
+an in-kernel dequant; FP8 W8A8 computes in fp8. The first moves the memory ceiling, the
+second moves both.</div>
+
+<p>The catch is the activations. Weights are frozen: quantize once offline, at leisure,
+with any granularity. Activations are born fresh every forward pass, so their scales must
+be found on the fly (<em>dynamic</em> quantization, a max-reduction per token or per tile)
+or frozen ahead of time from a few hundred sample prompts (<em>static</em> quantization,
+cheaper at runtime, brittle when traffic looks unlike the calibration set). And their
+distribution is worse. Weights sit in tidy near-Gaussian bundles; transformer activations
+carry <em>systematic outlier channels</em>, a few hidden dimensions that run 10 to 100
+times hotter than the rest, the same channels in every token. The LLM.int8() paper mapped
+this pathology: those channels are load-carrying features, and clipping them lobotomizes
+the model.</p>
+
+<p>Family 2&rsquo;s answer is surgical: LLM.int8() detects the hot columns at runtime,
+computes them in fp16, and quantizes the tame 99&percnt;. Family 3&rsquo;s answer is the
+one production kernels prefer, because mixed paths are slow paths: <strong>SmoothQuant</strong>
+notices the outliers live in fixed channels and <em>migrates</em> the difficulty before
+quantizing. Divide activation channel <em>j</em> by s<sub>j</sub>, multiply weight column
+<em>j</em> by the same s<sub>j</sub>: mathematically nothing happened, but the activation
+outliers shrink into range while the weights (flat, forgiving, offline-quantized at
+leisure) absorb the roughness. One knob &alpha; sets how much difficulty migrates.</p>
+
+<div data-widget="w-w8a8"></div>
+<p class="widget-caption"><strong>Figure.</strong> The W8A8 pipeline for one linear layer,
+annotated; hover any line. The whole scheme is three multiplies and a rescale: the
+accumulator comes back int32, and one multiply by s<sub>x</sub>&middot;s<sub>w</sub> lands
+it back in bf16 for the residual stream.</p>
+
+<p>For FP8 specifically, the e4m3/e5m2 fork from the number-line section resolves cleanly:
+inference activations and weights both take <strong>e4m3</strong> (dense rungs, max 448 is
+plenty once SmoothQuant has tamed the channels); <strong>e5m2</strong> is the training-side
+format, holding gradients whose swings need the range. The granularity lesson transfers
+unchanged, and Phase 11&rsquo;s stated trade (per-tensor scales versus per-block) is the
+same blast-radius dial from the previous section, applied at fp8.</p>
+
+<h2 id="qs-kv">The other tenant: quantizing the KV cache</h2>
+
+<p>Weights are half the memory story at serve. The other tenant in the 32 GiB is the KV
+cache, and our engine already knows its arithmetic precisely: the 0.6B writes
+<strong>114,688 bytes of cache per token</strong> at bf16 (2 tensors &times; 28 layers
+&times; 8 KV groups &times; 128 dims &times; 2 bytes), and the serve default preallocates a
+<strong>7.00 GiB</strong> pool (16 slots &times; 4,097 positions). Five times the weights,
+before a single long context arrives.</p>
+
+<p>The pressure is not hypothetical; the repository has the receipt. The wide-slots
+exploration wanted 48 slots at the same 4,096 capacity: a <strong>21.01 GiB</strong> pool,
+which is why its probe run is the one place the project has already hit a CUDA OOM on this
+card. And the batch twist says KV bytes, unlike weight bytes, are read per sequence per
+step: at high batch and long context the cache is not just the bigger tenant but the
+bigger <em>traffic</em>. For the 0.6B, one sequence&rsquo;s per-token KV read overtakes the
+entire weight read at 13,107 tokens of context (the Weights tab has carried that crossover
+number since long before this chapter).</p>
+
+<div data-widget="w-vram"></div>
+<p class="widget-caption"><strong>Interactive.</strong> The 32 GiB card as a shelf: weights
+plus KV pool plus the ~4 GiB of workspace the serve measurement implies (nvidia-smi read
+12.4 GiB at the default geometry; the residual is context, allocator, and activations,
+labeled as inferred). Slide slots, context, and dtypes. The second preset loads the
+48-slot probe geometry, 26 GiB on paper and the one configuration that has OOMed this card
+in practice; flip the KV dtype to fp8 and watch eleven gibibytes of margin reappear.</p>
+
+<p>Quantizing the cache is family 1 all over again, with one new wrinkle: KV is written
+once per token but read thousands of times, streamed in full at every subsequent decode
+step, so int8 or fp8 KV halves the dominant read stream <em>and</em> doubles capacity in
+one move. The scales want to be <strong>per block</strong> (one scale per 16-or-so-token
+run per head), for a reason that rhymes across two phases: Phase 4&rsquo;s paged pool
+already chops the cache into fixed blocks with per-block metadata, and a per-block scale is
+just one more column of it. One design decision, amortized across two features. The known
+asymmetry, for the quality section: published KV studies consistently find <em>keys</em>
+more sensitive than values, because keys carry outlier channels the way activations do and
+key error lands directly in the attention logits (KIVI and KVQuant both build on exactly
+this), so schemes go asymmetric: per-channel scales for keys, per-token for values, or
+higher key precision outright.</p>
+
+<h2 id="qs-fp4">Four bits, and the scale moves into the format</h2>
+
+<p>Push family 1 to its limit and something categorical happens: the granularity ladder
+bottoms out <em>inside the data type</em>. The microscaling (MX) formats standardize the
+block-plus-scale bundle itself: <strong>MXFP4</strong> is 32 fp4 (e2m1) elements sharing
+one 8-bit power-of-two scale (E8M0), 4.25 effective bits, and the tensor core consumes the
+block <em>with its scale</em> natively. NVIDIA&rsquo;s <strong>NVFP4</strong> tightens both
+dials: blocks of 16, and a proper e4m3 scale (plus one fp32 per-tensor outer scale), so
+the scale itself rounds gently instead of snapping to the nearest power of two. What was a
+software bookkeeping idiom three sections ago is now a hardware instruction: the dense fp4
+rate on this card is 1,676 TFLOPS, eight times its bf16 rate. This is why the plan&rsquo;s
+old &ldquo;FP8 needs a data center card&rdquo; note died: the 5090 eats these formats for
+breakfast.</p>
+
+<div data-widget="w-nvfp4"></div>
+<p class="widget-caption"><strong>Figure.</strong> A real 16-value block from our specimen
+tensor, hand-quantized to NVFP4, every intermediate shown: block absmax, the e4m3-rounded
+scale, each value&rsquo;s snap to the eight fp4 magnitudes, and the reconstruction error.
+The block chosen is the one containing the tensor&rsquo;s 0.418 outlier: sixteen values
+pay its tax instead of 3.1 million, which is the entire argument of microscaling in one
+row of numbers.</p>
+
+<p>The forcing function on the roadmap is concrete: <strong>GPT-OSS-20B ships its MoE
+weights in MXFP4</strong>, natively, from the training run. Serving it is not a choice to
+quantize; it is a requirement to speak the format. That is Phase 11&rsquo;s FP4 milestone,
+and it will be the first time this engine serves weights it never saw in bf16.</p>
+
+<aside class="note"><span class="label">The far end of the ladder</span>
+Below four bits the PTQ machinery of this chapter stops working; the surviving schemes
+change the training, not the rounding. BitNet b1.58 trains ternary weights from scratch,
+{&minus;1, 0, +1}, log&#8322;3 &asymp; 1.585 bits of information per weight, with QAT
+carrying the burden PTQ no longer can. It is the current answer to &ldquo;how low can the
+ladder go&rdquo;: astonishingly low, if you are willing to retrain the model to live
+there.</aside>
+
+<h2 id="qs-awq">Moving error to where there is headroom: GPTQ and AWQ</h2>
+
+<p>Two families remain, and they share a premise: round-to-nearest with a good grid is
+still leaving accuracy on the table, because it treats every weight as equally important
+and rounds each one in isolation. Both are wrong.</p>
+
+<p><strong>GPTQ</strong> attacks the isolation. Rounding is a joint decision: after
+committing weight <em>j</em> to its rung, the layer&rsquo;s <em>output</em> error from
+that commitment can be partially cancelled by nudging the not-yet-rounded weights, using
+curvature information (a Hessian sketch from a few hundred calibration prompts) to know
+which nudges matter. It sweeps each row left to right, quantize, compensate, repeat. Same
+grid, same bits, meaningfully less output error, and cheap enough to run on a 30B model in
+hours.</p>
+
+<div data-widget="w-gptq"></div>
+<p class="widget-caption"><strong>Interactive.</strong> Eight weights, one fixed input, one
+int4 grid, two roundings. Independent round-to-nearest lets the per-weight errors add up
+however they land; compensated rounding (step through it) folds each committed error back
+into the remaining weights, and the output error at the right shrinks several-fold.
+Same rungs; a better sequence of decisions.</p>
+
+<p><strong>AWQ</strong> attacks the equal importance. Measure activations on calibration
+data and a fraction of a percent of weight channels turn out to carry the hot inputs; a
+rounding error there is amplified by a large activation while errors elsewhere drown.
+AWQ protects those <em>salient</em> channels without any mixed precision: scale the
+salient weight channel up by <em>s</em> (activations down by <em>s</em>, the SmoothQuant
+move in reverse), so after group quantization the channel occupies more of its
+group&rsquo;s grid and rounds finer. The optimal <em>s</em> is a grid search per layer:
+too little moves nothing, too much makes the channel the group&rsquo;s new outlier.</p>
+
+<div data-widget="w-awq"></div>
+<p class="widget-caption"><strong>Interactive.</strong> One group of 128 weights, one
+salient channel (activation 20&times; hotter than its neighbors). Slide <em>s</em>: the
+salient channel&rsquo;s activation-weighted error falls as it stretches across the grid,
+the group&rsquo;s error creeps up as the shared scale grows, and the total finds a
+minimum in between. The dashed toggle swaps the uniform int4 rungs for NF4&rsquo;s
+normal-quantile rungs on the same data: family 4&rsquo;s two ideas, one frame.</p>
+
+<aside class="note"><span class="label">Calibration data, the quiet dependency</span>
+RTN needs no data at all. GPTQ, AWQ, and SmoothQuant all consume a few hundred prompts to
+estimate curvature, saliency, or migration scales, which makes &ldquo;quantized&rdquo;
+models mildly dataset-dependent: quantize on English web text, serve code traffic, and the
+calibration is quietly wrong. Worth remembering when Phase 11&rsquo;s quality matrix picks
+its calibration set.</aside>
+
+<aside class="note"><span class="label">And the GGUF k-quants</span>
+The llama.cpp family (Q4_K and friends) is the same toolbox arranged for CPU serving:
+groups within super-blocks, 6-bit quantized scales, layer-dependent bit budgets. Different
+packaging, zero new ideas beyond this chapter&rsquo;s four families, which is the point of
+having the four families.</aside>
+
+<h2 id="qs-quality">Did it hurt the model?</h2>
+
+<p>Every section so far measured error in RMSE against the original tensor. Models do not
+ship on RMSE. The only measure that counts is behavioral: does the quantized model still
+do what the bf16 model did? And &ldquo;it still chats fine&rdquo; is not a measurement;
+degradation at 4 bits is diffuse, a point of perplexity here, a dropped needle there,
+invisible in a demo and very visible over a million requests.</p>
+
+<p>The standard instruments, cheapest first: <strong>perplexity</strong> on held-out text
+(sensitive, fast, but blind to tail behaviors like long-range retrieval);
+<strong>needle-in-a-haystack</strong> retrieval sweeps (the KV-quant killer, since key
+error degrades exactly the attention lookups retrieval depends on); and
+<strong>task evals</strong> for the behaviors that pay the bills. PLAN.md&rsquo;s Phase 11
+commits to a matrix of all three across the full scheme ladder, and in this
+project&rsquo;s house style the matrix below stays empty until the runs happen: predictions
+first, numbers when measured.</p>
+
+<div data-predict="p-quality"></div>
+<div data-widget="w-matrix"></div>
+<p class="widget-caption"><strong>Figure.</strong> Phase 11&rsquo;s quality matrix as a
+scoreboard: schemes down the side, instruments across the top, published folklore as
+qualitative expectations (hover for the reasoning), measured cells deliberately blank
+until the 5090 runs fill them. The one cell folklore is confident about: INT8 weight-only
+is indistinguishable from bf16 at these model sizes, which is exactly why Phase 7 starts
+there.</p>
+
+<h2 id="qs-engine">Our engine, read with quant eyes</h2>
+
+<p>Close the loop the way the CUDA graphs chapter did: stand in the codebase and look at
+what has to change. The striking thing is how few knives the engine currently owns:</p>
+
+<ul>
+<li><strong><code>spec.py</code> has one dtype knob, and it fans out everywhere.</strong>
+<code>"dtype": torch.bfloat16</code> becomes the embedding dtype, every linear&rsquo;s
+dtype, and, through <code>runtime.py</code>, the KV pool&rsquo;s dtype. Phase 7&rsquo;s
+first refactor is splitting that one knob into three: storage dtype (per weight tensor,
+possibly int), compute dtype (what matmuls run in), and KV dtype (the pool&rsquo;s own).
+The parity suite already proves the pattern: <code>test_hf_parity.py</code> overrides the
+spec to fp32 for testing, the one place the codebase treats dtype as a per-context choice
+rather than a constant.</li>
+<li><strong><code>PaddedKVPool</code> allocates <code>dtype=spec.dtype</code>, take it or
+leave it.</strong> FP8 KV needs the pool to own a dtype of its own plus a scales tensor
+riding alongside <code>k</code> and <code>v</code>, per block, which is Phase 4&rsquo;s
+paged layout growing one more column of metadata.</li>
+<li><strong>The bench harness gains a dtype axis.</strong> <code>[server.matrix]</code>
+already sweeps <code>cuda_graphs = [false, true]</code>; <code>weight_dtype</code> and
+<code>kv_dtype</code> slot into the same machinery, and every claim in this chapter
+becomes a measurable cell.</li>
+<li><strong>The CUDA graphs recapture.</strong> A quantized forward is different kernels
+with different static buffers; the capture tables rebuild under the new dtype. The
+wrapper&rsquo;s design survives untouched, which was the point of keeping it thin.</li>
+</ul>
+
+<aside class="note"><span class="label">Predictions on record</span>
+In the house style, graded when Phase 7 lands. (1) INT8 weight-only on the 0.6B at the
+16-slot serve geometry moves aggregate throughput by under 10&percnt;: its decode step is
+overhead-and-KV-bound, not weight-bound, and the previous chapter already collected the
+overhead. (2) The same INT8 on the 8B at batch 1 approaches 1.8&times; single-stream,
+because that workload sits pinned to the weight-byte ceiling. (3) First quality casualty
+in the matrix: ungrouped int4, on needle retrieval. If any of the three is wrong, the
+error will be instructive, which is the reason to write them down now.</aside>
+
+<h2 id="qs-exercises">Exercises: do it with your own hands</h2>
+
+<p>Everything below runs on the Mac against the committed 0.6B checkpoint; nothing needs
+the 5090 except the last one. The capture record (<code>${REC}</code>) holds the expected
+answers for 3 and 4.</p>
+
+<ul>
+<li><strong>Print the bits.</strong>
+<code>torch.tensor(0.1, dtype=torch.bfloat16).view(torch.uint16)</code>, format as binary,
+and decode sign, exponent, mantissa by hand against the widget. Then explain to yourself
+why 0.1 was never going to be exact in any binary format.</li>
+<li><strong>Hunt the missing integers.</strong> Cast <code>torch.arange(250, 300)</code>
+to bf16 and list the survivors. Predict the pattern for the 512-to-1024 binade before you
+check.</li>
+<li><strong>Quantize the specimen.</strong> Load layer 0&rsquo;s <code>down_proj</code>
+straight from the safetensors (headers plus one tensor, no model build), implement absmax
+int8 per-tensor, per-channel, and group-128, and reproduce the capture record&rsquo;s three
+RMSE numbers. Bonus: cast the same tensor to <code>torch.float8_e4m3fn</code> and find
+where fp8&rsquo;s curve beats int8&rsquo;s ruler.</li>
+<li><strong>The outlier hunt.</strong> Rank all seven layer-0 linears by
+absmax &divide; p99.9. Check your ranking against the record, then answer: which
+projection would AWQ spend its protection budget on, and does the answer change per
+layer?</li>
+<li><strong>Fake-quantize the whole model.</strong> Quantize-dequantize every linear in
+place (int8 per-channel, then int4 group-128), run one greedy generation, and diff the
+tokens against bf16. The parity harness from <code>tests/</code> is the scaffold.</li>
+<li><strong>Derive the cache.</strong> Compute KV bytes per token for the 0.6B from
+<code>spec.py</code>&rsquo;s numbers by hand, then predict 1.7B and 4B before checking
+<code>trace_weights.js</code>. Then find the context length where one sequence&rsquo;s KV
+read equals the whole weight read, for each model.</li>
+<li><strong>(5090) Measure the roof.</strong> Time large contiguous reads to estimate
+achievable bandwidth against the 1.79 TB/s sheet number, then reconcile the measured
+0.6B decode step with the ceiling widget: how much of the 3.63 ms single-row step is
+bytes, and how much is the previous chapter&rsquo;s territory?</li>
+</ul>
+
+<div data-quiz></div>
+
+<hr>
+
+<aside class="note"><span class="label">Where this goes</span>
+Phase 7 builds the INT8 weight-only path on the dense models, then INT4 to fit
+Qwen3-30B-A3B; Phase 11 goes deep: FP8/INT8 KV with per-block scales, FP8 W8A8 on the
+native tensor cores, MXFP4 for GPT-OSS-20B, AWQ, and the quality matrix this
+chapter&rsquo;s scoreboard is waiting for. Specimen data: <code>${REC}</code> (regenerate
+with <code>viz/capture_quant.py</code>). Method papers, for the curious: LLM.int8()
+(Dettmers et al. 2022), SmoothQuant (Xiao et al. 2022), GPTQ (Frantar et al. 2022), AWQ
+(Lin et al. 2023), QLoRA/NF4 (Dettmers et al. 2023), the OCP Microscaling spec and
+NVIDIA&rsquo;s NVFP4 notes, BitNet b1.58 (Ma et al. 2024), and the FP8 formats paper
+(Micikevicius et al. 2022).</aside>
+`;
+
+  $('qt-body').appendChild(article);
+  wireGoto(article);
+
+  /* ---------- widget helpers ---------- */
+  const fmtB = (b) => b >= GiB ? (b / GiB).toFixed(2) + ' GiB'
+    : b >= 1 << 20 ? (b / (1 << 20)).toFixed(1) + ' MiB'
+    : b >= 1024 ? (b / 1024).toFixed(1) + ' KiB' : b + ' B';
+  const fmtMs = (ms) => ms >= 1 ? ms.toFixed(2) + ' ms'
+    : ms >= 1e-3 ? (ms * 1000).toFixed(1) + ' µs' : (ms * 1e6).toFixed(1) + ' ns';
+  const mkSeg = (opts, cur, onPick) => {
+    /* small segmented control; returns {root, set} */
+    const root = el('span');
+    root.style.cssText = 'display:inline-flex;gap:0;border:1px solid var(--grid);border-radius:8px;overflow:hidden;';
+    const btns = opts.map((o, i) => {
+      const b = el('button', null, o);
+      b.style.cssText = 'font:600 11.5px var(--sans);padding:4px 10px;border:0;cursor:pointer;background:var(--surface);color:var(--ink2);border-left:' + (i ? '1px solid var(--grid)' : '0') + ';';
+      b.addEventListener('click', () => { set(i); onPick(i); });
+      root.appendChild(b);
+      return b;
+    });
+    const set = (i) => btns.forEach((b, j) => {
+      b.style.background = j === i ? 'var(--sA)' : 'var(--surface)';
+      b.style.color = j === i ? '#fff' : 'var(--ink2)';
+    });
+    set(cur);
+    return { root, set };
+  };
+  const mkRange = (min, max, step, val, onInput) => {
+    const r = document.createElement('input');
+    r.type = 'range'; r.min = min; r.max = max; r.step = step; r.value = val;
+    r.style.cssText = 'width:150px;accent-color:var(--sA);';
+    r.addEventListener('input', () => onInput(Number(r.value)));
+    return r;
+  };
+  const ctrlRow = (...kids) => {
+    const c = el('div', 'widget-controls');
+    kids.forEach((k) => c.appendChild(typeof k === 'string' ? html('span', null, k) : k));
+    return c;
+  };
+
+  /* IEEE-like encode/decode used by w-designer and w-numberline */
+  const encodeTo = (x, F) => {
+    /* returns the nearest representable value (ties-to-even via JS rounding is
+       close enough for display; exactness matters only at .5 rungs) */
+    if (x === 0) return 0;
+    const sgn = Math.sign(x);
+    const a = Math.abs(x);
+    if (a >= F.max) return sgn * F.max;           /* saturate for display */
+    let E = Math.floor(Math.log2(a));
+    E = Math.max(E, 1 - F.bias - 0);              /* subnormal floor handled below */
+    if (E < 1 - F.bias) E = 1 - F.bias;
+    let q;
+    if (a < F.minNormal) {                        /* subnormal: grid of minSub */
+      q = Math.round(a / F.minSub) * F.minSub;
     } else {
-      const ul = el('ul');
-      const btns = [];
-      const explain = el('div', 'explain');
-      explain.style.display = 'none';
-      const grade = (choiceIdx) => {
-        const chosen = item.choices[choiceIdx];
-        const ok = !!chosen.correct;
-        btns.forEach((bb, i) => {
-          bb.disabled = true;
-          bb.classList.remove('right', 'wrong', 'reveal-right');
-          if (i === choiceIdx) bb.classList.add(ok ? 'right' : 'wrong');
-          else if (item.choices[i].correct && !ok) bb.classList.add('reveal-right');
-        });
-        const text = chosen.explain || (item.choices.find((c) => c.correct) || {}).explain || '';
-        if (text) {
-          explain.innerHTML = (ok ? '<strong>Right.</strong> ' : '<strong>Not quite.</strong> ') + text;
-          explain.style.display = '';
-        }
-        states.set(item.id, ok);
-        updateScore();
-      };
-      item.choices.forEach((c, i) => {
-        const li = el('li');
-        const bb = el('button');
-        bb.innerHTML = c.html;
-        bb.addEventListener('click', () => { grade(i); store.set('quiz:' + item.id, i); });
-        btns.push(bb);
-        li.appendChild(bb);
-        ul.appendChild(li);
-      });
-      boxq.append(ul, explain);
-      if (typeof saved === 'number' && item.choices[saved]) grade(saved);
+      const stepv = Math.pow(2, E - F.m);
+      q = Math.round(a / stepv) * stepv;
     }
-    quizHost.appendChild(boxq);
-  });
-  quizHost.appendChild(score);
-  updateScore();
+    return sgn * q;
+  };
+
+  /* ---------- widgets ---------- */
+  const W = {};
+
+  /* w-designer: bits of one value + spend-the-bits format designer */
+  W['w-designer'] = (mount) => {
+    const { box, body } = widget('Design a number format · sign, exponent, mantissa');
+    const PI = Math.PI;
+    let fmt = Object.assign({}, FORMATS.bf16);
+    let bits = [];        /* current bit values, [sign, e..., m...] */
+
+    const presetRow = el('div', 'widget-controls');
+    presetRow.appendChild(html('span', null, 'presets:'));
+    Object.keys(FORMATS).forEach((k) => {
+      const b = el('button', 'btn', FORMATS[k].label);
+      b.style.padding = '2px 9px';
+      b.style.fontSize = '0.75rem';
+      b.addEventListener('click', () => { fmt = Object.assign({}, FORMATS[k]); setValue(PI); paint(); });
+      presetRow.appendChild(b);
+    });
+
+    let budget = 16;
+    const eSlider = mkRange(2, 8, 1, fmt.e, (v) => { custom(v); });
+    const budgetSeg = mkSeg(['8-bit budget', '16-bit budget'], 1, (i) => {
+      budget = i === 0 ? 8 : 16;
+      eSlider.max = Math.min(8, budget - 2);
+      if (Number(eSlider.value) > eSlider.max) eSlider.value = eSlider.max;
+      custom(Number(eSlider.value));
+    });
+    const custom = (e) => {
+      const m = budget - 1 - e;
+      fmt = Object.assign(fmtProps(e, m), { label: `custom e${e}m${m}`, bits: budget });
+      setValue(PI);
+      paint();
+    };
+    const customRow = ctrlRow('or spend a budget yourself:', budgetSeg.root, 'exponent bits', eSlider);
+
+    const bitRow = el('div');
+    bitRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;margin:6px 0 10px;';
+    const decodeRow = el('div', 'widget-readout');
+    const statRow = el('div', 'widget-readout');
+
+    const setValue = (x) => {
+      /* encode x into the current format's bit fields */
+      bits = new Array(1 + fmt.e + fmt.m).fill(0);
+      const a = Math.abs(x);
+      bits[0] = x < 0 ? 1 : 0;
+      let E = Math.floor(Math.log2(a));
+      let f = Math.round((a / Math.pow(2, E) - 1) * Math.pow(2, fmt.m));
+      if (f === Math.pow(2, fmt.m)) { f = 0; E += 1; }
+      let Efield = E + fmt.bias;
+      const maxField = Math.pow(2, fmt.e) - 1;
+      if (Efield >= maxField) { Efield = maxField - 1; f = Math.pow(2, fmt.m) - 1; }
+      if (Efield < 1) { Efield = 0; f = Math.round(a / fmt.minSub); }
+      for (let i = 0; i < fmt.e; i++) bits[1 + i] = (Efield >> (fmt.e - 1 - i)) & 1;
+      for (let i = 0; i < fmt.m; i++) bits[1 + fmt.e + i] = (f >> (fmt.m - 1 - i)) & 1;
+    };
+
+    const decode = () => {
+      const s = bits[0];
+      let Efield = 0, f = 0;
+      for (let i = 0; i < fmt.e; i++) Efield = (Efield << 1) | bits[1 + i];
+      for (let i = 0; i < fmt.m; i++) f = (f << 1) | bits[1 + fmt.e + i];
+      const maxField = Math.pow(2, fmt.e) - 1;
+      const frac = f / Math.pow(2, fmt.m);
+      if (Efield === maxField) {
+        /* e4m3 reclaims this row: only all-ones mantissa is NaN */
+        if (fmt.label === 'fp8 e4m3') {
+          if (f === Math.pow(2, fmt.m) - 1) return { v: NaN, txt: 'NaN (the reclaimed code)' };
+          return { v: (s ? -1 : 1) * (1 + frac) * Math.pow(2, Efield - fmt.bias), special: 'reclaimed binade' };
+        }
+        return { v: f === 0 ? (s ? -Infinity : Infinity) : NaN, txt: f === 0 ? (s ? '-inf' : '+inf') : 'NaN' };
+      }
+      if (Efield === 0) return { v: (s ? -1 : 1) * frac * Math.pow(2, 1 - fmt.bias), sub: true };
+      return { v: (s ? -1 : 1) * (1 + frac) * Math.pow(2, Efield - fmt.bias) };
+    };
+
+    const paint = () => {
+      bitRow.innerHTML = '';
+      const mkBit = (idx, cls, tipTxt) => {
+        const b = el('button', null, String(bits[idx]));
+        b.style.cssText = 'width:22px;height:26px;font:600 12px var(--mono);border-radius:5px;cursor:pointer;border:1px solid ' +
+          (cls === 's' ? 'var(--ink)' : cls === 'e' ? 'var(--sC)' : 'var(--sA)') + ';background:' +
+          (bits[idx] ? (cls === 's' ? 'var(--ink)' : cls === 'e' ? 'var(--sC)' : 'var(--sA)') : 'var(--surface)') +
+          ';color:' + (bits[idx] ? '#fff' : 'var(--ink2)') + ';';
+        b.addEventListener('click', () => { bits[idx] = 1 - bits[idx]; paint(); });
+        tipify(b, tipTxt);
+        return b;
+      };
+      bitRow.appendChild(mkBit(0, 's', 'sign bit'));
+      const gap = () => { const g = el('span'); g.style.width = '7px'; return g; };
+      bitRow.appendChild(gap());
+      for (let i = 0; i < fmt.e; i++) bitRow.appendChild(mkBit(1 + i, 'e', 'exponent bit ' + (fmt.e - 1 - i) + ' (picks the binade)'));
+      bitRow.appendChild(gap());
+      for (let i = 0; i < fmt.m; i++) bitRow.appendChild(mkBit(1 + fmt.e + i, 'm', 'mantissa bit ' + (fmt.m - 1 - i) + ' (places the value inside the binade)'));
+      const d = decode();
+      let Efield = 0;
+      for (let i = 0; i < fmt.e; i++) Efield = (Efield << 1) | bits[1 + i];
+      const errPi = Number.isFinite(d.v) ? Math.abs(d.v - PI) : NaN;
+      decodeRow.innerHTML =
+        `<b>${fmt.label}</b> (1 + ${fmt.e} + ${fmt.m} bits)\n` +
+        `value  = ${d.txt !== undefined ? d.txt : fnum(d.v)}${d.sub ? '   (subnormal: leading 0., not 1.)' : ''}\n` +
+        `       = (-1)^${bits[0]} × ${d.sub ? '0' : '1'}.f × 2^(${Efield}${d.sub ? '+1' : ''}−${fmt.bias})` +
+        (Number.isFinite(d.v) && errPi < 1 ? `\nvs π   : off by ${fnum(errPi)}` : '');
+      statRow.innerHTML =
+        `largest finite   ${fnum(fmt.max)}${fmt.note ? '   (' + fmt.note + ')' : ''}\n` +
+        `smallest normal  ${fnum(fmt.minNormal)}\n` +
+        `spacing at 1.0   ${fnum(fmt.eps)}   (${fmt.perBinade} values per binade)\n` +
+        `integers exact   up to ${fnum(fmt.intExact)}`;
+    };
+
+    body.append(presetRow, customRow, bitRow, decodeRow, statRow,
+      html('div', 'widget-hint', 'Every preset loads the closest encoding of π. The exponent field is the coarse dial (which power-of-two window), the mantissa the fine one (where inside it); flip bits of each and compare the damage.'));
+    setValue(PI);
+    paint();
+    mount.replaceWith(box);
+  };
+
+  /* w-numberline: every representable magnitude on one log axis */
+  W['w-numberline'] = (mount) => {
+    const { box, body } = widget('The number line · rungs per binade, cliffs at the edges');
+    const SHOW = [
+      ['fp16', FORMATS.fp16, 'var(--sC)'],
+      ['bf16', FORMATS.bf16, 'var(--sA)'],
+      ['fp8 e4m3', FORMATS.e4m3, 'var(--sB)'],
+      ['fp8 e5m2', FORMATS.e5m2, '#8a5fb0'],
+      ['fp4 e2m1', FORMATS.e2m1, '#b0763b'],
+    ];
+    const on = [true, true, false, false, false];
+    let showInt8 = false;
+    const LOG_MIN = -8, LOG_MAX = 6;   /* axis: 1e-8 .. 1e6 */
+    const Wd = 860, LANE = 34, PAD = 54;
+
+    const controls = el('div', 'widget-controls');
+    SHOW.forEach(([name, , color], i) => {
+      const lab = el('label');
+      lab.style.cssText = 'display:inline-flex;align-items:center;gap:5px;cursor:pointer;';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = on[i]; cb.style.accentColor = 'var(--sA)';
+      cb.addEventListener('change', () => { on[i] = cb.checked; draw(); });
+      lab.append(cb, html('span', null, `<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${color};vertical-align:-1px"></span> ${name}`));
+      controls.appendChild(lab);
+    });
+    const intLab = el('label');
+    intLab.style.cssText = 'display:inline-flex;align-items:center;gap:5px;cursor:pointer;';
+    const intCb = document.createElement('input');
+    intCb.type = 'checkbox'; intCb.checked = false; intCb.style.accentColor = 'var(--sA)';
+    intCb.addEventListener('change', () => { showInt8 = intCb.checked; draw(); });
+    intLab.append(intCb, html('span', null, 'int8 grid, for contrast'));
+    controls.appendChild(intLab);
+
+    const holder = el('div');
+    const draw = () => {
+      holder.innerHTML = '';
+      const lanes = SHOW.filter((_, i) => on[i]);
+      const Ht = 34 + (lanes.length + (showInt8 ? 1 : 0)) * LANE + 8;
+      const [svg, scroll] = svgIn(Wd, Ht, 720);
+      const X = (v) => PAD + (Math.log10(v) - LOG_MIN) / (LOG_MAX - LOG_MIN) * (Wd - PAD - 14);
+      for (let d = LOG_MIN; d <= LOG_MAX; d++) {
+        const x = X(Math.pow(10, d));
+        smk('line', { x1: x, y1: 22, x2: x, y2: Ht - 12, style: 'stroke:var(--grid);stroke-width:1' }, null, svg);
+        if (d % 2 === 0) smk('text', { x, y: 14, style: 'font:9.5px var(--mono);fill:var(--muted);text-anchor:middle' }, d === 0 ? '1' : '1e' + d, svg);
+      }
+      let row = 0;
+      lanes.forEach(([name, F, color]) => {
+        const y = 30 + row * LANE; row += 1;
+        smk('text', { x: 4, y: y + 13, style: 'font:600 10.5px var(--sans);fill:var(--ink2)' }, name, svg);
+        const eMin = 1 - F.bias, eMax = Math.floor(Math.log2(F.max));
+        for (let E = eMin; E <= eMax; E++) {
+          const lo = Math.pow(2, E), hi = Math.min(Math.pow(2, E + 1), F.max);
+          if (hi < Math.pow(10, LOG_MIN) || lo > Math.pow(10, LOG_MAX)) continue;
+          const x1 = Math.max(X(Math.max(lo, Math.pow(10, LOG_MIN))), PAD);
+          const x2 = Math.min(X(hi), Wd - 14);
+          const r = smk('rect', { x: x1, y: y + 2, width: Math.max(x2 - x1, 1), height: 16, rx: 2,
+            style: `fill:${color};fill-opacity:0.55;stroke:#fff;stroke-width:0.6` }, null, svg);
+          tipify(r, `${name} · binade [${fnum(lo)}, ${fnum(hi)})\n${F.perBinade} rungs, spacing ${fnum(Math.pow(2, E - F.m))}`);
+        }
+        /* subnormal stretch, hatched lighter */
+        const subLo = F.minSub, subHi = F.minNormal;
+        if (subHi > Math.pow(10, LOG_MIN)) {
+          const x1 = Math.max(X(Math.max(subLo, Math.pow(10, LOG_MIN))), PAD);
+          const x2 = X(subHi);
+          const r = smk('rect', { x: x1, y: y + 2, width: Math.max(x2 - x1, 1), height: 16, rx: 2,
+            style: `fill:${color};fill-opacity:0.18` }, null, svg);
+          tipify(r, `${name} · subnormals: fixed spacing ${fnum(F.minSub)} down to ${fnum(F.minSub)}`);
+        }
+        /* the cliff flag */
+        if (F.max <= Math.pow(10, LOG_MAX)) {
+          const x = X(F.max);
+          smk('line', { x1: x, y1: y - 2, x2: x, y2: y + 20, style: `stroke:${color};stroke-width:1.8` }, null, svg);
+          smk('text', { x: Math.min(x + 3, Wd - 60), y: y + 0, style: `font:600 9px var(--mono);fill:${color}` }, 'max ' + fnum(F.max), svg);
+        } else {
+          smk('text', { x: Wd - 12, y: y + 14, style: `font:600 11px var(--mono);fill:${color};text-anchor:end` }, '→ ' + fnum(F.max), svg);
+        }
+      });
+      if (showInt8) {
+        const y = 30 + row * LANE;
+        smk('text', { x: 4, y: y + 13, style: 'font:600 10.5px var(--sans);fill:var(--ink2)' }, 'int8', svg);
+        for (let k = 1; k <= 127; k++) {
+          const x = X(k);
+          if (x < PAD) continue;
+          smk('line', { x1: x, y1: y + 2, x2: x, y2: y + 18, style: 'stroke:var(--ink2);stroke-width:0.8;stroke-opacity:0.6' }, null, svg);
+        }
+        smk('text', { x: X(127) + 4, y: y + 14, style: 'font:600 9px var(--mono);fill:var(--ink2)' }, 'max 127', svg);
+      }
+      holder.appendChild(scroll);
+    };
+    draw();
+    body.append(controls, holder,
+      html('div', 'widget-hint', 'Log axis, so equal widths are equal ratios: every float binade is the same width with the same rung count, which is what &ldquo;constant relative error&rdquo; looks like. The int8 lane inverts it: uniform absolute spacing means rungs crowd the right of a log axis and desert the left.'));
+    gate(body, 'p-count');
+    mount.replaceWith(box);
+  };
+
+  /* w-ceiling: the two ceilings for one decode step */
+  W['w-ceiling'] = (mount) => {
+    const { box, body } = widget('The two ceilings · bytes vs math for one decode step');
+    let mi = 0, di = 0, batch = 1, ctx = 1024;
+    const DTYPES = [['bf16', 2], ['int8 g128', 1.015625], ['int4 g128', 0.515625], ['fp8', 1.0078125]];
+    const local = MODELS.filter((m) => m.here);
+    const mSeg = mkSeg(local.map((m) => m.name.replace('Qwen3-', '')), mi, (i) => { mi = i; paint(); });
+    const dSeg = mkSeg(DTYPES.map((d) => d[0]), di, (i) => { di = i; paint(); });
+    const bLab = html('span', null, ''); const cLab = html('span', null, '');
+    const bR = mkRange(1, 48, 1, batch, (v) => { batch = v; paint(); });
+    const cR = mkRange(256, 8192, 256, ctx, (v) => { ctx = v; paint(); });
+    const bars = el('div');
+    const read = el('div', 'widget-readout');
+    const paint = () => {
+      const M = local[mi], bpw = DTYPES[di][1];
+      const wBytes = M.params * bpw;
+      const kvBytes = batch * ctx * M.kvB;
+      const tBytes = (wBytes + kvBytes) / HW.bw * 1000;               /* ms */
+      const tMath = 2 * M.params * batch / HW.tflopsBF16 * 1000;      /* ms */
+      const maxT = Math.max(tBytes, tMath);
+      bLab.innerHTML = `batch <b>${batch}</b>`;
+      cLab.innerHTML = `context <b>${ctx.toLocaleString('en-US')}</b>`;
+      bars.innerHTML = '';
+      bars.appendChild(barRow('bytes at 1.79 TB/s', tBytes * 1000, maxT * 1000, 'var(--sC)',
+        `${fmtB(wBytes)} weights + ${fmtB(kvBytes)} KV`,
+        'every weight byte once per step; KV bytes once per sequence'));
+      bars.appendChild(barRow('math at 209 TFLOPS', tMath * 1000, maxT * 1000, 'var(--sB)',
+        `${(2 * M.params * batch / 1e9).toFixed(1)} GFLOP`,
+        'two FLOPs per weight per row (linears only; attention math excluded)'));
+      const bound = tBytes > tMath ? 'memory-bound' : 'compute-bound';
+      const ceil = batch / (maxT / 1000);
+      let measured = '';
+      if (mi === 0 && di === 0) {
+        if (batch === 16) measured = `\nmeasured (0.6B, graphs on, 16 rows): 5.93 ms/step, ${Math.round(16 / 0.00593).toLocaleString('en-US')} tok/s: 3.5× the byte floor. The gap is kernel-count territory (previous chapter).`;
+        if (batch === 1) measured = `\nmeasured (0.6B, graphs on, 1 row): 3.63 ms/step: 4× its byte floor. Small models live above their roofs; big ones live on them.`;
+      }
+      read.textContent =
+        `step floor  ${fmtMs(maxT)}   (${bound})\n` +
+        `ceiling     ${Math.round(ceil).toLocaleString('en-US')} tok/s aggregate  ·  ${Math.round(1000 / maxT).toLocaleString('en-US')} steps/s` + measured;
+    };
+    body.append(ctrlRow(mSeg.root, dSeg.root), ctrlRow(bLab, bR, cLab, cR), bars, read,
+      html('div', 'widget-hint', 'KV stays bf16 in this widget (its own dtype gets its own section). Slide batch right and watch the green bar chase the red one: weight bytes amortize, math does not; the crossing is where weight-only quantization stops paying.'));
+    paint();
+    gate(body, 'p-ceiling');
+    mount.replaceWith(box);
+  };
+
+  /* w-odometer: one decode step, told in bytes (the chapter's one transport) */
+  W['w-odometer'] = (mount) => {
+    const { box, body } = widget('One decode step, told in bytes · 0.6B, 16 rows, context 1,024');
+    const cols = el('div', 'cols-2');
+    const left = el('div');
+    const board = el('div', 'fw-board');
+    const zone = (nameHtml) => {
+      const z = el('div', 'fw-zone');
+      const nm = html('div', 'fw-zone-name', nameHtml);
+      const chips = el('div', 'fw-chips');
+      z.append(nm, chips);
+      return { z, nm, chips };
+    };
+    const mkChip = (title, sub, cls) => {
+      const c = el('div', 'fw-chip' + (cls ? ' ' + cls : ''));
+      const b = el('b', null, title);
+      const s = el('small', null, sub || '');
+      c.append(b, s);
+      return { c, b, s };
+    };
+    const setChip = (ref, state, sub) => {
+      ref.c.className = 'fw-chip' + (state === 1 ? ' cur' : state === 0 ? ' ghost' : '');
+      if (sub !== undefined) ref.s.textContent = sub;
+    };
+    const zH = zone('GDDR7 <small>· 1.79 TB/s away: everything starts here</small>');
+    const chEmb = mkChip('embeddings', '297 MiB resident, 32 KiB gathered');
+    const chW = mkChip('layer weights', '28 layers × 30.0 MiB');
+    const chKV = mkChip('KV pool', '16 rows × 1,024 tokens cached');
+    const chLM = mkChip('lm_head', '297 MiB, streamed whole');
+    zH.chips.append(chEmb.c, chW.c, chKV.c, chLM.c);
+    const zC = zone('On chip <small>· SRAM tiles → registers → tensor cores</small>');
+    const chTile = mkChip('SRAM tile', 'idle', 'ghost');
+    const chTC = mkChip('tensor cores', 'idle', 'ghost');
+    zC.chips.append(chTile.c, chTC.c);
+    const zL = zone('The ledger <small>· what this step moved and did</small>');
+    const ctr = el('span', 'fw-ctrs');
+    const cBytes = el('span', 'statchip'), cFlop = el('span', 'statchip'), cTime = el('span', 'statchip');
+    ctr.append(cBytes, cFlop, cTime);
+    zL.nm.appendChild(ctr);
+    const layerCells = (() => {
+      const grp = el('span', 'fw-poolgrp');
+      grp.append(document.createTextNode('layers'));
+      const wrap = el('span', 'fw-cells');
+      const cells = [];
+      for (let i = 0; i < 28; i++) { const c = el('span', 'fw-cell', ''); cells.push(c); wrap.appendChild(c); }
+      grp.appendChild(wrap);
+      return { grp, cells };
+    })();
+    zL.chips.appendChild(layerCells.grp);
+    board.append(zH.z, zC.z, zL.z);
+    left.appendChild(board);
+
+    const right = el('div', 'detail');
+    const rTitle = el('div', 'detail-title');
+    const rBody = el('div');
+    right.append(rTitle, rBody);
+    cols.append(left, right);
+
+    /* bytes per stage at bf16 (batch 16, ctx 1024): see cell tooltips for the arithmetic */
+    const S = {
+      /* exact bytes at bf16: params × 2 (linears), 2^26 KV read, 16 KV rows written */
+      embed: 32768, attnW: 12582912, ffnW: 18874368, kvL: 67108864, kvWr: 65536,
+      layerW: 31457280, lmHead: 311164928,
+    };
+    const layerBytes = S.layerW + S.kvL + S.kvWr;
+    const totalBF16 = S.embed + 28 * layerBytes + S.lmHead;             /* ≈ 3.07 GiB-ish (decimal ~3.07e9) */
+    const wOnly = S.embed + 28 * S.layerW + S.lmHead;
+    const kvOnly = 28 * (S.kvL + S.kvWr);
+    const FLOPS = 22.8e9;
+    const tAt = (bytes) => bytes / HW.bw * 1000;
+    const led = (bytes, flop, done) => [bytes, flop, done];
+    const STEPS = [
+      { t: 'the cast, at rest', e: 0, w: 0, kv: 0, lm: 0, tile: 0, tc: 0, layer: -1, done: 0, b: 0, f: 0, lines: [
+        'Sixteen sequences each owe one token. Everything the step needs sits in GDDR7: 1.11 GiB of weights that must be <em>streamed</em> (the embedding matrix is only gathered, 16 rows of it), and 1.75 GiB of KV that sixteen sequences have accumulated at 1,024 tokens each.',
+        'The odometers start at zero. Watch which chip lights for each tick, and watch the bytes counter outrun the FLOPs counter from the first stage.'] },
+      { t: 'embedding gather: 32 KiB', e: 1, w: 0, kv: 0, lm: 0, tile: 1, tc: 0, layer: -1, done: 0, b: S.embed, f: 0.001e9, lines: [
+        'Sixteen token ids index sixteen rows of the embedding matrix: 16 × 1,024 values × 2 bytes = 32 KiB. A gather, not a stream: the other 297 MiB of that matrix stays put.',
+        'This is the step&rsquo;s only cheap tensor, and it is cheap for a reason worth noticing: only the <em>rows you touch</em> cost bytes. Every weight matrix after this one is touched in full.'] },
+      { t: 'layer 0 · attention weights: 12.0 MiB', e: 2, w: 1, kv: 0, lm: 0, tile: 1, tc: 1, layer: 0, done: 0, b: S.embed + S.attnW, f: 0.2e9, lines: [
+        'q, k, v, and o projections stream through the SRAM tiles: 6.3M parameters, 12.0 MiB, read once and shared by all sixteen rows. The tensor cores do 2 FLOPs per weight per row and wait the rest of the time.',
+        'At 1.79 TB/s these bytes want 7 µs; the math wants under 2 µs at the card&rsquo;s full rate. The imbalance never flips for the rest of the step.'] },
+      { t: 'layer 0 · KV read + write: 64.0 MiB', e: 2, w: 2, kv: 1, lm: 0, tile: 1, tc: 1, layer: 0, done: 0, b: S.embed + S.attnW + S.kvL + S.kvWr, f: 0.34e9, lines: [
+        'Attention reads every cached K and V for every row: 16 rows × 1,024 tokens × 8 groups × 128 dims × 2 tensors × 2 bytes = 64.0 MiB, <em>five times</em> the layer&rsquo;s attention weights. Then it writes this step&rsquo;s 16 new K/V rows: 64 KiB, a rounding error.',
+        'The cache is written once per token and read on every later step. That asymmetry is why its dtype will matter as much as the weights&rsquo;.'] },
+      { t: 'layer 0 · FFN: 18.0 MiB', e: 2, w: 1, kv: 2, lm: 0, tile: 1, tc: 1, layer: 0, done: 1, b: S.embed + layerBytes, f: 0.64e9, lines: [
+        'gate, up, and down projections: 9.4M parameters, 18.0 MiB. One layer&rsquo;s full toll: 30.0 MiB of weights plus 64.1 MiB of cache traffic, and about 0.64 GFLOP of math against it.',
+        'Arithmetic intensity of the layer: roughly 6 FLOPs per byte. The card needs ~117 to break even. Nothing in this loop is compute-bound.'] },
+      { t: 'layers 1 through 27, fast-forwarded', e: 2, w: 2, kv: 2, lm: 0, tile: 1, tc: 1, layer: 27, done: 28, b: S.embed + 28 * layerBytes, f: 18.1e9, lines: [
+        'The same 99 MiB toll, twenty-seven more times. The odometer sprints: 2.57 GiB moved by the time the residual stream leaves layer 27, of which 1.75 GiB is cache and 0.82 GiB is layer weights.',
+        'Note what did <em>not</em> grow: the FLOPs counter is barely at 18 GFLOP, under a tenth of a millisecond of tensor-core time. The step is a memory event with arithmetic sprinkled on.'] },
+      { t: 'lm_head: 297 MiB for sixteen rows', e: 2, w: 2, kv: 2, lm: 1, tile: 1, tc: 1, layer: 27, done: 28, b: totalBF16, f: FLOPS, lines: [
+        'The output projection streams all 155.6M parameters to score 151,936 vocabulary entries for each of the sixteen rows. It is the single biggest tensor the step reads.',
+        '(It is also why the embedding gather&rsquo;s thrift was notable: tied-embedding models like the 4B pay this matrix only once for both jobs.)'] },
+      { t: 'the ledger, at bf16', e: 2, w: 2, kv: 2, lm: 2, tile: 2, tc: 2, layer: 27, done: 28, b: totalBF16, f: FLOPS, lines: [
+        `Total: <b>${fmtB(totalBF16)}</b> moved, ${(FLOPS / 1e9).toFixed(0)} GFLOP done. Priced at 1.79 TB/s the bytes alone want <b>${fmtMs(tAt(totalBF16))}</b>; the measured step (graphs on) is 5.93 ms. The remainder is the previous chapter&rsquo;s territory: fifty launches still cost, and small kernels do not hit peak bandwidth.`,
+        'The ledger&rsquo;s split is the chapter&rsquo;s map: 1.75 GiB of cache, 1.11 GiB of streamed weights, kilobytes of everything else. Now shrink the numbers.'] },
+      { t: 'replay · INT8 weights', e: 2, w: 2, kv: 2, lm: 2, tile: 2, tc: 2, layer: 27, done: 28, b: kvOnly + wOnly / 2, f: FLOPS, mode: 'int8 W', lines: [
+        `Same step, linear weights and lm_head stored at one byte (embedding gather stays bf16; it was 32 KiB). Streamed weights fall 1.11 GiB → 0.56 GiB; the total falls to <b>${fmtB(kvOnly + wOnly / 2)}</b>, floor ${fmtMs(tAt(kvOnly + wOnly / 2))}.`,
+        'Look at the split now: the cache is twice the weights. Weight-only quantization just promoted the KV pool to biggest line item, which is the argument for the next replay.'] },
+      { t: 'replay · INT8 weights + FP8 KV', e: 2, w: 2, kv: 2, lm: 2, tile: 2, tc: 2, layer: 27, done: 28, b: kvOnly / 2 + wOnly / 2, f: FLOPS, mode: 'int8 W · fp8 KV', lines: [
+        `Cache at one byte per value too: the total lands at <b>${fmtB(kvOnly / 2 + wOnly / 2)}</b>, floor ${fmtMs(tAt(kvOnly / 2 + wOnly / 2))}, under half the bf16 step&rsquo;s bytes. And capacity doubled on the same 7 GiB pool as a side effect.`,
+        'The FLOPs counter never moved across all ten steps. Decode never needed the math to get cheaper; it needed the numbers to get smaller.'] },
+    ];
+    const t = makeTransport({
+      max: STEPS.length - 1,
+      labelFn: (i) => `stage ${i} / ${STEPS.length - 1}: ${STEPS[i].t}`,
+      onSet: (i) => {
+        const s = STEPS[i];
+        setChip(chEmb, s.e);
+        setChip(chW, s.w, s.w === 1 ? 'streaming through SRAM' : '28 layers × 30.0 MiB');
+        setChip(chKV, s.kv, s.kv === 1 ? 'reading 64.0 MiB, writing 64 KiB' : '16 rows × 1,024 tokens cached');
+        setChip(chLM, s.lm, s.lm === 1 ? 'streaming all 297 MiB' : '297 MiB, streamed whole');
+        setChip(chTile, s.tile, ['idle', 'weights flowing through', 'drained'][s.tile]);
+        setChip(chTC, s.tc, ['idle', 'mostly waiting on the bus', 'done: ~23 GFLOP total'][s.tc]);
+        layerCells.cells.forEach((c, j) => {
+          c.className = 'fw-cell' + (j === s.layer && s.done <= j ? ' cur' : j < s.done ? ' done' : '');
+        });
+        cBytes.innerHTML = `bytes <b>${fmtB(s.b)}</b>`;
+        cFlop.innerHTML = `math <b>${(s.f / 1e9).toFixed(1)} GFLOP</b>`;
+        cTime.innerHTML = `bytes @ 1.79 TB/s <b>${fmtMs(tAt(s.b))}</b>${s.mode ? ' · ' + s.mode : ''}`;
+        rTitle.textContent = s.t;
+        rBody.innerHTML = '';
+        s.lines.forEach((h) => rBody.appendChild(html('div', 'dline', h)));
+      },
+      playMs: 3800,
+    });
+    activeTransports['quant'] = t;
+    box.insertBefore(t.root, body);
+    body.appendChild(cols);
+    t.set(0);
+    mount.replaceWith(box);
+  };
+
+  /* w-hist: the absmax grid vs one outlier, synthetic */
+  W['w-hist'] = (mount) => {
+    const { box, body } = widget('One outlier taxes the population · absmax grid, live');
+    let out = 0.1, bits = 8;
+    const SIG = 0.02;
+    const holder = el('div');
+    const read = el('div', 'widget-readout');
+    const bSeg = mkSeg(['int8', 'int4'], 0, (i) => { bits = i === 0 ? 8 : 4; draw(); });
+    const oLab = html('span', null, '');
+    const oR = mkRange(0.06, 0.45, 0.01, out, (v) => { out = v; draw(); });
+    const draw = () => {
+      const qmax = bits === 8 ? 127 : 7;
+      const delta = out / qmax;
+      const rmse = delta / Math.sqrt(12);
+      const rmse0 = (3.5 * SIG / qmax) / Math.sqrt(12);   /* no-outlier baseline: absmax ≈ 3.5σ */
+      const inRange = Math.min(qmax, Math.ceil(3 * SIG / delta));
+      oLab.innerHTML = `outlier at <b>${out.toFixed(2)}</b>`;
+      holder.innerHTML = '';
+      const Wd = 820, Ht = 150;
+      const [svg, scroll] = svgIn(Wd, Ht, 700);
+      const X = (v) => Wd / 2 + v / 0.5 * (Wd / 2 - 16);
+      /* the population */
+      for (let i = -30; i <= 30; i++) {
+        const c = i * SIG / 6;
+        const h = Math.exp(-c * c / (2 * SIG * SIG)) * 96;
+        if (h < 1) continue;
+        smk('rect', { x: X(c) - 2.4, y: 118 - h, width: 4.8, height: h, style: 'fill:var(--sA);fill-opacity:0.55' }, null, svg);
+      }
+      /* the outlier */
+      smk('rect', { x: X(out) - 2.4, y: 78, width: 4.8, height: 40, style: 'fill:var(--sC)' }, null, svg);
+      smk('text', { x: X(out), y: 72, style: 'font:600 10px var(--sans);fill:var(--sC);text-anchor:middle' }, 'the outlier', svg);
+      /* the rungs */
+      const every = bits === 8 ? 4 : 1;
+      for (let k = -qmax; k <= qmax; k += every) {
+        const x = X(k * delta);
+        if (x < 8 || x > Wd - 8) continue;
+        smk('line', { x1: x, y1: 122, x2: x, y2: 134, style: 'stroke:var(--ink2);stroke-width:1;stroke-opacity:0.75' }, null, svg);
+      }
+      smk('text', { x: 10, y: 146, style: 'font:9.5px var(--mono);fill:var(--muted)' },
+        (bits === 8 ? 'int8 rungs (every 4th drawn)' : 'int4 rungs (all 15)') + ' · grid pinned to ±outlier', svg);
+      smk('line', { x1: X(-out), y1: 118, x2: X(out), y2: 118, style: 'stroke:var(--axis);stroke-width:1' }, null, svg);
+      holder.appendChild(scroll);
+      read.textContent =
+        `scale s        = ${out.toFixed(2)} / ${qmax} = ${fnum(delta)}   (grid spacing Δ)\n` +
+        `RMS error      = Δ/√12 = ${fnum(rmse)}   (${(rmse / rmse0).toFixed(1)}× the no-outlier floor)\n` +
+        `rungs inside ±3σ of the population: ${2 * inRange} of ${2 * qmax + 1}`;
+    };
+    body.append(ctrlRow(bSeg.root, oLab, oR), holder, read,
+      html('div', 'widget-hint', 'The population never moves; only the outlier does. Every rung the grid spends past ±3σ is a rung the 4,095 tame weights cannot use, and Δ (with everyone&rsquo;s error) grows linearly with the worst value.'));
+    draw();
+    mount.replaceWith(box);
+  };
+
+  /* w-layer: the real down_proj under six schemes */
+  W['w-layer'] = (mount) => {
+    const { box, body } = widget('The specimen · layer 0 down_proj, 3,145,728 real weights');
+    let bits = 'int8', gran = 'tensor';
+    const holder = el('div');
+    const read = el('div', 'widget-readout');
+    const cmp = el('div');
+    const bSeg = mkSeg(['int8', 'int4'], 0, (i) => { bits = i === 0 ? 'int8' : 'int4'; paint(); });
+    const gSeg = mkSeg(['per-tensor', 'per-channel', 'group-128'], 0, (i) => { gran = ['tensor', 'channel', 'group'][i]; paint(); });
+    const drawHist = () => {
+      const Wd = 820, Ht = 170;
+      const [svg, scroll] = svgIn(Wd, Ht, 700);
+      const n = LAYER.histCounts.length;
+      const maxLog = Math.log10(Math.max(...LAYER.histCounts) + 1);
+      const X = (v) => 20 + (v + LAYER.absmax) / (2 * LAYER.absmax) * (Wd - 40);
+      LAYER.histCounts.forEach((c, i) => {
+        if (!c) return;
+        const v = -LAYER.absmax + (i + 0.5) / n * 2 * LAYER.absmax;
+        const h = Math.log10(c + 1) / maxLog * 120;
+        const r = smk('rect', { x: X(v) - (Wd - 40) / n / 2 + 0.5, y: 138 - h, width: (Wd - 40) / n - 1, height: h,
+          style: 'fill:var(--sA);fill-opacity:0.6' }, null, svg);
+        tipify(r, `${c.toLocaleString('en-US')} weights near ${v.toFixed(3)}`);
+      });
+      [[LAYER.p999, 'p99.9 = 0.095', 'var(--sB)'], [LAYER.absmax, 'absmax = 0.418 (row 35)', 'var(--sC)']].forEach(([v, lab, col]) => {
+        smk('line', { x1: X(v), y1: 18, x2: X(v), y2: 140, style: `stroke:${col};stroke-width:1.6;stroke-dasharray:4 3` }, null, svg);
+        smk('text', { x: X(v) - 4, y: 14, style: `font:600 9.5px var(--mono);fill:${col};text-anchor:end` }, lab, svg);
+      });
+      smk('text', { x: 20, y: 160, style: 'font:9.5px var(--mono);fill:var(--muted)' },
+        'log-scaled counts · the bar at 0.418 is a single weight, holding the per-tensor grid hostage', svg);
+      holder.appendChild(scroll);
+    };
+    const paint = () => {
+      const key = `${bits}/${gran}`;
+      const e = LAYER.err[key];
+      const base = LAYER.err[`${bits}/tensor`];
+      const scales = gran === 'tensor' ? 1 : gran === 'channel' ? LAYER.rows : LAYER.rows * LAYER.cols / LAYER.group;
+      read.textContent =
+        `scheme         ${bits} · ${gran === 'group' ? 'groups of 128' : gran}\n` +
+        `scales stored  ${scales.toLocaleString('en-US')}\n` +
+        `RMS error      ${e.rmse.toExponential(2)}   (${gran === 'tensor' ? 'the baseline' : (base.rmse / e.rmse).toFixed(1) + '× better than per-tensor'})\n` +
+        `codes used     ${Math.round(e.used * 100)}% of the ${bits === 'int8' ? 255 : 15} rungs`;
+      cmp.innerHTML = '';
+      const maxR = LAYER.err['int4/tensor'].rmse;
+      Object.entries(LAYER.err).forEach(([k, v]) => {
+        const r = barRow(k, Math.round(v.rmse * 1e6) / 1, maxR * 1e6,
+          k === key ? 'var(--sC)' : 'var(--sA)', k === key ? '← selected' : '',
+          `RMSE ${v.rmse.toExponential(2)}, computed on the real tensor by capture_quant.py`);
+        r.querySelectorAll('span')[1] && (r.querySelectorAll('span')[1].textContent = '');
+        cmp.appendChild(r);
+      });
+    };
+    drawHist();
+    body.append(ctrlRow(bSeg.root, gSeg.root), holder, read, cmp,
+      html('div', 'widget-hint', 'Error numbers are RMS reconstruction error computed offline on the real tensor (viz/capture_quant.py), units of the weights themselves; for scale, the median weight magnitude is about 0.018. The bar chart prices all six schemes at once (µ-units).'));
+    paint();
+    gate(body, 'p-outlier');
+    mount.replaceWith(box);
+  };
+
+  /* w-membars: who fits on the card, at which format */
+  W['w-membars'] = (mount) => {
+    const { box, body } = widget('What fits in 32 GiB · every checkpoint, four storage formats');
+    const DT = [['fp32', 4], ['bf16', 2], ['int8 g128', 1.015625], ['int4 g128', 0.515625]];
+    let di = 1;
+    const bars = el('div');
+    const seg = mkSeg(DT.map((d) => d[0]), di, (i) => { di = i; paint(); });
+    const paint = () => {
+      bars.innerHTML = '';
+      const bpw = DT[di][1];
+      const cap = HW.vramGiB * GiB;
+      const maxB = 65e9;   /* fixed scale so switching formats visibly moves bars */
+      MODELS.forEach((M) => {
+        let bytes = M.params * bpw;
+        let sub = '';
+        if (M.name === 'GPT-OSS-20B') {
+          if (di >= 2) { bytes = M.params * 0.9 * 4.25 / 8 + M.params * 0.1 * 2; sub = 'as shipped: 90% MXFP4 + bf16 rest'; }
+          else sub = 'hypothetical: it never shipped at ' + DT[di][0];
+        }
+        if (M.plan) sub = sub || M.plan;
+        const over = bytes > cap;
+        const row = barRow(M.name.replace('Qwen3-', ''), Math.min(bytes, maxB) / 1e6, maxB / 1e6,
+          over ? 'var(--sC)' : M.here ? 'var(--sA)' : 'var(--sB)',
+          `${(bytes / 1e9).toFixed(1)} GB${over ? ' · does not fit' : ''}${sub ? ' · ' + sub : ''}`,
+          `${M.params.toLocaleString('en-US')} params × ${bpw} bytes effective`);
+        bars.appendChild(row);
+      });
+      /* the 32 GiB line, drawn as a labeled row */
+      const line = el('div');
+      line.style.cssText = 'position:relative;height:16px;margin:4px 0 0 158px;';
+      const pct = cap / maxB * 100;
+      line.innerHTML = `<div style="position:absolute;left:${pct}%;top:-999px;bottom:0;border-left:2px dashed var(--ink);opacity:.45"></div>` +
+        `<span style="position:absolute;left:${pct}%;transform:translateX(4px);font:600 10px var(--sans);color:var(--ink2)">the card: 32 GiB</span>`;
+      line.style.overflow = 'visible';
+      bars.appendChild(line);
+    };
+    body.append(ctrlRow(seg.root), bars,
+      html('div', 'widget-hint', 'Effective bytes include one fp16 scale per 128 weights for the int formats (int4 is 4.125 bits, not 4). Weights are only the first tenant: KV pool and workspace still need their room, which is the next section&rsquo;s widget.'));
+    paint();
+    gate(body, 'p-scales');
+    mount.replaceWith(box);
+  };
+
+  /* w-w8a8: the annotated W8A8 pipeline */
+  W['w-w8a8'] = (mount) => {
+    const { box, body } = widget('The W8A8 pipeline · one linear layer, annotated');
+    const lines = [
+      ['s_x  = absmax(x, per token) / 127          # found on the fly: dynamic quantization',
+       'Activations are born every forward pass, so their scale must be too: one max-reduction per token (or per tile). Static variants freeze s_x from calibration prompts instead, trading robustness for a saved reduction.'],
+      ['x_q  = round(x / s_x)                      # int8 activations, the hard part',
+       'This is the step SmoothQuant exists for: raw activation channels can run 100× hot and would clip. After migration, the channels fit in eight bits.'],
+      ['w_q  = round(w / s_w)                      # int8 weights, quantized once, offline',
+       'Weights are frozen: quantize at load with per-channel scales, at leisure, with any of the chapter&rsquo;s machinery.'],
+      ['acc  = x_q @ w_q                           # int8 × int8 → int32 accumulate, on tensor cores',
+       'The payoff line: the tensor core eats int8 directly at 838 dense TOPS on this card, 4× its bf16-with-fp32-accumulate rate. Accumulation in int32 is exact: integer dot products do not round.'],
+      ['y    = acc * (s_x * s_w)                   # one rescale, back to bf16',
+       'Two scalar multiplies fold into one; the result re-enters the residual stream in bf16 as if nothing happened. Everything quantization did is invisible outside the kernel.'],
+    ];
+    const asm = el('div', 'asm');
+    lines.forEach(([txt, tipTxt]) => {
+      const ln = el('div', 'asm-ln', txt);
+      tipify(ln, tipTxt);
+      asm.appendChild(ln);
+    });
+    body.append(asm, html('div', 'widget-hint', 'Hover each line. The fp8 variant swaps round() for an e4m3 cast and the int32 accumulator for fp32-class accumulation, same shape.'));
+    mount.replaceWith(box);
+  };
+
+  /* w-vram: the 32 GiB shelf */
+  W['w-vram'] = (mount) => {
+    const { box, body } = widget('The 32 GiB shelf · weights + KV pool + workspace');
+    const local = MODELS.filter((m) => m.here);
+    const WD = [['bf16', 2], ['int8 g128', 1.015625], ['int4 g128', 0.515625]];
+    const KD = [['bf16', 2], ['fp8 + scales', 1.0625], ['int4 + scales', 0.5625]];
+    let mi = 0, wi = 0, ki = 0, slots = 16, ctx = 4096;
+    const WORK = 4 * GiB;
+    const mSeg = mkSeg(local.map((m) => m.name.replace('Qwen3-', '')), mi, (i) => { mi = i; paint(); });
+    const wSeg = mkSeg(WD.map((d) => 'W ' + d[0]), wi, (i) => { wi = i; paint(); });
+    const kSeg = mkSeg(KD.map((d) => 'KV ' + d[0]), ki, (i) => { ki = i; paint(); });
+    const sLab = html('span', null, ''); const cLab = html('span', null, '');
+    const sR = mkRange(1, 64, 1, slots, (v) => { slots = v; paint(); });
+    const cR = mkRange(1024, 40960, 1024, ctx, (v) => { ctx = v; paint(); });
+    const shelf = el('div');
+    const read = el('div', 'widget-readout');
+    const presets = el('div', 'widget-controls');
+    const preset = (label, fn) => {
+      const b = el('button', 'btn', label);
+      b.style.fontSize = '0.75rem';
+      b.addEventListener('click', () => { fn(); mSeg.set(mi); wSeg.set(wi); kSeg.set(ki); sR.value = slots; cR.value = ctx; paint(); });
+      presets.appendChild(b);
+    };
+    preset('serve default · 16 × 4096', () => { mi = 0; wi = 0; ki = 0; slots = 16; ctx = 4096; });
+    preset('the 48-slot probe', () => { mi = 0; wi = 0; ki = 0; slots = 48; ctx = 4096; });
+    const kvPool = (M, bpw) => 2 * M.layers * slots * (ctx + 1) * 8 * 128 * bpw;
+    const paint = () => {
+      const M = local[mi];
+      const wB = M.params * WD[wi][1];
+      const kB = kvPool(M, KD[ki][1]);
+      const total = wB + kB + WORK;
+      const cap = HW.vramGiB * GiB;
+      sLab.innerHTML = `slots <b>${slots}</b>`;
+      cLab.innerHTML = `capacity <b>${ctx.toLocaleString('en-US')}</b> tokens`;
+      shelf.innerHTML = '';
+      const bar = el('div');
+      const scale = Math.max(total, cap) * 1.03;
+      bar.style.cssText = 'display:flex;height:30px;border-radius:6px;overflow:hidden;border:1px solid var(--grid);position:relative;background:var(--plane);';
+      [[wB, 'var(--sA)', 'weights'], [kB, 'var(--sB)', 'KV pool'], [WORK, 'var(--axis)', 'workspace (inferred)']].forEach(([b, c, lab]) => {
+        const seg2 = el('div');
+        seg2.style.cssText = `width:${b / scale * 100}%;background:color-mix(in srgb, ${c} 72%, #fff);border-right:1px solid #fff;`;
+        tipify(seg2, `${lab}: ${fmtB(b)}`);
+        bar.appendChild(seg2);
+      });
+      const capMark = el('div');
+      capMark.style.cssText = `position:absolute;left:${cap / scale * 100}%;top:-4px;bottom:-4px;border-left:2px dashed var(--ink);opacity:.55;`;
+      bar.appendChild(capMark);
+      shelf.appendChild(bar);
+      shelf.appendChild(legend([
+        [swInside('var(--sA)', 60), 'weights'], [swInside('var(--sB)', 60), 'KV pool'],
+        [swInside('var(--axis)', 60), 'workspace, inferred from the 12.4 GiB serve reading'],
+      ]));
+      const margin = cap - total;
+      read.textContent =
+        `weights ${fmtB(wB)}  +  KV pool ${fmtB(kB)}  +  workspace ~${fmtB(WORK)}\n` +
+        `total   ${fmtB(total)} of 32 GiB  ·  ${margin >= 0 ? 'margin ' + fmtB(margin) : 'OVER by ' + fmtB(-margin)}` +
+        (slots === 48 && ctx === 4096 && ki === 0 && mi === 0
+          ? '\nthis is the geometry that OOMed in practice: 26 GiB on paper, but the probe stacked a second pool\nand 1.03 GiB of graph arenas on top. Budgets die by their margins, not their totals.'
+          : '');
+      read.style.color = margin >= 0 ? '' : 'var(--cg-wrong)';
+    };
+    body.append(presets, ctrlRow(mSeg.root, wSeg.root, kSeg.root), ctrlRow(sLab, sR, cLab, cR), shelf, read,
+      html('div', 'widget-hint', 'The pool is preallocated dense (PaddedKVPool): slots × capacity, used or not, which is why the 0.6B&rsquo;s serve default already holds 7 GiB. Phase 4&rsquo;s paged pool makes the same bytes follow demand; fp8 KV halves them outright and its per-block scales ride the same block table.'));
+    paint();
+    mount.replaceWith(box);
+  };
+
+  /* w-nvfp4: one real block, hand-quantized */
+  W['w-nvfp4'] = (mount) => {
+    const { box, body } = widget('NVFP4 by hand · the block that contains the outlier');
+    const vals = BLOCK.outlier;
+    const absmax = Math.max(...vals.map(Math.abs));
+    const raw = absmax / 6;
+    const e4m3 = encodeTo(raw, FORMATS.e4m3);
+    const q = vals.map((v) => {
+      const t = v / e4m3;
+      let best = 0;
+      FP4_LEVELS.forEach((L) => { if (Math.abs(Math.abs(t) - L) < Math.abs(Math.abs(t) - best)) best = L; });
+      return Math.sign(v) * best;
+    });
+    const back = q.map((c) => c * e4m3);
+    const rmse = Math.sqrt(vals.reduce((a, v, i) => a + (v - back[i]) ** 2, 0) / 16);
+    const dTensor = LAYER.absmax / 7;
+    let txt = `the block  (${BLOCK.outlierLoc}, real bf16 values)\n`;
+    txt += 'value      /scale    fp4 code   back      error\n';
+    vals.forEach((v, i) => {
+      txt += `${v.toFixed(5).padStart(9)} ${(v / e4m3).toFixed(2).padStart(8)} ${String(q[i]).padStart(8)}  ${back[i].toFixed(5).padStart(9)} ${(v - back[i]).toExponential(1).padStart(9)}${Math.abs(v) === absmax ? '   ← the 0.418' : ''}\n`;
+    });
+    txt += `\nblock absmax 0.41797 → raw scale /6 = ${raw.toFixed(5)} → e4m3-rounded scale = ${e4m3.toFixed(7)}\n`;
+    txt += `block RMSE ${rmse.toExponential(2)} · for contrast, per-tensor int4 (Δ = 0.418/7 = ${dTensor.toFixed(4)}) rounds\n`;
+    txt += `every value in the TYPICAL block to 0 or ±${dTensor.toFixed(3)}: coarser than the values themselves.`;
+    const pre = el('div', 'widget-readout');
+    pre.textContent = txt;
+    body.append(pre, html('div', 'widget-hint',
+      'The e4m3 scale lands within 1% of the ideal 0.06966; an MXFP4-style power-of-two scale must pick 0.0625 (clips the outlier to 0.375) or 0.125 (doubles everyone&rsquo;s spacing). A gently-rounding scale is NVFP4&rsquo;s whole pitch, and sixteen victims instead of 3.1 million is microscaling&rsquo;s.'));
+    mount.replaceWith(box);
+  };
+
+  /* w-gptq: rounding as a joint decision */
+  W['w-gptq'] = (mount) => {
+    const { box, body } = widget('GPTQ&rsquo;s move · eight weights, two roundings');
+    const w0 = [0.037, -0.012, 0.055, 0.021, -0.044, 0.008, -0.029, 0.049];
+    const x = [1.0, 0.6, -0.8, 1.2, 0.9, -1.1, 0.7, 1.0];
+    const delta = 0.055 / 7;
+    const snap = (v) => Math.max(-7, Math.min(7, Math.round(v / delta))) * delta;
+    const yTrue = w0.reduce((a, wv, i) => a + wv * x[i], 0);
+    /* RTN */
+    const qR = w0.map(snap);
+    const errR = qR.reduce((a, wv, i) => a + wv * x[i], 0) - yTrue;
+    /* compensated, precomputed stepwise */
+    const states = [];
+    let wc = w0.slice(), qC = new Array(8).fill(null);
+    for (let i = 0; i < 8; i++) {
+      qC[i] = snap(wc[i]);
+      const e = wc[i] - qC[i];
+      const restIdx = [];
+      for (let j = i + 1; j < 8; j++) restIdx.push(j);
+      const denom = restIdx.reduce((a, j) => a + x[j] * x[j], 0);
+      if (denom > 0) restIdx.forEach((j) => { wc[j] += e * x[i] * x[j] / denom; });
+      states.push({ q: qC.slice(), w: wc.slice(), e });
+    }
+    const errC = qC.reduce((a, wv, i) => a + wv * x[i], 0) - yTrue;
+    let step = -1;   /* -1 = RTN view */
+    const grid = el('div', 'widget-readout');
+    const bars = el('div');
+    const btnRow = el('div', 'widget-controls');
+    const bRtn = el('button', 'btn', 'round all at once (RTN)');
+    const bStep = el('button', 'btn', 'compensate, one weight at a time ▸');
+    const bReset = el('button', 'btn', 'reset');
+    [bRtn, bStep, bReset].forEach((b) => { b.style.fontSize = '0.78rem'; btnRow.appendChild(b); });
+    const paint = () => {
+      let txt = 'w (bf16)  : ' + w0.map((v) => v.toFixed(3).padStart(7)).join(' ') + '\n';
+      if (step === -1) {
+        txt += 'q (RTN)   : ' + qR.map((v) => v.toFixed(3).padStart(7)).join(' ') + '\n';
+        txt += `output error x·(q−w) = ${errR.toExponential(2)}   (each rounding lands where it lands)`;
+      } else {
+        const st = states[step];
+        txt += 'q so far  : ' + st.q.map((v) => (v === null ? '      ·' : v.toFixed(3).padStart(7))).join(' ') + '\n';
+        txt += 'w adjusted: ' + st.w.map((v, i) => (i <= step ? '      ·' : v.toFixed(3).padStart(7))).join(' ') + '\n';
+        txt += `committed w${step}: residual ${st.e.toExponential(1)} folded into the ${7 - step} not-yet-rounded weights` +
+          (step === 7 ? `\n\nfinal output error = ${errC.toExponential(2)}  vs RTN&rsquo;s ${errR.toExponential(2)}  (${Math.abs(errR / errC) > 1 ? (Math.abs(errR / errC)).toFixed(0) + '× smaller' : 'compare'})` : '');
+      }
+      grid.innerHTML = txt.replace(/&rsquo;/g, '’');
+      bars.innerHTML = '';
+      const mx = Math.max(Math.abs(errR), Math.abs(errC)) * 1e4;
+      bars.appendChild(barRow('RTN output error', Math.abs(errR) * 1e4, mx, 'var(--sC)', errR.toExponential(1)));
+      bars.appendChild(barRow('compensated', Math.abs(errC) * 1e4, mx, step === 7 ? 'var(--sB)' : 'var(--axis)',
+        step === 7 ? errC.toExponential(1) : 'step through to earn it'));
+    };
+    bRtn.addEventListener('click', () => { step = -1; paint(); });
+    bStep.addEventListener('click', () => { step = Math.min(7, step + 1); paint(); });
+    bReset.addEventListener('click', () => { step = -1; paint(); });
+    body.append(btnRow, grid, bars,
+      html('div', 'widget-hint', 'One input vector, so each committed error can be folded forward exactly; real GPTQ averages over hundreds of calibration inputs and uses a Hessian sketch to decide where the fold goes. Same grid both ways: the win is purely in the order and interdependence of decisions.'));
+    paint();
+    mount.replaceWith(box);
+  };
+
+  /* w-awq: protect the salient channel by scaling, plus the NF4 grid */
+  W['w-awq'] = (mount) => {
+    const { box, body } = widget('AWQ&rsquo;s move · stretch the salient channel across the grid');
+    /* deterministic pseudo-gaussian group of 128 */
+    const g = [];
+    let seed = 42;
+    const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+    for (let i = 0; i < 127; i++) {
+      const u1 = Math.max(rnd(), 1e-9), u2 = rnd();
+      g.push(Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2) * 0.02);
+    }
+    const wSal = 0.02, aSal = 20, aRest = 1;
+    const NF4 = [-1.0, -0.6961928, -0.52507305, -0.39491748, -0.28444138, -0.18477343,
+                 -0.09105003, 0.0, 0.07958029, 0.1609302, 0.2461123, 0.33791524,
+                 0.44070983, 0.5626179, 0.72295684, 1.0];
+    let s = 1, useNF4 = false;
+    const snapU = (v, amax) => Math.max(-7, Math.min(7, Math.round(v / (amax / 7)))) * (amax / 7);
+    const snapN = (v, amax) => {
+      const t = v / amax;
+      let best = NF4[0];
+      NF4.forEach((L) => { if (Math.abs(t - L) < Math.abs(t - best)) best = L; });
+      return best * amax;
+    };
+    const evalAt = (sv, nf) => {
+      const scaled = g.concat([wSal * sv]);
+      const amax = Math.max(...scaled.map(Math.abs));
+      const snap2 = nf ? snapN : snapU;
+      let eRest = 0;
+      g.forEach((v) => { const q = snap2(v, amax); eRest += ((q - v) * aRest) ** 2; });
+      eRest = Math.sqrt(eRest / 127);
+      const qs = snap2(wSal * sv, amax) / sv;
+      const eSal = Math.abs(qs - wSal) * aSal;
+      return { eRest, eSal, tot: Math.sqrt(eRest * eRest + eSal * eSal) };
+    };
+    const bars = el('div');
+    const read = el('div', 'widget-readout');
+    const sLab = html('span', null, '');
+    const sR = mkRange(1, 8, 0.25, s, (v) => { s = v; paint(); });
+    const nfSeg = mkSeg(['uniform int4', 'NF4 rungs'], 0, (i) => { useNF4 = i === 1; paint(); });
+    const paint = () => {
+      const r = evalAt(s, useNF4);
+      const r1 = evalAt(1, useNF4);
+      sLab.innerHTML = `scale s on the salient channel: <b>${s.toFixed(2)}</b>`;
+      bars.innerHTML = '';
+      const mx = Math.max(r1.eSal, r1.eRest) * 1.2 * 1e4;
+      bars.appendChild(barRow('salient channel (×20 activation)', r.eSal * 1e4, mx, 'var(--sC)',
+        s > 1 ? (r1.eSal / r.eSal).toFixed(1) + '× less than at s=1' : 'the error that matters most'));
+      bars.appendChild(barRow('the other 127', r.eRest * 1e4, mx, 'var(--sA)',
+        s > 1 ? 'creeping up as the shared grid stretches' : ''));
+      bars.appendChild(barRow('activation-weighted total', r.tot * 1e4, mx, 'var(--sB)'));
+      /* a tiny argmin sweep for the readout */
+      let bestS = 1, bestT = Infinity;
+      for (let sv = 1; sv <= 8.001; sv += 0.25) {
+        const t = evalAt(sv, useNF4).tot;
+        if (t < bestT) { bestT = t; bestS = sv; }
+      }
+      read.textContent =
+        `AWQ&rsquo;s bet: w×s then quantize, x÷s at runtime, mathematically a no-op, numerically a rescue.\n`.replace('&rsquo;', '’') +
+        `sweet spot on this group: s ≈ ${bestS.toFixed(2)} (found by grid search, exactly like the paper)\n` +
+        `grid: ${useNF4 ? 'NF4, 16 rungs at normal quantiles (the QLoRA codebook)' : 'uniform int4, 15 rungs'}`;
+    };
+    body.append(ctrlRow(sLab, sR, nfSeg.root), bars, read,
+      html('div', 'widget-hint', 'Too little s changes nothing; too much makes the salient channel the group&rsquo;s new absmax and everyone pays again. The NF4 toggle shows family 4&rsquo;s other idea on the same data: rungs placed where a Gaussian population actually lives beat evenly spaced ones at every s.'));
+    paint();
+    mount.replaceWith(box);
+  };
+
+  /* w-matrix: the Phase 11 quality scoreboard, deliberately unfilled */
+  W['w-matrix'] = (mount) => {
+    const { box, body } = widget('The Phase 11 scoreboard · expectations now, numbers when measured');
+    const ROWS = [
+      ['bf16 (baseline)', ['·', '·', '·'], 'the reference every row below is diffed against'],
+      ['INT8 weight-only', ['≈', '≈', '≈'], 'folklore is confident here: indistinguishable through 175B (LLM.int8(), k-bit scaling laws)'],
+      ['INT4 group-128', ['~', '~', '~'], 'close to bf16 in the k-bit scaling-law sweeps; the bit-for-bit sweet spot'],
+      ['INT4 ungrouped', ['▼', '▼', '▼'], 'the RTN baselines of the GPTQ/AWQ papers degrade visibly without groups'],
+      ['INT8 W + INT8 KV', ['≈', '~', '~'], 'adds cache error on top; keys are the fragile half (KIVI, KVQuant)'],
+      ['FP8 KV', ['≈', '~', '≈'], 'per-block scales expected to hold retrieval; the needle column is the test that bites'],
+      ['MXFP4 / NVFP4 weights', ['~', '?', '~'], 'GPT-OSS ships this natively; for a bf16-trained model, PTQ to fp4 is the open question'],
+    ];
+    const COLS = ['perplexity', 'needle', 'tasks'];
+    const gridEl = el('div');
+    const head = el('div', 'fact-row');
+    head.appendChild(html('div', 'fact-name', 'scheme'));
+    head.appendChild(html('div', 'fact-body', `<b>${COLS.join(' · ')}</b> · <span style="color:var(--muted)">measured (Phase 11)</span>`));
+    gridEl.appendChild(head);
+    ROWS.forEach(([name, marks, why]) => {
+      const row = el('div', 'fact-row');
+      row.appendChild(html('div', 'fact-name', name));
+      const bodyc = el('div', 'fact-body');
+      marks.forEach((m, i) => {
+        const chip = el('span', 'statchip');
+        chip.innerHTML = `${COLS[i]} <b>${m}</b>`;
+        chip.style.marginRight = '6px';
+        bodyc.appendChild(chip);
+      });
+      const meas = el('span', 'statchip');
+      meas.innerHTML = 'measured <b>· · ·</b>';
+      meas.style.opacity = '0.55';
+      bodyc.appendChild(meas);
+      tipify(row, why);
+      gridEl.appendChild(row);
+    });
+    body.append(gridEl,
+      html('div', 'widget-hint', '≈ expected lossless · ~ expected close · ▼ expected to degrade · ? genuinely open. Hover a row for the reasoning and the source. The empty cells are the point: this is the project&rsquo;s predictions-on-record ritual applied to quality, and Phase 11&rsquo;s bench runs fill them.'));
+    gate(body, 'p-quality');
+    mount.replaceWith(box);
+  };
+
+  mountWidgets(article, W);
+
+  const PREDICTS = {
+    'p-count': {
+      question: 'A bf16 tensor is assigned the integer 257. After the round trip through storage, what does it hold?',
+      choices: ['257: integers are what floats do best', '256: bf16 ran out of integer rungs one step earlier', '258: it rounds away from zero'],
+      correct: 1,
+      explain: 'Seven mantissa bits count exactly to 2^8 = 256; above that the rungs are 2 apart, and 257, exactly halfway, rounds to the even rung: 256. fp16 counts to 2,048, fp32 to 16,777,216. Your serving dtype cannot count to 257, and nothing in the engine ever notices, which is the point of the next two sections.',
+    },
+    'p-ceiling': {
+      question: 'One decode token on the 8B: roughly 16 GFLOP of math against 16.4 GB of weight reads. On a card doing 209 TFLOPS and 1.79 TB/s, which bound is tighter?',
+      choices: ['The math: 16 GFLOP is real work', 'They land about even', 'The bytes, by two orders of magnitude'],
+      correct: 2,
+      explain: 'The math takes 0.08 ms; the bytes take 9.1 ms. Single-stream decode runs at about 1 FLOP per byte against a machine that needs ~117 to stay busy. The widget below prices every model the same way.',
+    },
+    'p-outlier': {
+      question: 'Our real layer-0 down_proj has absmax 0.418 against a 99.9th percentile of 0.095. Giving each output channel its own scale (instead of one shared scale) cuts the int8 error by roughly…',
+      choices: ['A few percent: most channels are similar', 'About 4×', 'About 50×'],
+      correct: 1,
+      explain: 'Measured on the real tensor: RMS error 9.5·10⁻⁴ per-tensor → 2.6·10⁻⁴ per-channel, a 3.7× cut, because row 35&rsquo;s outlier now taxes only row 35. Groups of 128 push it to 5.3×. The widget below has all six schemes.',
+    },
+    'p-scales': {
+      question: 'Qwen3-30B-A3B at int4 with one fp16 scale per 128 weights: total weight bytes?',
+      choices: ['15.25 GB: four bits is four bits', '15.7 GB: the scales tax it about 3%', '19.8 GB: the bookkeeping bites double digits'],
+      correct: 1,
+      explain: '4 + 16/128 = 4.125 effective bits: 30.5B × 4.125 / 8 = 15.7 GB, matching PLAN.md&rsquo;s &ldquo;~15 GB&rdquo; arithmetic for Phase 7. Scale overhead is real, small, and worth pricing every time.',
+    },
+    'p-quality': {
+      question: 'Phase 11 will quantize weights and the KV cache. Published results say the most fragile tensor in the whole building is…',
+      choices: ['Weights, at int4 with groups', 'The KV cache&rsquo;s keys', 'The KV cache&rsquo;s values'],
+      correct: 1,
+      explain: 'Keys carry outlier channels the way activations do, and key error lands directly in the attention logits that retrieval depends on; values are far tamer (KIVI, KVQuant). Group-128 int4 weights, by contrast, hold up well in every published sweep. Hence the asymmetric KV schemes in the scoreboard.',
+    },
+  };
+  mountPredicts(article, PREDICTS);
+
+  const QUIZ = [
+    { id: 'q-gib', type: 'numeric',
+      prompt: 'Qwen3-1.7B has 2,031,739,904 parameters. Its bf16 checkpoint size in GiB (1 GiB = 2³⁰ bytes)?',
+      answer: 3.78, tol: 0.05, unit: 'GiB',
+      explain: '2,031,739,904 × 2 bytes ÷ 2³⁰ = 3.78 GiB, which is what ls -l says about the file on disk. A checkpoint is the numbers, nothing else.' },
+    { id: 'q-range',
+      prompt: 'A tensor holds both 0.0001 and 70,000. Which 16-bit format keeps both finite and nonzero?',
+      choices: [
+        { html: 'bf16: coarse everywhere, but the range is fp32&rsquo;s', correct: true,
+          explain: 'bf16&rsquo;s eight exponent bits cover both magnitudes with ease (at seven bits of precision). fp16 holds 0.0001 comfortably but overflows at 65,504: 70,000 becomes inf. Range failures are cliffs; precision failures are gentle slopes. Pick the failure mode you can live with.' },
+        { html: 'fp16: ten mantissa bits beat seven' },
+        { html: 'Either works: 16 bits is 16 bits' },
+      ] },
+    { id: 'q-delta', type: 'numeric',
+      prompt: 'Symmetric int8 with absmax 0.4: what is the grid spacing Δ?',
+      answer: 0.00315, tol: 0.0002, unit: '',
+      explain: 'Δ = s = absmax / 127 = 0.4 / 127 ≈ 0.00315, and the RMS rounding error everyone pays is Δ/√12 ≈ 0.0009. One number at 0.4 sets the grid; whether anything else lives near 0.4 is irrelevant to the price.' },
+    { id: 'q-families',
+      prompt: 'Which method leaves the outliers where they are and computes them in fp16 at runtime?',
+      choices: [
+        { html: 'LLM.int8(): mixed-precision decomposition, outlier columns stay fp16', correct: true,
+          explain: 'Family 2: keep the outliers. SmoothQuant and AWQ are family 3: they migrate the difficulty with scales, offline, precisely to avoid a runtime mixed path. Microscaling is family 1 at hardware scale: shrink the blast radius to a block.' },
+        { html: 'SmoothQuant' },
+        { html: 'AWQ' },
+        { html: 'MXFP4' },
+      ] },
+    { id: 'q-kvtokens', type: 'numeric',
+      prompt: 'The 0.6B serve pool holds 65,552 token-positions of KV at bf16 (7.00 GiB). Switching the cache to fp8, the same 7 GiB holds about how many?',
+      answer: 131000, tol: 4000, unit: 'tokens',
+      explain: 'Half the bytes per value, twice the positions: ~131,104. PLAN.md&rsquo;s &ldquo;doubles effective KV capacity&rdquo; is this arithmetic, and it lands on exactly the pool that has already OOMed once at 48 slots.' },
+    { id: 'q-prefill',
+      prompt: 'INT4 weights are 4× fewer bytes than bf16. A 4,096-token prefill step speeds up by roughly…',
+      choices: [
+        { html: 'Barely anything: prefill is compute-bound and the tensor cores still run bf16', correct: true,
+          explain: 'Thousands of tokens reuse each loaded weight, so prefill&rsquo;s intensity sits far above the ~117 FLOP/byte line: the bytes were never the bottleneck, and weight-only kernels still do bf16 math after an in-register dequant. Moving prefill needs the tensor core itself to eat a smaller format: W8A8 int8 or FP8.' },
+        { html: 'About 4×, matching the byte reduction' },
+        { html: 'About 2×: half the win survives' },
+      ] },
+    { id: 'q-crossover', type: 'numeric',
+      prompt: 'Qwen3-4B: 4,022,468,096 parameters at bf16, and 147,456 KV bytes per token. At what context length does one sequence&rsquo;s per-step KV read equal the entire weight read?',
+      answer: 54558, tol: 600, unit: 'tokens',
+      explain: 'params × 2 ÷ 147,456 ≈ 54,558 tokens: the crossover column the Weights tab has always shown. Past it, even batch 1 spends more bandwidth on cache than on weights, and KV quantization outranks weight quantization.' },
+    { id: 'q-mxbits', type: 'numeric',
+      prompt: 'MXFP4 stores 32 fp4 values behind one 8-bit shared scale. Effective bits per value?',
+      answer: 4.25, tol: 0.01, unit: 'bits',
+      explain: '4 + 8/32 = 4.25, the number OpenAI quotes for GPT-OSS&rsquo;s MoE weights. NVFP4 pays 4 + 8/16 = 4.5 (plus one fp32 per tensor) to buy a gentler scale and a smaller blast radius. In quantization, even the scales are on the bill.' },
+  ];
+  buildQuiz(article, QUIZ, 'qs-quiz');
 }
 
 /* =============== boot =============== */

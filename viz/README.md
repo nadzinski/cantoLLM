@@ -7,7 +7,7 @@ your memory of the architecture. Open it directly (no server needed):
 open viz/index.html
 ```
 
-Four views, linked by the nav bar (semantic zoom — the overview stays sparse,
+The views, linked by the nav bar (semantic zoom: the overview stays sparse,
 detail lives behind the zoom targets):
 
 - **Overview** — the request path through `src/cantollm/` (clients → FastAPI →
@@ -101,6 +101,24 @@ detail lives behind the zoom targets):
   cantoLLM boundary problem (KV-scatter wrinkle, buckets as capture
   vocabulary, the bills). Predictions and quiz answers persist in
   localStorage. Sections lean on each other; read in order.
+- **Quantization**: a second textbook mini-chapter (same format; both chapters
+  share one CSS/JS "chapter kit" inside index.html), written as read-ahead for
+  Phases 7 and 11: general-purpose coverage of number formats and quantization
+  methods, with this repo's real numbers as the recurring worked example. Arc:
+  the checkpoint-size puzzle (params x 2 bytes; the two stakes are fitting
+  30B-A3B on a 32 GB card and decode as a bytes-over-bandwidth problem), a
+  format designer that derives bf16 and e4m3 from budget sliders, the number
+  line under a microscope, where the codebase already refuses bf16, GPU memory
+  101 with a two-ceilings calculator and an arrow-key decode-step byte
+  odometer (with INT8-weight and FP8-KV replay stages), the grid-and-scale
+  machinery, granularity measured on a real captured layer (layer-0 down_proj
+  and its 4.4x outlier in row 35), the four-family outlier map, weight-only vs
+  W8A8 vs KV-cache quantization, microscaling with a real block hand-quantized
+  to NVFP4, GPTQ and AWQ toys, the deliberately-empty Phase 11 quality
+  scoreboard, and a closing reread of the engine (spec.py's one dtype knob and
+  how it has to split). Hardware figures were verified against vendor
+  whitepapers at authoring time; specimen data is a committed capture (below).
+  Predictions and quiz answers persist in localStorage.
 
 ## Regenerating the traces
 
@@ -115,12 +133,16 @@ before first use:
 .venv/bin/python viz/trace_split.py        # ~40s     → data/trace_split.js (spawns a real engine process on 0.6B)
 ```
 
-One harness is different: `viz/capture_cudagraphs.py` needs CUDA hardware
-(run it on the `infra/` GPU node; see `infra/README.md`) and its artifacts
-are **committed** under `viz/captures/` instead of gitignored, because a
-Mac can never regenerate them. The CUDA graphs tab embeds a curated inline
-copy of that data; the committed artifacts are the record it is transcribed
-from. `--dry-run` builds the examples CPU-side for a quick import check.
+Two harnesses are different, with artifacts **committed** under
+`viz/captures/` instead of gitignored; their tabs embed curated inline
+copies, and the committed artifacts are the record they were transcribed
+from. `viz/capture_cudagraphs.py` needs CUDA hardware (run it on the
+`infra/` GPU node; see `infra/README.md`) because a Mac can never
+regenerate it; `--dry-run` builds the examples CPU-side for a quick import
+check. `viz/capture_quant.py` is the opposite: pure safetensors reads of
+the local 0.6B checkpoint, runs on the Mac in seconds, no GPU and no model
+build (it feeds the Quantization tab's specimen-layer statistics and its
+NVFP4 block figure).
 
 The Tokenizer tab is live rather than trace-based — it needs its small server
 (starts instantly; loads only `tokenizer.json`, no weights):
