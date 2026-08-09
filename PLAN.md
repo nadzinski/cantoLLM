@@ -504,9 +504,8 @@ pre-compile-round A/B configs pinned `torch_compile = false`; serve
 parks the Inductor cache in `~/.cache/cantollm/inductor` since systemd
 empties /tmp at boot — reboots keep the +21 s warm bill instead of
 falling back to the cold one; broader §9 cache persistence stays
-deferred).
-Open: `torch-compile-results.md` (back home, from the run records);
-the H100 day.
+deferred). `torch-compile-results.md` (2026-08-09) is the round's
+write-up. Open: the H100 day.
 
 **Core:**
 
