@@ -496,11 +496,13 @@ matters only for reprovisioned boxes). The remaining failed gate:
 greedy streams are not token-identical vs eager (bf16 argmax ties at
 0.0625 margins flip under fused-kernel reordering; drift quantified
 benign — coherent alternates, logits within 0.5 on a 15-scale — but
-temperature-0 outputs change vs the eager engine). Agent
-recommendation: torch_compile ready for default-on pending only the
-author's call on that drift; strategy default dynamic. Open:
-`torch-compile-results.md` (back home, from the run records); the
-default decision; the H100 day.
+temperature-0 outputs change vs the eager engine). The author accepted
+the drift 2026-08-09 ("eager isn't ground truth either") and
+**torch_compile is now the fifth piece of the CUDA serve default**
+(strategy dynamic; `--no-torch-compile` opts out; the three
+pre-compile-round A/B configs pinned `torch_compile = false`).
+Open: `torch-compile-results.md` (back home, from the run records);
+the H100 day.
 
 **Core:**
 

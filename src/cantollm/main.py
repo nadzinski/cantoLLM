@@ -99,10 +99,15 @@ def cmd_serve(args):
             args.cuda_graphs if args.cuda_graphs is not None
             else warmup_shapes and on_cuda
         )
-        # Unlike the flags above, no device-based auto-on: default off
-        # until the A/B decides (torch-compile-design.md §3.6).
+        # Default-on for CUDA since the 2026-08-08/09 A/B cleared the
+        # gates (+49.6% short_chat c=16, +64% longctx c=1, warm Ready
+        # bill +21 s; run record in bench/history, decision: greedy
+        # bf16 tie-drift vs eager accepted): compile joins sdpa +
+        # buckets + warm-up + graphs as the fifth piece of the CUDA
+        # serve default.
         torch_compile = (
-            args.torch_compile if args.torch_compile is not None else False
+            args.torch_compile if args.torch_compile is not None
+            else warmup_shapes and on_cuda
         )
         if warmup_shapes and not shape_buckets:
             sys.exit("error: --warmup-shapes requires shape buckets "
@@ -373,8 +378,11 @@ def parse_args():
                                    "forward (Inductor kernel fusion; artifacts "
                                    "build during the warm-up sweep behind "
                                    "readiness, and CUDA-graph capture records "
-                                   "the fused kernels). Default: off until the "
-                                   "A/B (torch-compile-design.md)")
+                                   "the fused kernels; +48-64%% aggregate on "
+                                   "the 2026-08 5090 A/B). Default: on when "
+                                   "warm-up is on for CUDA; --no-torch-compile "
+                                   "for eager kernels or bit-stable-vs-eager "
+                                   "greedy output")
     serve_parser.add_argument("--torch-compile-strategy", default="dynamic",
                               choices=["dynamic", "batch-bucket"],
                               help="Artifact strategy for --torch-compile: "

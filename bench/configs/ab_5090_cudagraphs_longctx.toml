@@ -22,6 +22,10 @@ batch_max_seq_len = 10240
 max_tokens_per_step = 512
 shape_buckets = true
 warmup_shapes = true
+# Pinned 2026-08-09: this A/B was measured without torch.compile (it
+# predates the compile round); re-runs must not inherit the new CUDA
+# default-on.
+torch_compile = false
 
 [server.matrix]
 cuda_graphs = [false, true]
