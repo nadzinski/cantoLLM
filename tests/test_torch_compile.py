@@ -312,6 +312,77 @@ class TestEngineWiring:
         assert scheduler.is_idle()
 
 
+class TestExecutionContext:
+    """The forward entry points must hold the attention method's
+    `execution_context()` open around execution (sdpa's cuDNN pin lives
+    there since the 2026-08-08 hoist), and the traced region must never
+    contain it — a traced sdpa_kernel bypasses the compile caches. The
+    fused-kernel half of the contract is
+    test_sdpa_equivalence.py::test_attend_runs_fused_on_cuda."""
+
+    class _RecordingMethod(PaddedAttentionMethod):
+        def __init__(self):
+            self.entries = 0
+
+        def execution_context(self):
+            from contextlib import contextmanager
+
+            @contextmanager
+            def ctx():
+                self.entries += 1
+                yield
+
+            return ctx()
+
+    def test_eager_entry_holds_context(self):
+        method = self._RecordingMethod()
+        model = make_model(method)
+        pool = make_pool()
+        meta = make_meta([(0, 0, 5)])
+        model.forward_batched(ids_for(meta), meta, pool)
+        assert method.entries == 1
+
+    def test_compiled_front_holds_context(self):
+        method = self._RecordingMethod()
+        runtime = make_runtime(make_model(method))
+        runtime.enable_torch_compile(backend="eager")
+        pool = make_pool()
+        meta = make_meta([(0, 0, 5)])
+        runtime.forward_batched(ids_for(meta), meta, pool)
+        assert method.entries == 1
+
+    def test_sdpa_traced_region_has_no_backend_pin(self):
+        """The cache-bypass tripwire, CPU-side: tracing the sdpa forward
+        must not plant sdpa_kernel machinery (`_backend_from_string`) in
+        the graph. Checked on the traced FX graph's call targets."""
+        model = make_model(SDPAAttentionMethod())
+        seen = []
+
+        def spy_backend(gm, example_inputs):
+            seen.extend(
+                str(n.target) for n in gm.graph.nodes if n.op == "call_function"
+            )
+            return gm.forward
+
+        fn = torch.compile(
+            model.forward_batched_impl, backend=spy_backend, fullgraph=True
+        )
+        pool = make_pool()
+        meta = make_meta([(0, 0, 5)])
+        model._validate_batched(meta, pool)
+        _ = meta.kv_write_map
+        with torch.inference_mode(), model.attention_method.execution_context():
+            fn(ids_for(meta), meta, pool)
+        assert any("scaled_dot_product" in t for t in seen), (
+            "traced graph lost the attention call — bad probe"
+        )
+        offenders = [t for t in seen if "backend" in t or "sdpa_kernel" in t]
+        assert not offenders, (
+            f"sdpa dispatcher machinery traced into the graph — this "
+            f"bypasses the compile caches: {offenders}"
+        )
+
+
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
 class TestInductorCUDA:
     """The functionalization tripwire, on the real backend.

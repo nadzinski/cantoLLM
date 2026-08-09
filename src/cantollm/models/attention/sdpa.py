@@ -47,6 +47,30 @@ from cantollm.models.attention.padded import PaddedAttentionMethod
 
 
 class SDPAAttentionMethod(PaddedAttentionMethod):
+    def execution_context(self):
+        """The cuDNN priority pin, held open by the forward's entry points
+        (see the protocol docstring), NOT inside the attend.
+
+        cuDNN is pinned ahead of math, which stays listed as the CPU/MPS
+        fallback. set_priority is load-bearing: without it sdpa_kernel
+        only restricts the backend *set*, and this build's default
+        priority ranks math above cuDNN — the call would silently run
+        unfused (see the amendment in the module docstring).
+
+        The pin used to live inside `_attend_batched`; it was hoisted
+        out of the traced region on the 2026-08-08 5090 round because a
+        traced `sdpa_kernel` plants `_backend_from_string` in the graph,
+        which bypasses the AOTAutograd/FX caches and re-runs full
+        Inductor codegen on every server boot. Dispatch semantics are
+        unchanged: under torch.compile the backend is chosen at trace
+        time, and every trace happens inside this context (the warm-up
+        sweep runs through the entry points); eagerly the dispatcher
+        reads it live at the call.
+        """
+        return sdpa_kernel(
+            [SDPBackend.CUDNN_ATTENTION, SDPBackend.MATH], set_priority=True
+        )
+
     def _attend_batched(
         self,
         queries: torch.Tensor,
@@ -58,19 +82,14 @@ class SDPAAttentionMethod(PaddedAttentionMethod):
         keys_sdpa = full_keys.transpose(1, 2)
         values_sdpa = full_values.transpose(1, 2)
         attn_mask = ~mask[:, None, :, :]
-        # cuDNN pinned ahead of math, which stays listed as the CPU/MPS
-        # fallback. set_priority is load-bearing: without it sdpa_kernel
-        # only restricts the backend *set*, and this build's default
-        # priority ranks math above cuDNN — the call would silently run
-        # unfused (see the amendment in the module docstring).
-        with sdpa_kernel(
-            [SDPBackend.CUDNN_ATTENTION, SDPBackend.MATH], set_priority=True
-        ):
-            output = F.scaled_dot_product_attention(
-                queries_sdpa,
-                keys_sdpa,
-                values_sdpa,
-                attn_mask=attn_mask,
-                enable_gqa=True
-            )
+        # Backend routing comes from `execution_context()` (the cuDNN
+        # pin), which the caller holds open around the forward — keep
+        # this body pure tensor work so torch.compile can cache it.
+        output = F.scaled_dot_product_attention(
+            queries_sdpa,
+            keys_sdpa,
+            values_sdpa,
+            attn_mask=attn_mask,
+            enable_gqa=True
+        )
         return output.transpose(1, 2).unflatten(2, (queries.shape[2], -1))

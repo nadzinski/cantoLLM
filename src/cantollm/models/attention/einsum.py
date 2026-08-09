@@ -9,12 +9,18 @@ Mac / CPU fallback going forward.
 
 from __future__ import annotations
 
+from contextlib import nullcontext
+
 import torch
 
 from cantollm.models.attention.protocol import BatchMeta
 
 
 class EinsumAttentionMethod:
+    def execution_context(self):
+        """No dispatcher state to pin (see the protocol docstring)."""
+        return nullcontext()
+
     def build_mask(
         self,
         start_pos: int,

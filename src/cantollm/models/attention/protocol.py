@@ -12,6 +12,7 @@ at `cantollm/engine/backend.py`.
 
 from __future__ import annotations
 
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from functools import cached_property
 from typing import NamedTuple, Protocol
@@ -161,6 +162,23 @@ class BatchMeta:
 
 
 class AttentionMethod(Protocol):
+    def execution_context(self) -> AbstractContextManager:
+        """Context the caller holds open around a whole forward's
+        *execution* — dispatcher state the method needs live when its
+        kernels run, e.g. the SDPA backend-priority pin.
+
+        This lives on the method but is entered by the forward's entry
+        points (`Qwen3.forward_batched` for eager callers, the runtime
+        front for the compiled path), deliberately OUTSIDE the
+        torch.compile-traced region: tracing the context manager plants
+        an unserializable call in the graph, which bypasses the
+        AOTAutograd/FX caches and re-runs full Inductor codegen on every
+        boot (found on the 2026-08-08 5090 round — the entire warm-cache
+        Ready bill). Methods with no dispatcher needs return a
+        nullcontext.
+        """
+        ...
+
     def build_mask(
         self,
         start_pos: int,

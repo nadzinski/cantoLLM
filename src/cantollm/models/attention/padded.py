@@ -21,12 +21,19 @@ equivalence failure between the two can only be the attend.
 
 from __future__ import annotations
 
+from contextlib import nullcontext
+
 import torch
 
 from cantollm.models.attention.protocol import BatchMeta
 
 
 class PaddedAttentionMethod:
+    def execution_context(self):
+        """No dispatcher state to pin for the einsum attend (see the
+        protocol docstring for what this hook is for)."""
+        return nullcontext()
+
     def build_mask(
         self,
         start_pos: int,

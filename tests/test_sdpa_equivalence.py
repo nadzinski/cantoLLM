@@ -261,12 +261,18 @@ class TestOnCUDA:
 
     def test_attend_runs_fused_on_cuda(self):
         """The production-path tripwire: profile the real `_attend_batched`
-        at production dtype/geometry and assert a cuDNN SDPA kernel actually
-        ran. This is the check the pinned-backend tests above cannot make —
-        sdpa_kernel only restricts the backend set, and this build's default
-        priority ranks math above cuDNN, so without `set_priority=True` in
-        the attend the call silently runs unfused while every output-level
-        test stays green. Caught twice during 5090 bring-up; hence a test."""
+        at production dtype/geometry — under the method's
+        `execution_context()`, exactly as the forward entry points hold it
+        (the pin was hoisted out of the attend on the 2026-08-08 round:
+        traced, it bypassed the compile caches) — and assert a cuDNN SDPA
+        kernel actually ran. This is the check the pinned-backend tests
+        above cannot make — sdpa_kernel only restricts the backend set,
+        and this build's default priority ranks math above cuDNN, so
+        without `set_priority=True` in the context the call silently runs
+        unfused while every output-level test stays green. Caught twice
+        during 5090 bring-up; hence a test. (That the entry points enter
+        the context at all is pinned CPU-side by
+        test_torch_compile.py::TestExecutionContext.)"""
         from torch.profiler import ProfilerActivity, profile
 
         device = torch.device("cuda")
@@ -275,11 +281,12 @@ class TestOnCUDA:
         keys = torch.randn(4, 64, 8, 128, dtype=torch.bfloat16, device=device)
         values = torch.randn(4, 64, 8, 128, dtype=torch.bfloat16, device=device)
         mask = torch.zeros(4, 1, 64, dtype=torch.bool, device=device)
-        method._attend_batched(q, keys, values, mask)  # warm/dispatch once
-        torch.cuda.synchronize()
-        with profile(activities=[ProfilerActivity.CUDA]) as prof:
-            method._attend_batched(q, keys, values, mask)
+        with method.execution_context():
+            method._attend_batched(q, keys, values, mask)  # warm/dispatch once
             torch.cuda.synchronize()
+            with profile(activities=[ProfilerActivity.CUDA]) as prof:
+                method._attend_batched(q, keys, values, mask)
+                torch.cuda.synchronize()
         kernels = [
             e.key for e in prof.key_averages() if e.self_device_time_total > 0
         ]

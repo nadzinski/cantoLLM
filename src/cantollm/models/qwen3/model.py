@@ -358,7 +358,12 @@ class Qwen3(nn.Module):
         calls `_validate_batched` + the compiled impl itself.
         """
         self._validate_batched(meta, pool)
-        return self.forward_batched_impl(input_ids, meta, pool)
+        # The method's dispatcher needs (e.g. sdpa's cuDNN priority pin)
+        # are held open here, outside the compile-traceable impl — a
+        # traced context manager bypasses the compile caches (protocol
+        # docstring; 2026-08-08 5090 round).
+        with self.attention_method.execution_context():
+            return self.forward_batched_impl(input_ids, meta, pool)
 
     def forward_batched_impl(self, input_ids, meta, pool):
         """The traced region: pure tensor dataflow, no host-side Python

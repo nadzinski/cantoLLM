@@ -135,7 +135,14 @@ class ModelRuntime:
         self.model._validate_batched(meta, pool)
         _ = meta.kv_write_map
         self._mark_compile_dims(input_ids, meta)
-        return self._compiled_batched(input_ids, meta, pool)
+        # The attention method's dispatcher state (sdpa's cuDNN pin) is
+        # entered here, around — never inside — the traced region: a
+        # traced sdpa_kernel context bypasses the AOTAutograd/FX caches
+        # and the warm-up recompiles the world every boot (2026-08-08).
+        # Trace-time dispatch happens under this context too, since the
+        # artifacts are built by warm-up forwards passing through here.
+        with self.model.attention_method.execution_context():
+            return self._compiled_batched(input_ids, meta, pool)
 
     def enable_torch_compile(
         self, strategy: str = "dynamic", backend="inductor"
