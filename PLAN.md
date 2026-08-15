@@ -385,7 +385,7 @@ The target is worth optimizing because its shape is stable — no major refactor
 invalidate the work (paged KV in Phase 4 _will_ reshape the attention path, but in a
 well-contained way).
 
-**Status (2026-08-08):** In progress. Opened with step profiling
+**Status (2026-08-15):** Complete. Opened with step profiling
 (`step-profiling.md`): the decode floor is CPU dispatch — ~2700 CUDA API calls
 per step, GPU ~60% idle — and the top two sinks are fixed (ragged KV write
 vectorized to one gather+scatter per tensor via `KVWriteMap`; sampling
@@ -505,7 +505,18 @@ parks the Inductor cache in `~/.cache/cantollm/inductor` since systemd
 empties /tmp at boot — reboots keep the +21 s warm bill instead of
 falling back to the cold one; broader §9 cache persistence stays
 deferred). `torch-compile-results.md` (2026-08-09) is the round's
-write-up. Open: the H100 day.
+write-up. The phase closed with the H100 day (2026-08-14/15, p5.4xlarge
+in Tokyo after the us-west-2 capacity-blocks-only discovery;
+`h100-results.md` is the record, `h100-plan.md` §4 the graded
+predictions): 0.6B cross-hardware anchor (the 5090 wins nearly every
+absolute cell; compile's relative win is larger on Hopper), first 32B
+ever hosted (fits at 8x4096, stack beats eager +159-191% because the
+server host's dispatch is 2.5-4x slower than the desktop's, production
+decode 27.5 ms vs the 19.6 ms bandwidth floor at 2.38 TB/s achieved),
+32B knee at 1.5-2.0 rps, and a working 32B webchat through the tunnel.
+No flag flips: the serve default performed as shipped. Descoped: the
+0.6B compile-batch-bucket H100 arm (timed out at the old 900 s health
+timeout; strategy question already answered on the 5090).
 
 **Core:**
 

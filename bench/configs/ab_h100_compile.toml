@@ -17,7 +17,10 @@ model = "0.6B"
 engine = "batched"
 device = "cuda"
 port = 8378
-health_timeout_s = 900
+# 1800 not 900: the p5 host compiles ~3x slower than the 5090's Ryzen;
+# the batch-bucket arm's cold Inductor bill blew the 900 s timeout on
+# the H100 day (h100-results.md §3) and lost its points.
+health_timeout_s = 1800
 max_batch = 16
 batch_max_seq_len = 4096
 max_tokens_per_step = 512

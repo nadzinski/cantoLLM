@@ -1,10 +1,37 @@
 # Session plan: the H100 day (Phase 3 close-out)
 
-**Status (2026-08-09):** Planned. Quota ticket PENDING (request
-`f6e561bb…`, 16 vCPUs of `L-417A185B` in us-west-2, filed 2026-08-09
-12:36 PT; the G-quota equivalent took about a day). Prep is committed:
-the 32B spec entry, seven bench configs, the infra H100 profile, this
-doc. The session runs when the quota email lands.
+**Status (2026-08-15):** Complete. The session ran 2026-08-14/15 (a
+Saturday morning JST: the weekday Tokyo pool refused, the weekend pool
+gave an instance on the first try). `h100-results.md` is the record;
+`bench/history/2026-08-15T*` are the runs, with the session log in
+`ab-h100-compile/agent-summary.md`; §4 below is graded verbatim in the
+results doc. ~4 h 55 m ≈ $42. Replan history follows.
+Replanned to Tokyo (2026-08-11). The us-west-2 quota
+(`f6e561bb…`) was approved, but the launch attempt hit
+`InsufficientInstanceCapacity` in all four AZs, and the investigation
+found why it always will: on-demand p5.4xlarge is sold only in London,
+Mumbai, Jakarta, Tokyo, and São Paulo; us-west-2 carries the type for
+**Capacity Blocks for ML only**, so its on-demand pool is effectively
+empty and the vCPU quota there buys nothing. Pivot: **ap-northeast-1
+(Tokyo)**, on-demand $8.60/hr, and exactly one AZ carries the type
+(**ap-northeast-1c**: pin it, there is no AZ walk). New quota ticket
+PENDING (request `d690a3ee…`, 16 vCPUs of `L-417A185B` in
+ap-northeast-1, filed 2026-08-11 evening PT; both prior tickets took
+about a day). Pre-verified in Tokyo: DLAMI (20260724 build) and the
+default-VPC subnet in 1c. Bring-up uses a fresh terraform workspace
+(`terraform workspace new tokyo`) so the us-west-2 key-pair/SG state
+stays intact. Budget at the Tokyo rate: ~$30-39 for the 3.5-4.5 h
+session, hard stop ~$52. Prep is committed: the 32B spec entry, seven
+bench configs, the infra H100 profile, this doc.
+**Update 2026-08-13:** Tokyo quota approved and enforced (16). First
+launch attempt (PT evening = midday JST) hit
+`InsufficientInstanceCapacity` through a ~15 min retry window and was
+cancelled; the 1c spot feed sits pinned at exactly the on-demand
+$8.60/hr around the clock, i.e. the pool is saturated and launches
+ride on-demand's priority over spot when something frees. Plan:
+attempt at a **PT morning (~8 AM PT = midnight JST)**, Tokyo's
+off-peak. The tokyo workspace already holds the key pair + SG (free),
+so the next apply creates only the instance.
 
 This is the last open item of Phase 3. Unlike the sdpa/graphs/compile
 rounds it decides no flag flips: it is a measurement session. The house
@@ -47,11 +74,13 @@ Ten minutes, strictly after the recorded runs.
 ## 2. The box and the bills
 
 **p5.4xlarge**: 1x H100 80 GB (SXM), 16 vCPU, 256 GiB RAM, 3.8 TB local
-NVMe, up to 100 Gbps network. On-demand ~$6.88/hr in us-west-2.
-Invocation (details in `infra/README.md`):
+NVMe, up to 100 Gbps network. On-demand $8.60/hr in ap-northeast-1
+(Tokyo; us-west-2 sells this type via Capacity Blocks only, see
+Status). Invocation (details in `infra/README.md`):
 
 ```
-INSTANCE_TYPE=p5.4xlarge ROOT_VOLUME_GB=150 ./up.sh     # AZ=us-west-2b to dodge capacity
+terraform workspace new tokyo   # once; keeps us-west-2 state intact
+REGION=ap-northeast-1 AZ=ap-northeast-1c INSTANCE_TYPE=p5.4xlarge ROOT_VOLUME_GB=150 ./up.sh
 ```
 
 Weights live on the NVMe via the `model_data` symlink (the repo
@@ -73,8 +102,8 @@ That is 92%+ occupancy, so `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`
 is set from the first server, not after the first OOM: at this pressure,
 fragmentation is the thing that lies about what fits.
 
-**Session budget:** ~3.5-4.5 hours ≈ $25-31. Hard stop at 6 hours /
-~$45 unless Nadia extends it live. `./down.sh` is the last command,
+**Session budget:** ~3.5-4.5 hours ≈ $30-39 at the Tokyo rate. Hard
+stop at 6 hours / ~$52 unless Nadia extends it live. `./down.sh` is the last command,
 verified with `aws ec2 describe-instances`, every time we walk away.
 
 ## 3. Runbook
@@ -85,8 +114,8 @@ that has a timeout, step 9).
 
 | # | step | est |
 |---|---|---|
-| 0 | Pre-flight (Mac): quota approved (`aws service-quotas get-service-quota --service-code ec2 --quota-code L-417A185B`), tree clean, this plan's prep commits pushed | before the day |
-| 1 | `INSTANCE_TYPE=p5.4xlarge ROOT_VOLUME_GB=150 ./up.sh`; on `InsufficientInstanceCapacity`, walk `AZ=us-west-2{a,b,c,d}` | 10 min |
+| 0 | Pre-flight (Mac): quota approved (`aws service-quotas get-service-quota --service-code ec2 --quota-code L-417A185B --region ap-northeast-1`), tree clean, this plan's prep commits pushed | before the day |
+| 1 | `terraform workspace new tokyo` (once), then `REGION=ap-northeast-1 AZ=ap-northeast-1c INSTANCE_TYPE=p5.4xlarge ROOT_VOLUME_GB=150 ./up.sh`; on `InsufficientInstanceCapacity`, retry over ~30 min (1c is the only AZ with the type), else reschedule | 10 min |
 | 2 | `./sync.sh`; `./ssh.sh nvidia-smi` (expect H100 80GB, driver from the DLAMI); node: tmux, the `model_data` symlink + `HF_HOME` export, `uv sync` | 15 min |
 | 3 | **Kick off the 32B download in a background tmux window immediately** (`snapshot_download` via a one-liner; ~65 GB, predicted 4-10 min on the 100 Gbps NIC); it overlaps step 4-5 | 0 (overlapped) |
 | 4 | Suite on the node: `python -m pytest tests/ -v` including the CUDA-marked tripwires | 10 min |
@@ -149,9 +178,10 @@ To be graded in `h100-results.md`, kept not edited:
   boot, fall back to 14B for the whole tier-2 program and say so in the
   results doc. Longctx ladder: 2 x 10240 -> 1 x 10240 -> drop the
   longctx pair.
-- **Capacity ladder**: AZ walk (a-d); if p5.4xlarge has no capacity
-  anywhere in us-west-2 that day, stop and reschedule. No 8-GPU
-  fallback: p5.48xlarge is ~$55/hr and answers no extra question.
+- **Capacity ladder**: ap-northeast-1c is the only AZ carrying the
+  type, so there is no walk: on `InsufficientInstanceCapacity`, retry
+  over ~30 min, then stop and reschedule. No 8-GPU fallback:
+  p5.48xlarge is ~$55/hr and answers no extra question.
 - **Quota stall**: if the ticket is still PENDING after ~2 business
   days, open a support case referencing it.
 - **Time**: hard stop at 6 hours. If the 0.6B tier overruns badly,
