@@ -119,6 +119,14 @@ detail lives behind the zoom targets):
   how it has to split). Hardware figures were verified against vendor
   whitepapers at authoring time; specimen data is a committed capture (below).
   Predictions and quiz answers persist in localStorage.
+- **H100 day** (`#/h100`): the Phase-3 close-out session's results
+  (2026-08-14/15, p5.4xlarge in Tokyo), presented in the chapter kit's look
+  (serif article, def/aside boxes, framed figures) but deliberately not a
+  chapter: no predict gates, no quiz, no exercises. `h100-results.md` in the
+  repo root is canonical; the tab carries the 0.6B cross-hardware anchor, the
+  32B stack-vs-eager A/B, the decode-step-vs-bandwidth-floor figure, the
+  open-loop knee, and the graded-predictions scoreboard. Charts are static
+  SVG with hover tooltips, validated chapter palette, light mode.
 
 ## Regenerating the traces
 

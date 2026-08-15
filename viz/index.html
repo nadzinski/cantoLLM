@@ -482,7 +482,7 @@
      the selector here so the shared palette variables are remapped inside it and
      reused components (transport, fw-board, chips) pick up the chapter's colors
      automatically. The JS half of the kit is chapterKit() next to makeTransport. */
-  #view-cudagraphs, #view-quant, #view-quant2 {
+  #view-cudagraphs, #view-quant, #view-quant2, #view-h100 {
     --plane: #f4f2ec;
     --surface: #ffffff;
     --grid: #e3dfd3;
@@ -573,6 +573,15 @@
     margin: -1.2rem 0 1.6rem; line-height: 1.5;
   }
   .chapter figure.fig { margin: 1.5rem 0 1.7rem; }
+  /* h100 tab: prediction scoreboard */
+  .chapter table.h1-score { border-collapse: collapse; width: 100%; margin: 1.2rem 0 1.6rem; font-size: 0.86rem; }
+  .chapter table.h1-score th { text-align: left; color: var(--muted); font-weight: 600; padding: 0.3rem 0.55rem; border-bottom: 1px solid var(--axis); }
+  .chapter table.h1-score td { padding: 0.34rem 0.55rem; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  .chapter .h1-pass, .chapter .h1-miss, .chapter .h1-split { display: inline-block; padding: 0.06rem 0.5rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+  .chapter .h1-pass { background: #e7f0e9; color: var(--sB); }
+  .chapter .h1-miss { background: var(--cg-rust-soft); color: var(--sC); }
+  .chapter .h1-split { background: var(--cg-accent-soft); color: var(--sA); }
+  .chapter .h1-note { color: var(--muted); font-size: 0.8rem; }
   .chapter figure.fig svg { display: block; width: 100%; height: auto; }
   .chapter figure.fig figcaption {
     font-family: var(--sans); font-size: 0.85rem; color: var(--muted);
@@ -733,6 +742,7 @@
       <a href="#/cudagraphs" data-route="cudagraphs">CUDA graphs</a>
       <a href="#/quant" data-route="quant">Quantization</a>
       <a href="#/quant2" data-route="quant2">Quantization v2</a>
+      <a href="#/h100" data-route="h100">H100 day</a>
     </nav>
   </header>
 
@@ -900,6 +910,15 @@
        under its own localStorage key. -->
   <section id="view-quant2" data-view hidden>
     <div id="qt2-body"></div>
+  </section>
+
+  <!-- ================= H100 DAY =================
+       Results tab in the chapter kit's look (serif article, def/aside boxes,
+       framed figures) but deliberately NOT a chapter: no predict gates, no
+       quiz, no exercises. h100-results.md is canonical; this presents it.
+       Charts use the validated chapter palette (sA/sB/sC), light mode. -->
+  <section id="view-h100" data-view hidden>
+    <div id="h1-body"></div>
   </section>
 
   <footer id="foot"></footer>
@@ -1298,6 +1317,7 @@ const VIEW_INIT = {
   'cudagraphs': initCudaGraphs,
   'quant': initQuant,
   'quant2': initQuant2,
+  'h100': initH100,
 };
 
 function route() {
@@ -1494,9 +1514,9 @@ function initRoadmap() {
         'Bench (5090 baseline, spec’d): 1145 vs 165 tok/s aggregate (~7×) on 0.6B; the TTFT trade appeared (1.5 s queue wait at c=16 on 8 slots) and doubling slots dissolved it (50 ms) — and a ~11.4 ms step time nearly independent of row count says small-model decode is per-step-overhead-bound (a Phase 3 CUDA-graphs lead)',
         '→ See the <a href="#/batching">Continuous batching</a> and <a href="#/wiring">CB wiring</a> tabs',
       ] },
-    { id: '3', title: 'CUDA beachhead', hw: '5090 · 1 H100 day', status: 'active',
+    { id: '3', title: 'CUDA beachhead', hw: '5090 · 1 H100 day', status: 'done',
       goal: 'First real perf-tuning pass, against a target whose shape is finally stable.',
-      statusLine: 'Status (2026-08-08): In progress. Step profiling (step-profiling.md) found the decode floor: CPU dispatch — ~2700 CUDA API calls/step, GPU ~60% idle. Top two sinks fixed (ragged KV write vectorized via KVWriteMap; sampling finalize batched to one transfer/step): 0.6B batched 1145 → 1469 tok/s (+28%). SDPA landed (author-hand-written attend, 910b7bd) and was validated on the 5090 same day — sdpa-results.md is the record: the mem-efficient routing assumption was wrong (efficient rejects dense GQA, flash rejects the mask; the one fused acceptor is cuDNN, which default priority ranks below math — the attend ran silently unfused until pinned with set_priority=True; tripwire tests now assert the fused kernel executes). The A/B then found the real lesson: cuDNN compiles a ~200 ms plan per distinct problem shape and CB churns shapes every step — SDPA lost end-to-end despite fused microbenchmark wins. The response landed same day (PR #1, merged): a bounded step-shape vocabulary — chunk widths quantized in the water-fill, kv-span/batch padding at one boundary (shaping.py, filler rows num_new == 0), 477-shape warm-up behind Ready. Second A/B (shape-buckets-results.md): plan churn eliminated (zero steps > 100 ms vs 23.9%), warm cuDNN wins long_context 1.6–2.2× (179 vs 80 tok/s at c=4), padded+buckets is repeat-noise; bill = 102 s warm-up. sdpa + shape buckets + warm-up is now the CUDA serve default (per-piece opt-outs; Mac/CPU stays padded). CUDA graphs landed 2026-08-05 (cuda-graphs-design.md; GraphedBatchedForward + write-map padding into a scratch position column + BatchMeta.seed_kv_write_map; forward-only capture of the decode shapes, riding the vocabulary’s warm-up sweep; default-on for CUDA) and were validated on the 5090 2026-08-07 — cuda-graphs-results.md is the record: first hardware contact caught the design note’s own §4 hazard for real (a device-compare replace() dropped the seeded write map and invalidated capture; fixed, 40fbcf9), then every gate cleared — launches/step 1859 → 50, 16-row decode p50 10.43 → 5.93 ms (the GPU-busy floor; decode is finally GPU-bound), short_chat c=16 1457 → 2466 tok/s (+69% vs +30–55% predicted), long_context +15–88% (predicted “noise” — its decode tails were dispatch-bound too), decode-step replay 100%, greedy tokens identical across arms, capture bill 3.4–5.0 s (not the predicted 40–90 s). torch.compile landed 2026-08-08 per torch-compile-design.md (batched forward compiled with the host-side loops hoisted out of the traced region; fullgraph=True as the tripwire; dynamic vs batch-bucket artifact strategy as the A/B experiment; the lm_head mid-prefill-row skip dropped the same day, the toy graphs exercise permanently deferred) and was validated on the 5090 2026-08-08/09 — torch-compile-results.md is the record, and the round found four bugs the CPU suite was structurally blind to, three caught by the protocol’s own tripwires: (1) the stacked KV pool’s per-layer view writes got functionalized into pool-scale copy chains (23× slower compiled, OOM at 48 slots) — fixed by per-layer pool tensors, the production static-cache shape; (2) warm-up metas skipped traffic’s inference-mode device move, so every artifact’s dispatch-key guards rejected the first live request; (3) each (batch, width) family needs both a length-1-specialized and a length-N-symbolic write-map artifact — warm-up now alternates seeded lengths; (4) the traced sdpa cuDNN pin made AOTAutograd bypass its cache outright, re-running Inductor codegen every boot — the pin hoisted to AttentionMethod.execution_context(), and the warm Ready bill fell +66 → +21 s (under the gate; serve also parks the Inductor cache in ~/.cache/cantollm/inductor because systemd wipes /tmp at boot). The clean A/B beat every performance prediction: short_chat c=16 2461 → 3683 tok/s (+49.6%), long_context c=1 179 → 294 (+64%), 16-row decode step 5.93 → 4.0 ms, kernels/step 1859 → 218, zero traffic recompiles, decode-graph replay 100% under compile, strategies within ~3% (dynamic wins on half the artifacts and bill). Greedy streams are NOT token-identical vs eager — bf16 argmax ties at one-ulp (0.0625) margins flip under fused-kernel reordering; drift quantified benign (coherent alternates, max |Δlogit| 0.5 on a 15-scale) and accepted (“eager isn’t ground truth either”). torch_compile is the fifth piece of the CUDA serve default (strategy dynamic; --no-torch-compile opts out; pre-compile A/B configs pinned false). Open: the H100 day.',
+      statusLine: 'Status (2026-08-15): Complete. Step profiling (step-profiling.md) found the decode floor: CPU dispatch — ~2700 CUDA API calls/step, GPU ~60% idle. Top two sinks fixed (ragged KV write vectorized via KVWriteMap; sampling finalize batched to one transfer/step): 0.6B batched 1145 → 1469 tok/s (+28%). SDPA landed (author-hand-written attend, 910b7bd) and was validated on the 5090 same day — sdpa-results.md is the record: the mem-efficient routing assumption was wrong (efficient rejects dense GQA, flash rejects the mask; the one fused acceptor is cuDNN, which default priority ranks below math — the attend ran silently unfused until pinned with set_priority=True; tripwire tests now assert the fused kernel executes). The A/B then found the real lesson: cuDNN compiles a ~200 ms plan per distinct problem shape and CB churns shapes every step — SDPA lost end-to-end despite fused microbenchmark wins. The response landed same day (PR #1, merged): a bounded step-shape vocabulary — chunk widths quantized in the water-fill, kv-span/batch padding at one boundary (shaping.py, filler rows num_new == 0), 477-shape warm-up behind Ready. Second A/B (shape-buckets-results.md): plan churn eliminated (zero steps > 100 ms vs 23.9%), warm cuDNN wins long_context 1.6–2.2× (179 vs 80 tok/s at c=4), padded+buckets is repeat-noise; bill = 102 s warm-up. sdpa + shape buckets + warm-up is now the CUDA serve default (per-piece opt-outs; Mac/CPU stays padded). CUDA graphs landed 2026-08-05 (cuda-graphs-design.md; GraphedBatchedForward + write-map padding into a scratch position column + BatchMeta.seed_kv_write_map; forward-only capture of the decode shapes, riding the vocabulary’s warm-up sweep; default-on for CUDA) and were validated on the 5090 2026-08-07 — cuda-graphs-results.md is the record: first hardware contact caught the design note’s own §4 hazard for real (a device-compare replace() dropped the seeded write map and invalidated capture; fixed, 40fbcf9), then every gate cleared — launches/step 1859 → 50, 16-row decode p50 10.43 → 5.93 ms (the GPU-busy floor; decode is finally GPU-bound), short_chat c=16 1457 → 2466 tok/s (+69% vs +30–55% predicted), long_context +15–88% (predicted “noise” — its decode tails were dispatch-bound too), decode-step replay 100%, greedy tokens identical across arms, capture bill 3.4–5.0 s (not the predicted 40–90 s). torch.compile landed 2026-08-08 per torch-compile-design.md (batched forward compiled with the host-side loops hoisted out of the traced region; fullgraph=True as the tripwire; dynamic vs batch-bucket artifact strategy as the A/B experiment; the lm_head mid-prefill-row skip dropped the same day, the toy graphs exercise permanently deferred) and was validated on the 5090 2026-08-08/09 — torch-compile-results.md is the record, and the round found four bugs the CPU suite was structurally blind to, three caught by the protocol’s own tripwires: (1) the stacked KV pool’s per-layer view writes got functionalized into pool-scale copy chains (23× slower compiled, OOM at 48 slots) — fixed by per-layer pool tensors, the production static-cache shape; (2) warm-up metas skipped traffic’s inference-mode device move, so every artifact’s dispatch-key guards rejected the first live request; (3) each (batch, width) family needs both a length-1-specialized and a length-N-symbolic write-map artifact — warm-up now alternates seeded lengths; (4) the traced sdpa cuDNN pin made AOTAutograd bypass its cache outright, re-running Inductor codegen every boot — the pin hoisted to AttentionMethod.execution_context(), and the warm Ready bill fell +66 → +21 s (under the gate; serve also parks the Inductor cache in ~/.cache/cantollm/inductor because systemd wipes /tmp at boot). The clean A/B beat every performance prediction: short_chat c=16 2461 → 3683 tok/s (+49.6%), long_context c=1 179 → 294 (+64%), 16-row decode step 5.93 → 4.0 ms, kernels/step 1859 → 218, zero traffic recompiles, decode-graph replay 100% under compile, strategies within ~3% (dynamic wins on half the artifacts and bill). Greedy streams are NOT token-identical vs eager — bf16 argmax ties at one-ulp (0.0625) margins flip under fused-kernel reordering; drift quantified benign (coherent alternates, max |Δlogit| 0.5 on a 15-scale) and accepted (“eager isn’t ground truth either”). torch_compile is the fifth piece of the CUDA serve default (strategy dynamic; --no-torch-compile opts out; pre-compile A/B configs pinned false). The phase closed with the H100 day (2026-08-14/15, p5.4xlarge in Tokyo after the us-west-2 capacity-blocks-only discovery; h100-results.md is the record, presented in the H100 day tab): the 5090 wins nearly every absolute 0.6B cell while compile\u2019s relative win is larger on Hopper; the first 32B ever hosted fits at 8x4096 and the stack beats eager +159-191% because the server host dispatches 2.5-4x slower than the desktop; production 32B decode 27.5 ms vs the 19.6 ms bandwidth floor (2.38 TB/s achieved); knee at 1.5-2.0 rps; a working 32B webchat through the tunnel. No flag flips: the serve default performed as shipped.',
       items: [
         '<code>SDPAAttentionMethod</code> (F.scaled_dot_product_attention, cuDNN-pinned) is the CUDA default, riding the bounded step-shape vocabulary (quantized chunk widths, kv/batch buckets, warm-up behind Ready) that killed cuDNN&#39;s per-shape plan-compile churn; einsum stays the correctness oracle and Mac/CPU fallback',
         '<code>torch.compile</code> on the batched forward — dynamic shapes will fight back; compile per batch-size bucket; budget a day of <code>torch._dynamo.explain()</code>',
@@ -10463,6 +10483,309 @@ NVIDIA&rsquo;s NVFP4 notes, BitNet b1.58 (Ma et al. 2024), and the FP8 formats p
       explain: '4 + 8/32 = 4.25, the number OpenAI quotes for GPT-OSS&rsquo;s MoE weights. NVFP4 pays 4 + 8/16 = 4.5 (plus one fp32 per tensor) to buy a gentler scale and a smaller blast radius. In quantization, even the scales are on the bill.' },
   ];
   buildQuiz(article, QUIZ, 'q2-quiz');
+}
+
+/* =============== H100 day (results tab: chapter look, no gates/quiz) =============== */
+function initH100() {
+  const $id = (i) => document.getElementById(i);
+
+  /* ---------- curated data ----------
+     Everything below is transcribed from bench/history/2026-08-15T*_nogit_*
+     (medians of repeats) and the profile logs of the same session;
+     h100-results.md is the canonical record, h100-plan.md section 4 the
+     predictions being graded. */
+  const RUST = 'var(--sC)', BLUE = 'var(--sA)', GREEN = 'var(--sB)';
+  const INK2 = 'var(--ink2)', MUTED = 'var(--muted)', GRID = 'var(--grid)';
+
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const txt = (x, y, s, size, fill, anchor, extra) =>
+    '<text x="' + x + '" y="' + y + '" style="font-size:' + size + 'px;fill:' + fill +
+    ';font-family:inherit;' + (extra || '') + '" text-anchor="' + (anchor || 'start') + '">' + s + '</text>';
+  const tipRect = (x, y, w, h, tip) =>
+    '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h +
+    '" fill="transparent" data-tip="' + esc(tip) + '"/>';
+  const svgOpen = (h) =>
+    '<svg viewBox="0 0 700 ' + h + '" style="width:100%;height:auto;display:block" role="img">';
+
+  /* horizontal bar with rounded data end, value label, hover tip */
+  const bar = (x, y, w, color, opacity, label, tip) => {
+    let s = '<rect x="' + x + '" y="' + y + '" width="' + Math.max(w, 2) + '" height="14" rx="3" fill="' +
+      color + '" fill-opacity="' + opacity + '"/>';
+    if (label) s += txt(x + Math.max(w, 2) + 6, y + 11, label, 11, INK2);
+    s += tipRect(x, y - 1, Math.max(w, 2) + 60, 16, tip);
+    return s;
+  };
+  const legendChip = (x, y, color, opacity, label) =>
+    '<rect x="' + x + '" y="' + y + '" width="12" height="12" rx="3" fill="' + color +
+    '" fill-opacity="' + opacity + '"/>' + txt(x + 17, y + 10, label, 11, INK2);
+
+  /* ---------- figure A: the 0.6B anchor ---------- */
+  const figAnchor = (() => {
+    const groups = [
+      ['short_chat c=16', 2461, 3683, 1855, 3125],
+      ['code c=8', 1366, 2097, 988, 1791],
+      ['long_context c=1', 179, 294, 110, 222],
+      ['long_context c=4', 208, 255, 182, 321],
+    ];
+    const X0 = 8, PW = 560, MAX = 3700, sc = (v) => X0 + (v / MAX) * PW;
+    let y = 26, s = '';
+    s += legendChip(8, 4, RUST, 0.45, '5090 baseline') + legendChip(120, 4, RUST, 1, '5090 +compile') +
+         legendChip(238, 4, BLUE, 0.45, 'H100 baseline') + legendChip(356, 4, BLUE, 1, 'H100 +compile');
+    for (const [name, fb, fc, hb, hc] of groups) {
+      s += txt(X0, y + 12, name, 12, 'var(--ink)', 'start', 'font-weight:600');
+      y += 18;
+      s += bar(X0, y, sc(fb) - X0, RUST, 0.45, String(fb), '5090 baseline: ' + fb + ' tok/s'); y += 17;
+      s += bar(X0, y, sc(fc) - X0, RUST, 1, String(fc), '5090 +compile dynamic: ' + fc + ' tok/s'); y += 17;
+      s += bar(X0, y, sc(hb) - X0, BLUE, 0.45, String(hb), 'H100 baseline: ' + hb + ' tok/s'); y += 17;
+      s += bar(X0, y, sc(hc) - X0, BLUE, 1, String(hc), 'H100 +compile dynamic: ' + hc + ' tok/s'); y += 27;
+    }
+    return svgOpen(y - 4) + s + '</svg>';
+  })();
+
+  /* ---------- figure B: the 32B step vs the floor ---------- */
+  const figStep = (() => {
+    const X0 = 158, PW = 500, MAX = 82, sc = (v) => X0 + (v / MAX) * PW;
+    let s = '', y = 24;
+    s += legendChip(X0, 2, RUST, 1, 'CPU dispatch') + legendChip(268, 2, GREEN, 1, 'GPU-bound step') +
+         legendChip(408, 2, 'var(--cg-faint)', 1, 'other host work');
+    const rows = [
+      ['eager', 76.7, 1.6, null, '78.3 ms', 'eager: 78.3 ms total, 76.7 ms CPU dispatch over 4267 launches'],
+      ['+ compile, graphs off', 33.9, 1.7, null, '35.6 ms', 'compiled, no graphs: 35.6 ms, 33.9 ms CPU over 538 launches'],
+      ['serve default (graphs on)', null, null, 27.5, '27.5 ms', 'production step_dur p50: 27.5 ms, GPU-bound (replay, ~50 launches)'],
+    ];
+    for (const [name, cpu, rest, gpu, lab, tip] of rows) {
+      s += txt(X0 - 8, y + 11, name, 11.5, INK2, 'end');
+      if (gpu === null) {
+        s += '<rect x="' + X0 + '" y="' + y + '" width="' + (sc(cpu) - X0) + '" height="14" rx="3" fill="' + RUST + '"/>';
+        s += '<rect x="' + (sc(cpu) + 2) + '" y="' + y + '" width="' + (sc(cpu + rest) - sc(cpu) - 2) +
+             '" height="14" rx="3" fill="var(--cg-faint)"/>';
+        s += txt(sc(cpu + rest) + 6, y + 11, lab, 11, INK2);
+      } else {
+        s += '<rect x="' + X0 + '" y="' + y + '" width="' + (sc(gpu) - X0) + '" height="14" rx="3" fill="' + GREEN + '"/>';
+        s += txt(sc(gpu) + 6, y + 11, lab, 11, INK2);
+      }
+      s += tipRect(X0, y - 1, PW, 16, tip);
+      y += 26;
+    }
+    const fx = sc(19.6);
+    s += '<line x1="' + fx + '" y1="18" x2="' + fx + '" y2="' + (y - 6) +
+         '" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="5 4"/>';
+    s += txt(fx, y + 10, '19.6 ms floor (65.5 GB / 3.35 TB/s)', 11, 'var(--ink)', 'middle');
+    return svgOpen(y + 18) + s + '</svg>';
+  })();
+
+  /* ---------- figure C: the 32B A/B ---------- */
+  const fig32b = (() => {
+    const cells = [
+      ['short_chat c=4', 50.1, 146.0, '+191%'],
+      ['short_chat c=8', 97.0, 280.2, '+189%'],
+      ['code c=8', 94.4, 244.5, '+159%'],
+      ['long_context c=1', 11.4, 30.9, '+171%'],
+      ['long_context c=2', 15.3, 44.4, '+190%'],
+    ];
+    const X0 = 130, PW = 470, MAX = 300, sc = (v) => X0 + (v / MAX) * PW;
+    let s = '', y = 24;
+    s += legendChip(X0, 2, RUST, 1, 'eager (everything off)') + legendChip(300, 2, BLUE, 1, 'serve default');
+    for (const [name, e, d, win] of cells) {
+      s += txt(X0 - 8, y + 20, name, 11.5, INK2, 'end');
+      s += bar(X0, y, sc(e) - X0, RUST, 1, String(e), 'eager: ' + e + ' tok/s'); y += 17;
+      s += bar(X0, y, sc(d) - X0, BLUE, 1, d + '  ' + win, 'serve default: ' + d + ' tok/s (' + win + ')'); y += 25;
+    }
+    return svgOpen(y - 2) + s + '</svg>';
+  })();
+
+  /* ---------- figure D: the knee ---------- */
+  const figKnee = (() => {
+    const RPS = [1, 1.5, 2, 2.5, 3, 4];
+    const P50 = [0.12, 0.15, 1.42, 4.82, 7.59, 11.47];
+    const P99 = [0.76, 2.03, 3.67, 9.12, 14.55, 22.40];
+    const AGG = [112.6, 166.2, 215.7, 233.7, 238.0, 240.3];
+    const X0 = 52, PW = 560, xs = (r) => X0 + ((r - 1) / 3) * PW;
+    let s = '';
+    /* panel 1: TTFT */
+    const Y0 = 16, PH = 150, ymax = 24, ys = (v) => Y0 + PH - (v / ymax) * PH;
+    s += '<rect x="' + xs(1.5) + '" y="' + Y0 + '" width="' + (xs(2) - xs(1.5)) +
+         '" height="' + PH + '" fill="var(--plane)"/>' +
+         txt((xs(1.5) + xs(2)) / 2, Y0 + 12, 'the knee', 11, MUTED, 'middle');
+    for (const g of [0, 10, 20]) {
+      s += '<line x1="' + X0 + '" y1="' + ys(g) + '" x2="' + (X0 + PW) + '" y2="' + ys(g) +
+           '" stroke="' + GRID + '" stroke-width="1"/>' + txt(X0 - 8, ys(g) + 4, g + ' s', 10.5, MUTED, 'end');
+    }
+    const line = (vals, color, name) => {
+      let p = '', out = '';
+      vals.forEach((v, i) => { p += (i ? ' L' : 'M') + xs(RPS[i]) + ' ' + ys(v); });
+      out += '<path d="' + p + '" fill="none" stroke="' + color + '" stroke-width="2"/>';
+      vals.forEach((v, i) => {
+        out += '<circle cx="' + xs(RPS[i]) + '" cy="' + ys(v) + '" r="4" fill="' + color + '"/>' +
+               tipRect(xs(RPS[i]) - 10, ys(v) - 10, 20, 20, name + ' at ' + RPS[i] + ' rps: ' + v + ' s');
+      });
+      out += txt(X0 + PW + 8, ys(vals[vals.length - 1]) + 4, name, 11, color);
+      return out;
+    };
+    s += line(P99, RUST, 'TTFT p99') + line(P50, BLUE, 'TTFT p50');
+    /* panel 2: aggregate */
+    const Y2 = Y0 + PH + 46, PH2 = 96, amax = 260, ya = (v) => Y2 + PH2 - (v / amax) * PH2;
+    for (const g of [0, 120, 240]) {
+      s += '<line x1="' + X0 + '" y1="' + ya(g) + '" x2="' + (X0 + PW) + '" y2="' + ya(g) +
+           '" stroke="' + GRID + '" stroke-width="1"/>' + txt(X0 - 8, ya(g) + 4, String(g), 10.5, MUTED, 'end');
+    }
+    s += '<line x1="' + X0 + '" y1="' + ya(240) + '" x2="' + (X0 + PW) + '" y2="' + ya(240) +
+         '" stroke="var(--ink)" stroke-width="1" stroke-dasharray="4 4"/>' +
+         txt(X0 + PW - 4, ya(240) - 6, 'saturation: ~240 tok/s', 10.5, INK2, 'end');
+    let p2 = '';
+    AGG.forEach((v, i) => { p2 += (i ? ' L' : 'M') + xs(RPS[i]) + ' ' + ya(v); });
+    s += '<path d="' + p2 + '" fill="none" stroke="' + BLUE + '" stroke-width="2"/>';
+    AGG.forEach((v, i) => {
+      s += '<circle cx="' + xs(RPS[i]) + '" cy="' + ya(v) + '" r="4" fill="' + BLUE + '"/>' +
+           tipRect(xs(RPS[i]) - 10, ya(v) - 10, 20, 20, v + ' tok/s at ' + RPS[i] + ' rps');
+    });
+    s += txt(X0 + PW + 8, ya(AGG[5]) + 4, 'agg tok/s', 11, BLUE);
+    /* shared x axis labels */
+    const YX = Y2 + PH2 + 18;
+    for (const r of RPS) s += txt(xs(r), YX, String(r), 10.5, MUTED, 'middle');
+    s += txt(X0 + PW / 2, YX + 16, 'offered load (requests per second, open loop)', 11, MUTED, 'middle');
+    return svgOpen(YX + 24) + s + '</svg>';
+  })();
+
+  /* ---------- the article ---------- */
+  const article = document.createElement('article');
+  article.className = 'chapter';
+  article.innerHTML = `
+<h1>The H100 day</h1>
+<p class="lede">One rented H100 for one evening (2026-08-14/15, a p5.4xlarge in Tokyo,
+$8.60/hr, about $42 all in): the Phase-3 close-out measurement session. No flag flips
+were at stake; the question was how the stack the 5090 rounds built behaves on server
+iron and on a model fifty times the size. Short version: at 0.6B the 5090 keeps its
+crown, at 32B the stack&rsquo;s win refuses to shrink, and nearly every wrong prediction
+was wrong for the same reason: the server&rsquo;s CPU, not its GPU, sets the terms.
+<code>h100-results.md</code> in the repo root is the canonical
+record; this tab presents it.</p>
+
+<aside class="note"><span class="label">Getting a machine at all</span>
+On-demand p5.4xlarge is sold in exactly five regions (London, Mumbai, Jakarta, Tokyo,
+Sao Paulo). us-west-2 carries the type for Capacity Blocks only, so a granted quota
+there buys InsufficientInstanceCapacity forever: the offerings API lists the type, the
+spot feed ticks (resold reservation leftovers), and RunInstances never succeeds. Tokyo
+refused a weekday midday too (its spot price sits pinned at exactly the on-demand rate,
+the signature of a saturated pool) and then handed over an instance first try on a
+Saturday morning JST. Capacity has a weekly rhythm; rent accordingly.</aside>
+
+<h2>The 0.6B anchor: same configs, different silicon</h2>
+<p>The compile round&rsquo;s A/B configs re-ran unchanged, so every cell has a direct
+5090 sibling. The 5090 wins nearly every absolute cell: small-model decode is many
+small kernels, a game of clocks and dispatch rate that a 2.9 GHz consumer card wins
+against a 1.8 GHz datacenter part. The exception, and the day&rsquo;s cleanest
+teaching cell, is long_context c=4 under compile: four long KV histories per decode
+step finally give each kernel enough parallel work to run the H100 in its throughput
+regime, and it takes the cell 321 to 255.</p>
+
+<figure class="fig">${figAnchor}
+<figcaption>Aggregate tok/s, medians of 3, exact 5090-config re-runs
+(ab_h100_compile + longctx sibling). Hover any bar for the number.</figcaption></figure>
+
+<p>Meanwhile compile&rsquo;s <em>relative</em> win is larger on Hopper in every cell
+(+69% vs +49.6% at short_chat c=16; +101% vs +64% at long_context c=1). PLAN.md&rsquo;s
+old &ldquo;compile has more headroom on Hopper&rdquo; claim comes true in relative
+terms while losing in absolute ones, and for an unflattering reason: the eager
+starting point is worse here, so erasing overhead buys more.</p>
+
+<h2>The finding underneath: the host CPU</h2>
+<div class="def"><span class="label">Definition &middot; dispatch-bound, on a server</span>
+A step is dispatch-bound when the CPU cannot issue kernels as fast as the GPU retires
+them. The p5&rsquo;s host CPU spends ~6 &micro;s per launch against the 5090
+host&rsquo;s ~2-3 &micro;s, so the boundary between &ldquo;dispatch-bound&rdquo; and
+&ldquo;GPU-bound&rdquo; sits at a much bigger model here than on the desktop.</div>
+<p>The flagless probe puts the 0.6B eager 16-row step at 37.2 ms with 35.4 ms of it
+CPU dispatch, flat from 1 to 48 rows, GPU nearly idle. The same tax priced every bill
+of the day at 2.5-3x the 5090 host: warm-up sweep 204 s vs 78, cold compile-dynamic
+Ready 647 s vs 226, and the 32B cold Ready at 24.6 minutes (sweep + Inductor 1244 s of
+CPU). One arm died of it: 0.6B compile-batch-bucket compiles ~2x the artifacts, blew
+the config&rsquo;s 900 s health timeout, and lost its points (both H100 0.6B configs now
+carry 1800 s; the re-run was descoped since the 5090 already answered the strategy
+question).</p>
+
+<h2>The 32B headline</h2>
+<p>First 32B this engine has ever hosted: 65.5 GB of bf16 weights, 8 slots of 4096,
+73.4 GB peak of the 80 (the OOM ladder was never touched). The prediction said the
+stack&rsquo;s win would shrink to +30-70% here, because a 32B decode step is ~20 ms of
+genuine GPU work that no dispatch fix touches. It missed in the stack&rsquo;s favor:</p>
+
+<figure class="fig">${fig32b}
+<figcaption>Qwen3-32B, serve default vs everything-off eager, medians of 3
+(ab_h100_32b_* pairs). The win holds at 2.6-2.9x across every cell.</figcaption></figure>
+
+<p>The 32B probe explains it. The eager 8-row step is 78.3 ms, of which 76.7 ms is CPU
+dispatch across 4,267 launches (the launch-flood prediction, confirmed within 2%). The
+GPU&rsquo;s ~20 ms of work hides completely under the launch stream: eager 32B on this
+host measures the CPU, not the model. Compiled-without-graphs still spends 33.9 ms of
+CPU over 538 launches. Only with <a href="#/cudagraphs">CUDA-graph replay</a> does the
+measurement flip to the GPU:</p>
+
+<figure class="fig">${figStep}
+<figcaption>The 32B decode step, three ways, against the bandwidth floor. Probe rows
+are the graphs-off decomposition; the green row is production step_dur p50 from the
+recorded A/B (occupancy 0.98, replay 100% of pure-decode steps).</figcaption></figure>
+
+<div class="def"><span class="label">Definition &middot; the bytes-over-bandwidth floor</span>
+Decoding one token batch must read every weight once: 65.5 GB at the H100&rsquo;s
+3.35 TB/s is 19.6 ms, a floor no software touches. Production lands at 27.5 ms, +40%,
+an achieved 2.38 TB/s (71% of spec): attention, sampling, and the imperfect overlap of
+a real serving step price the gap. The <a href="#/quant">quantization chapter&rsquo;s</a>
+bytes argument now has a measured anchor from this repo&rsquo;s own hardware.</div>
+
+<h2>Where one H100 falls over</h2>
+<p>The purchased extra: open-loop Poisson arrivals against the full default stack,
+128-token outputs. The queue-theory textbook shape arrived on schedule, with the tail
+detonating first: p99 blows up at 1.5 rps while p50 still reads 150 ms, and p50
+follows at 2.0. The knee sits at 1.5-2.0 rps, left of the predicted 2.0-3.0, because
+saturation is ~240 tok/s (the real 27.5 ms step and the prefill share), and
+240/128 &asymp; 1.9 rps is where the queue must diverge.</p>
+
+<figure class="fig">${figKnee}
+<figcaption>knee_h100_32b_openloop: TTFT percentiles (top) and aggregate throughput
+(bottom) vs offered load. Repeats 2; hover the points.</figcaption></figure>
+
+<h2>Scoreboard</h2>
+<p>Twelve predictions went on record in h100-plan.md &sect;4 before the session;
+h100-results.md &sect;7 grades them in full. The compressed card:</p>
+<table class="h1-score">
+<tr><th>#</th><th>claim</th><th>verdict</th></tr>
+<tr><td>1</td><td>bring-up clean, suite green first try</td><td><span class="h1-pass">confirmed</span></td></tr>
+<tr><td>2</td><td>H100 does not clearly beat the 5090 at 0.6B decode</td><td><span class="h1-pass">confirmed</span></td></tr>
+<tr><td>3</td><td>0.6B prefill/long-context favor the H100</td><td><span class="h1-miss">missed</span> <span class="h1-note">(except longctx c=4 compiled)</span></td></tr>
+<tr><td>4</td><td>kernel census model-shaped, Hopper names appear</td><td><span class="h1-pass">confirmed</span></td></tr>
+<tr><td>5</td><td>Ready bills same-order, slightly worse</td><td><span class="h1-miss">missed</span> <span class="h1-note">(2.5-3x worse)</span></td></tr>
+<tr><td>6</td><td>32B fits at 8x4096, peak 72-78 GB</td><td><span class="h1-pass">confirmed</span> <span class="h1-note">(73.4 GB)</span></td></tr>
+<tr><td>7</td><td>download 4-10 min; cold Ready 6-12 min</td><td><span class="h1-split">split</span> <span class="h1-note">(3 min; 24.6 min)</span></td></tr>
+<tr><td>8</td><td>32B step 20-24 ms; 2.7-3.3 TB/s; eager 26-45 ms; ~4200 launches</td><td><span class="h1-split">split</span> <span class="h1-note">(27.5; 2.38; 78.3; 4267 &check;)</span></td></tr>
+<tr><td>9</td><td>stack win shrinks to +30-70% at 32B</td><td><span class="h1-miss">missed</span> <span class="h1-note">(+159-191%, the good direction)</span></td></tr>
+<tr><td>10</td><td>knee at 2.0-3.0 rps, p99-then-p50 shape</td><td><span class="h1-split">split</span> <span class="h1-note">(1.5-2.0; shape &check;)</span></td></tr>
+<tr><td>11</td><td>webchat works through the tunnel</td><td><span class="h1-pass">confirmed</span></td></tr>
+<tr><td>12</td><td>session under $35</td><td><span class="h1-miss">missed</span> <span class="h1-note">(~$42)</span></td></tr>
+</table>
+
+<p>Phase 3 is complete. The serve default (sdpa + shape buckets + warm-up + CUDA
+graphs + torch.compile) shipped to new hardware and a new model size with zero engine
+changes, zero traffic recompiles on the tripwired arm, and 100.00% pure-decode graph
+replay in all four graph-enabled runs. The walk-through lesson, one sentence: on
+server-class hosts the CPU is slower relative to the GPU than on any desktop, so
+dispatch-erasure is not an optimization tier, it is the difference between measuring
+the CPU and measuring the GPU, and the bigger the model, the more the eager number
+lies about what the hardware can do.</p>
+
+<aside class="note"><span class="label">Provenance</span>
+Runs: bench/history/2026-08-15T*_nogit_* (the nogit stamp: an rsynced tree carries no
+.git; the engine code is main 7848c6d). The session log with graded predictions sits
+in ab-h100-compile/agent-summary.md. About a third of the cells carry a TTFT
+repeat-variance warning (CV 5-14%); the 5090 rounds had zero, so read H100 TTFT
+numbers as noisier. Aggregate-throughput medians are clean everywhere.</aside>
+`;
+
+  $id('h1-body').appendChild(article);
+  article.querySelectorAll('figure.fig [data-tip]').forEach((n) => {
+    n.addEventListener('mousemove', showTip);
+    n.addEventListener('mouseleave', hideTip);
+  });
 }
 
 /* =============== boot =============== */
