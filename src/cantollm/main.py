@@ -394,7 +394,54 @@ def _add_speculative_args(parser):
                         default=None, help="Draft model for speculative decoding")
 
 
-def parse_args():
+def _load_serve_config(path: str, serve_parser) -> dict:
+    """A `[serve]` TOML table, validated against the serve parser's own
+    options, becomes parser defaults: CLI flags override file values, file
+    values override built-ins (argparse set_defaults + re-parse). Same
+    conventions as the bench configs: underscore keys, real TOML booleans
+    for the tri-state flags, unknown keys are hard errors."""
+    import tomllib
+
+    try:
+        with open(path, "rb") as f:
+            raw = tomllib.load(f)
+    except FileNotFoundError:
+        sys.exit(f"error: config file not found: {path}")
+    except tomllib.TOMLDecodeError as exc:
+        sys.exit(f"error: invalid TOML in {path}: {exc}")
+    unknown_tables = set(raw) - {"serve"}
+    if unknown_tables:
+        sys.exit(f"error: {path}: unknown table(s) {sorted(unknown_tables)}; "
+                 "a serve config is a single [serve] table")
+    actions = {
+        a.dest: a for a in serve_parser._actions
+        if a.dest not in ("help", "config")
+    }
+    values: dict = {}
+    for key, value in raw.get("serve", {}).items():
+        dest = key.replace("-", "_")
+        action = actions.get(dest)
+        if action is None:
+            sys.exit(f"error: {path}: unknown serve option '{key}'. Known: "
+                     f"{', '.join(sorted(actions))}")
+        if isinstance(action, argparse.BooleanOptionalAction) or action.nargs == 0:
+            if not isinstance(value, bool):
+                sys.exit(f"error: {path}: '{key}' must be true or false")
+        elif action.choices is not None and value not in action.choices:
+            sys.exit(f"error: {path}: '{key}' must be one of "
+                     f"{list(action.choices)}, got {value!r}")
+        elif action.type is int:
+            if not isinstance(value, int) or isinstance(value, bool):
+                sys.exit(f"error: {path}: '{key}' must be an integer")
+        elif action.type is float:
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                sys.exit(f"error: {path}: '{key}' must be a number")
+            value = float(value)
+        values[dest] = value
+    return values
+
+
+def parse_args(argv=None):
     """Parse command line arguments with subcommands."""
     parser = argparse.ArgumentParser(description="CantoLLM — from-scratch Qwen3 inference")
     subparsers = parser.add_subparsers(dest="command")
@@ -429,6 +476,10 @@ def parse_args():
                               help="OTLP/HTTP endpoint for request traces (e.g. "
                                    "http://localhost:4318); also honors "
                                    "OTEL_EXPORTER_OTLP_ENDPOINT. Default: tracing off")
+    serve_parser.add_argument("--config", default=None, metavar="TOML",
+                              help="Serve config file: a [serve] table whose keys "
+                                   "are these options (underscored); CLI flags "
+                                   "override file values (see serve.example.toml)")
     serve_parser.add_argument("--max-batch", type=int, default=8,
                               help="Batched engine: concurrent KV slots (default: 8)")
     serve_parser.add_argument("--batch-max-seq-len", type=int, default=4096,
@@ -544,7 +595,13 @@ def parse_args():
                               default="0.6B",
                               help="Tokenizer to verify against (default: 0.6B)")
 
-    return parser.parse_args(), parser
+    args = parser.parse_args(argv)
+    if args.command == "serve" and args.config is not None:
+        # File values become serve defaults, then a re-parse lets any
+        # explicitly passed CLI flag win over them.
+        serve_parser.set_defaults(**_load_serve_config(args.config, serve_parser))
+        args = parser.parse_args(argv)
+    return args, parser
 
 
 def main():

@@ -1,0 +1,32 @@
+# canto serve --config serve.toml
+#
+# One [serve] table; keys are the serve CLI options with underscores.
+# Precedence: CLI flag > file value > built-in default. Unknown keys are
+# hard errors. The tri-state stack flags (shape_buckets, warmup_shapes,
+# cuda_graphs, torch_compile) take real booleans; leaving one out keeps
+# the device-based default (on for CUDA), exactly like omitting the flag.
+
+[serve]
+model = "0.6B"
+engine = "batched"
+host = "0.0.0.0"
+port = 8000
+device = "auto"
+
+# Batched-engine geometry
+max_batch = 8
+batch_max_seq_len = 4096
+max_tokens_per_step = 256
+# attention = "sdpa"            # default: sdpa on CUDA, padded elsewhere
+# shape_buckets = true
+# warmup_shapes = true
+# cuda_graphs = true
+# torch_compile = true
+# torch_compile_strategy = "dynamic"
+
+# Production hygiene (Phase 3.5)
+drain_timeout = 30.0            # SIGTERM/Ctrl-C: seconds to drain in-flight
+watchdog_timeout = 60.0         # hung-engine kill threshold; 0 disables
+# max_inflight = 32             # default: 4x max_batch (batched), 16 sequential
+admission_timeout = 30.0        # over-cap queue wait before 429
+# otlp_endpoint = "http://localhost:4318"   # request traces (Tempo); off if unset
