@@ -2,7 +2,7 @@
 
 `ServerProcess` spawns `python -m cantollm.main serve ...` (or any injected
 argv — the executor tests spawn a stub), captures its output to a log file,
-polls /health until ready, and tears down SIGTERM→SIGKILL. `AttachedServer`
+polls /ready until the engine is warm, and tears down SIGTERM→SIGKILL. `AttachedServer`
 is the --attach shape: same interface, no lifecycle.
 
 `StatsScraper` polls /debug/engine-stats with the since-cursor at ~1 Hz so
@@ -72,9 +72,24 @@ class ServerProcess:
                         f"log tail:\n{self.log_tail()}"
                     )
                 try:
-                    r = await client.get(f"{self.base_url}/health")
+                    # /ready (not /health): since 3.5 the server binds
+                    # immediately and warms in the background, so liveness
+                    # says nothing about serveability. A crashed engine
+                    # state fails fast instead of burning the timeout.
+                    r = await client.get(f"{self.base_url}/ready")
                     if r.status_code == 200:
                         break
+                    if r.status_code == 503:
+                        try:
+                            state = r.json().get("status")
+                        except ValueError:
+                            state = None
+                        if state == "crashed":
+                            await self.stop()
+                            raise ServerStartupError(
+                                "server engine crashed during startup; "
+                                f"log tail:\n{self.log_tail()}"
+                            )
                 except httpx.HTTPError:
                     pass
                 await asyncio.sleep(HEALTH_POLL_S)
@@ -113,10 +128,14 @@ class AttachedServer:
 
     async def start(self, health_timeout_s: float) -> None:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            r = await client.get(f"{self.base_url}/health")
+            # Prefer /ready; fall back to /health for non-Canto servers
+            # (vLLM and friends) that do not expose it.
+            r = await client.get(f"{self.base_url}/ready")
+            if r.status_code == 404:
+                r = await client.get(f"{self.base_url}/health")
             if r.status_code != 200:
                 raise ServerStartupError(
-                    f"attached server unhealthy: {r.status_code}"
+                    f"attached server not ready: {r.status_code}"
                 )
 
     async def stop(self) -> None:

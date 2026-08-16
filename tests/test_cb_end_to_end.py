@@ -16,10 +16,11 @@ import torch
 from cantollm.api import create_app
 from cantollm.engine import ContinuousBatchingEngine, SequentialEngine
 from cantollm.engine.batching import BatchingConfig
+from cantollm.lifecycle import BuiltEngine
 from cantollm.registry import EngineRegistry
 from cantollm.runtime import build_runtime
 from tests.cb_helpers import PROMPTS, build_engines, collect, make_request
-from tests.fakes import parse_sse
+from tests.fakes import parse_sse, wait_ready
 from tests.tiny_model import tiny_qwen3_spec
 
 
@@ -136,7 +137,8 @@ class TestThroughTheAPI:
         engine = ContinuousBatchingEngine.from_runtime(runtime, config)
         registry = EngineRegistry()
         registry.register(
-            "tiny-cb", engine, runtime, max_request_tokens=config.max_seq_len
+            "tiny-cb", lambda: BuiltEngine(engine, runtime),
+            max_request_tokens=config.max_seq_len, runtime=runtime,
         )
         return create_app(registry)
 
@@ -156,6 +158,7 @@ class TestThroughTheAPI:
                 async with httpx.AsyncClient(
                     transport=transport, base_url="http://test"
                 ) as client:
+                    await wait_ready(client)
                     responses = await asyncio.gather(
                         *(client.post("/v1/messages", json=self._body(5))
                           for _ in range(3))

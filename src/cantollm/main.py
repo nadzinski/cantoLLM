@@ -80,6 +80,7 @@ def cmd_serve(args):
         SequentialEngine,
     )
     from cantollm.engine.batching import BatchingConfig, build_qwen3_batched_scheduler
+    from cantollm.lifecycle import BuiltEngine
     from cantollm.obs.logging import configure_logging
     from cantollm.registry import EngineRegistry
     from cantollm.runtime import build_runtime, build_tokenizer_runtime
@@ -156,29 +157,48 @@ def cmd_serve(args):
             max_tokens_per_step=args.max_tokens_per_step,
             **bucket_kwargs,
         )
+        # Factories, not built engines: the registry's supervisor task runs
+        # them in the background so uvicorn binds immediately and /ready
+        # reports warm-up. The same closure rebuilds after a crash or reload.
         if args.in_process:
-            runtime = build_runtime(spec, device, attention=attention)
-            engine = ContinuousBatchingEngine.from_runtime(runtime, config)
-            api_runtime = runtime
+            def factory(spec=spec, device=device, attention=attention,
+                        config=config) -> BuiltEngine:
+                # Weights + compile + sweep + capture all run in here, on
+                # the supervisor's worker thread.
+                runtime = build_runtime(spec, device, attention=attention)
+                engine = ContinuousBatchingEngine.from_runtime(runtime, config)
+                return BuiltEngine(engine=engine, runtime=runtime)
+
+            api_runtime = None
             where = "in-process"
         else:
-            # The engine process loads the weights (at engine.start(), inside
-            # the app lifespan); the API process only ever holds the tokenizer.
-            engine = EngineProcessClient(
-                build_qwen3_batched_scheduler,
-                {
-                    "size": args.model,
-                    "device": str(device),
-                    "config": config,
-                    "attention": attention,
-                },
-            )
+            # The engine process loads the weights (at engine.start(), from
+            # the supervisor task); the API process only ever holds the
+            # tokenizer, built eagerly so /v1/messages can tokenize the
+            # moment the engine is ready — and it is generation-independent,
+            # so every rebuild reuses the same object.
             api_runtime = build_tokenizer_runtime(spec)
+
+            def factory(api_runtime=api_runtime, config=config,
+                        attention=attention, model=args.model,
+                        device=device) -> BuiltEngine:
+                engine = EngineProcessClient(
+                    build_qwen3_batched_scheduler,
+                    {
+                        "size": model,
+                        "device": str(device),
+                        "config": config,
+                        "attention": attention,
+                    },
+                )
+                return BuiltEngine(engine=engine, runtime=api_runtime)
+
             where = "engine process"
         model_name = spec.name
         # The per-slot capacity doubles as the admission cap.
         registry.register(
-            model_name, engine, api_runtime, max_request_tokens=config.max_seq_len
+            model_name, factory,
+            max_request_tokens=config.max_seq_len, runtime=api_runtime,
         )
         engine_desc = (
             f"continuous batching, {where} (max_batch={config.max_batch}, "
@@ -194,20 +214,30 @@ def cmd_serve(args):
         if args.speculative:
             main_spec = qwen3_spec(args.main_model or args.model)
             draft_spec = qwen3_spec(args.draft_model or "0.6B")
-            runtime = build_runtime(main_spec, device, speculative=draft_spec)
             model_name = f"qwen3-{main_spec.size}+{draft_spec.size}-speculative"
+
+            def factory(main_spec=main_spec, draft_spec=draft_spec,
+                        device=device) -> BuiltEngine:
+                runtime = build_runtime(main_spec, device, speculative=draft_spec)
+                return BuiltEngine(SequentialEngine(runtime), runtime)
+
+            cap_spec = main_spec
         else:
             spec = qwen3_spec(args.model)
-            runtime = build_runtime(spec, device)
             model_name = spec.name
-        engine = SequentialEngine(runtime)
+
+            def factory(spec=spec, device=device) -> BuiltEngine:
+                runtime = build_runtime(spec, device)
+                return BuiltEngine(SequentialEngine(runtime), runtime)
+
+            cap_spec = spec
         # Cap admission at the RoPE table length: the sequential forward
         # indexes freqs_cis by absolute position, so prompt + max_tokens past
         # arch max_seq_len would IndexError mid-generation. A clean 400 beats
         # that.
         registry.register(
-            model_name, engine, runtime,
-            max_request_tokens=runtime.spec.arch["max_seq_len"],
+            model_name, factory,
+            max_request_tokens=cap_spec.arch["max_seq_len"],
         )
         engine_desc = "sequential"
 
@@ -215,7 +245,8 @@ def cmd_serve(args):
 
     print(f"\nCantoLLM server starting on http://{args.host}:{args.port}")
     print("  POST /v1/messages  — Anthropic-compatible Messages API")
-    print("  GET  /health       — Health check")
+    print("  GET  /health       — Health check (API liveness)")
+    print("  GET  /ready        — Readiness + warm-up progress")
     print("  GET  /docs         — OpenAPI docs")
     print(f"\nModel: {model_name}  ·  Engine: {engine_desc}\n")
 

@@ -101,7 +101,12 @@ def build_app(mode: str, crash_after: int | None):
         config = BatchingConfig(max_batch=3, max_seq_len=64, max_tokens_per_step=16)
         engine = ContinuousBatchingEngine.from_runtime(runtime, config)
         registry = EngineRegistry()
-        registry.register("tiny", engine, runtime, max_request_tokens=64)
+        from cantollm.lifecycle import BuiltEngine
+
+        registry.register(
+            "tiny", lambda: BuiltEngine(engine, runtime),
+            max_request_tokens=64, runtime=runtime,
+        )
         return create_app(registry)
 
     if mode == "crash":

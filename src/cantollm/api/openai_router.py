@@ -14,7 +14,11 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
-from cantollm.api.common import check_admission, tokenize_and_build_request
+from cantollm.api.common import (
+    check_admission,
+    tokenize_and_build_request,
+    tracked_events,
+)
 from cantollm.api.openai_adapter import (
     render_chat_completion,
     render_chat_completion_sse,
@@ -111,63 +115,71 @@ def build_openai_router(
                 detail=f"Model '{body.model}' is not registered. Available: {registry.names()}",
             )
 
-        messages, system = _normalize_openai_messages(body.messages)
-        if not messages:
-            raise HTTPException(
-                status_code=400,
-                detail="At least one user or assistant message is required.",
-            )
-
-        max_tokens = (
-            body.max_completion_tokens
-            or body.max_tokens
-            or DEFAULT_MAX_TOKENS
-        )
-
-        if body.ignore_eos and body.stop:
-            raise HTTPException(
-                status_code=400,
-                detail="ignore_eos and stop are mutually exclusive: "
-                "ignore_eos requests fixed-length output, stop sequences end it early.",
-            )
-
-        tokenizer = entry.runtime.tokenizer
+        # Same pre-flight as the Anthropic router: ready check + in-flight
+        # ticket claimed before the first await (see anthropic_router.py).
+        engine = entry.ensure_ready()
+        ticket = entry.begin_request()
         try:
-            req = await tokenize_and_build_request(
-                messages=messages,
-                system=system,
-                sampling_params=SamplingParams.from_temperature_top_p(
-                    body.temperature, body.top_p,
-                ),
-                max_tokens=max_tokens,
-                tokenizer=tokenizer,
-                executor=tokenizer_executor,
-                ignore_eos=body.ignore_eos,
-            )
-            check_admission(req, entry.max_request_tokens)
-        except (ValueError, TypeError, KeyError) as exc:
-            raise HTTPException(status_code=400, detail=str(exc))
+            messages, system = _normalize_openai_messages(body.messages)
+            if not messages:
+                raise HTTPException(
+                    status_code=400,
+                    detail="At least one user or assistant message is required.",
+                )
 
-        events = entry.engine.submit(req)
-        input_tokens = len(req.prompt_token_ids)
-        completion_id = f"chatcmpl-{uuid.uuid4().hex[:24]}"
-        created = int(time.time())
-
-        if body.stream:
-            include_usage = (body.stream_options or StreamOptions()).include_usage
-            return StreamingResponse(
-                render_chat_completion_sse(
-                    events, tokenizer, body.model, input_tokens,
-                    completion_id, created, include_usage,
-                    logprobs_requested=body.logprobs,
-                    stop=body.stop,
-                ),
-                media_type="text/event-stream",
+            max_tokens = (
+                body.max_completion_tokens
+                or body.max_tokens
+                or DEFAULT_MAX_TOKENS
             )
-        return await render_chat_completion(
-            events, tokenizer, body.model, input_tokens, completion_id, created,
-            logprobs_requested=body.logprobs,
-            stop=body.stop,
-        )
+
+            if body.ignore_eos and body.stop:
+                raise HTTPException(
+                    status_code=400,
+                    detail="ignore_eos and stop are mutually exclusive: "
+                    "ignore_eos requests fixed-length output, stop sequences end it early.",
+                )
+
+            tokenizer = entry.runtime.tokenizer
+            try:
+                req = await tokenize_and_build_request(
+                    messages=messages,
+                    system=system,
+                    sampling_params=SamplingParams.from_temperature_top_p(
+                        body.temperature, body.top_p,
+                    ),
+                    max_tokens=max_tokens,
+                    tokenizer=tokenizer,
+                    executor=tokenizer_executor,
+                    ignore_eos=body.ignore_eos,
+                )
+                check_admission(req, entry.max_request_tokens)
+            except (ValueError, TypeError, KeyError) as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+
+            events = tracked_events(ticket, engine.submit(req))
+            input_tokens = len(req.prompt_token_ids)
+            completion_id = f"chatcmpl-{uuid.uuid4().hex[:24]}"
+            created = int(time.time())
+
+            if body.stream:
+                include_usage = (body.stream_options or StreamOptions()).include_usage
+                return StreamingResponse(
+                    render_chat_completion_sse(
+                        events, tokenizer, body.model, input_tokens,
+                        completion_id, created, include_usage,
+                        logprobs_requested=body.logprobs,
+                        stop=body.stop,
+                    ),
+                    media_type="text/event-stream",
+                )
+            return await render_chat_completion(
+                events, tokenizer, body.model, input_tokens, completion_id, created,
+                logprobs_requested=body.logprobs,
+                stop=body.stop,
+            )
+        except BaseException:
+            ticket.close()
+            raise
 
     return router

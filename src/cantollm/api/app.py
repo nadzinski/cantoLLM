@@ -38,11 +38,14 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        await registry.start_all()
+        # Non-blocking: supervisors build engines in the background while
+        # uvicorn serves. /ready reports 503-with-progress until warm;
+        # nothing heavy runs pre-yield, so the socket answers immediately.
+        registry.launch_all()
         try:
             yield
         finally:
-            await registry.shutdown_all()
+            await registry.stop_all()
             tokenizer_executor.shutdown(wait=True, cancel_futures=True)
 
     app = FastAPI(title="CantoLLM", lifespan=lifespan)

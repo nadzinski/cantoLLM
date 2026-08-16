@@ -7,14 +7,31 @@ wrapping the result into an `InferenceRequest`.
 
 import asyncio
 import uuid
+from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
 
-from cantollm.engine.types import InferenceRequest, SamplingParams
+from cantollm.engine.types import InferenceRequest, SamplingParams, TokenEvent
+from cantollm.lifecycle import RequestTicket
 from cantollm.obs.logging import request_id_var
 
 
 class AdmissionError(ValueError):
     """Request rejected at the door, before any engine sees it."""
+
+
+async def tracked_events(
+    ticket: RequestTicket, events: AsyncIterator[TokenEvent]
+) -> AsyncIterator[TokenEvent]:
+    """Wrap an engine event stream so the request's in-flight ticket closes
+    exactly once — on exhaustion, on error, or on aclose (the adapter's
+    disconnect path). Closing this wrapper also closes the inner stream,
+    which is what triggers the engine-side disconnect abort."""
+    try:
+        async for evt in events:
+            yield evt
+    finally:
+        ticket.close()
+        await events.aclose()
 
 
 def check_admission(req: InferenceRequest, max_request_tokens: int | None) -> None:

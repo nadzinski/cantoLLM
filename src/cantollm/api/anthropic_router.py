@@ -7,7 +7,11 @@ from fastapi.responses import StreamingResponse
 
 from cantollm.api.anthropic_adapter import render_message, render_sse
 from cantollm.api.anthropic_types import MessagesRequest
-from cantollm.api.common import check_admission, tokenize_and_build_request
+from cantollm.api.common import (
+    check_admission,
+    tokenize_and_build_request,
+    tracked_events,
+)
 from cantollm.engine.types import SamplingParams
 from cantollm.registry import EngineRegistry
 
@@ -28,40 +32,51 @@ def build_anthropic_router(
                 detail=f"Model '{body.model}' is not registered. Available: {registry.names()}",
             )
 
-        if body.ignore_eos and body.stop_sequences:
-            raise HTTPException(
-                status_code=400,
-                detail="ignore_eos and stop_sequences are mutually exclusive: "
-                "ignore_eos requests fixed-length output, stop sequences end it early.",
-            )
-
-        tokenizer = entry.runtime.tokenizer
+        # Raises NotReadyError (-> 503) while warming/draining/crashed.
+        # Capture the engine now: a supervisor swap mid-request must not mix
+        # generations. The ticket claims the in-flight counter in the same
+        # handler tick, so a drain beginning on any later await still counts
+        # this request; tracked_events (or the except below) closes it.
+        engine = entry.ensure_ready()
+        ticket = entry.begin_request()
         try:
-            req = await tokenize_and_build_request(
-                messages=[m.model_dump() for m in body.messages],
-                system=body.system,
-                sampling_params=SamplingParams.from_temperature_top_p(
-                    body.temperature, body.top_p,
-                ),
-                max_tokens=body.max_tokens,
-                tokenizer=tokenizer,
-                executor=tokenizer_executor,
-                ignore_eos=body.ignore_eos,
-            )
-            check_admission(req, entry.max_request_tokens)
-        except (ValueError, TypeError, KeyError) as exc:
-            raise HTTPException(status_code=400, detail=str(exc))
+            if body.ignore_eos and body.stop_sequences:
+                raise HTTPException(
+                    status_code=400,
+                    detail="ignore_eos and stop_sequences are mutually exclusive: "
+                    "ignore_eos requests fixed-length output, stop sequences end it early.",
+                )
 
-        events = entry.engine.submit(req)
-        input_tokens = len(req.prompt_token_ids)
+            tokenizer = entry.runtime.tokenizer
+            try:
+                req = await tokenize_and_build_request(
+                    messages=[m.model_dump() for m in body.messages],
+                    system=body.system,
+                    sampling_params=SamplingParams.from_temperature_top_p(
+                        body.temperature, body.top_p,
+                    ),
+                    max_tokens=body.max_tokens,
+                    tokenizer=tokenizer,
+                    executor=tokenizer_executor,
+                    ignore_eos=body.ignore_eos,
+                )
+                check_admission(req, entry.max_request_tokens)
+            except (ValueError, TypeError, KeyError) as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
 
-        if body.stream:
-            return StreamingResponse(
-                render_sse(events, tokenizer, body.model, input_tokens,
-                           stop_sequences=body.stop_sequences),
-                media_type="text/event-stream",
-            )
-        return await render_message(events, tokenizer, body.model, input_tokens,
-                                    stop_sequences=body.stop_sequences)
+            events = tracked_events(ticket, engine.submit(req))
+            input_tokens = len(req.prompt_token_ids)
+
+            if body.stream:
+                return StreamingResponse(
+                    render_sse(events, tokenizer, body.model, input_tokens,
+                               stop_sequences=body.stop_sequences),
+                    media_type="text/event-stream",
+                )
+            return await render_message(events, tokenizer, body.model, input_tokens,
+                                        stop_sequences=body.stop_sequences)
+        except BaseException:
+            ticket.close()
+            raise
 
     return router

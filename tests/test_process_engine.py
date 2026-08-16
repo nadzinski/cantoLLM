@@ -27,8 +27,9 @@ from cantollm.engine.batching.scheduler import ContinuousBatchingScheduler
 from cantollm.engine.batching.types import AddRequest
 from cantollm.engine.logits_processors import TemperatureProcessor, TopPProcessor
 from cantollm.engine.types import InferenceRequest, SamplingParams, TokenEvent
+from cantollm.lifecycle import BuiltEngine
 from cantollm.registry import EngineRegistry
-from tests.fakes import FakeRuntime, FakeTokenizer, parse_sse
+from tests.fakes import FakeRuntime, FakeTokenizer, parse_sse, wait_ready
 from tests.toy_stepper import ToyStepper, make_toy_pool, toy_oracle
 
 GREEDY = SamplingParams.from_temperature_top_p(temperature=0.0, top_p=1.0)
@@ -344,11 +345,14 @@ class TestApiSmoke:
         runtime; no model exists in this process."""
         async def main():
             registry = EngineRegistry()
+            runtime = FakeRuntime(FakeTokenizer())
             registry.register(
                 "toy",
-                EngineProcessClient(toy_scheduler_factory),
-                FakeRuntime(FakeTokenizer()),
+                lambda: BuiltEngine(
+                    EngineProcessClient(toy_scheduler_factory), runtime
+                ),
                 max_request_tokens=64,
+                runtime=runtime,
             )
             app = create_app(registry)
             transport = httpx.ASGITransport(app=app)
@@ -356,6 +360,7 @@ class TestApiSmoke:
                 async with httpx.AsyncClient(
                     transport=transport, base_url="http://test"
                 ) as http:
+                    await wait_ready(http)
                     resp = await http.post(
                         "/v1/messages",
                         json={

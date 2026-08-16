@@ -114,12 +114,20 @@ class FakeRegistry:
     def items(self):
         return self._entries.items()
 
-    async def start_all(self) -> None:
-        for entry in self._entries.values():
-            await entry.runtime.start()
-            await entry.engine.start()
+    def launch_all(self) -> None:
+        # The real registry spawns supervisor tasks; fakes start engines in
+        # one background task so the lifespan stays non-blocking.
+        async def _start():
+            for entry in self._entries.values():
+                await entry.runtime.start()
+                await entry.engine.start()
 
-    async def shutdown_all(self) -> None:
+        self._launch_task = asyncio.get_running_loop().create_task(_start())
+
+    async def stop_all(self) -> None:
+        task = getattr(self, "_launch_task", None)
+        if task is not None:
+            await task
         for entry in self._entries.values():
             await entry.engine.shutdown()
             await entry.runtime.shutdown()
@@ -131,6 +139,17 @@ class _FakeEntry:
     runtime: FakeRuntime
     registered_at: float = 0.0
     max_request_tokens: int | None = None
+
+    def ensure_ready(self):
+        # Fakes are always ready; contract tests exercise the dialects, not
+        # the lifecycle (tests/test_lifecycle.py covers that with the real
+        # registry).
+        return self.engine
+
+    def begin_request(self):
+        from cantollm.lifecycle import RequestTicket
+
+        return RequestTicket(None)
 
 
 @dataclass
@@ -189,6 +208,24 @@ class FakeEngine:
         finally:
             if not self.completed:
                 self.aborted = True
+
+
+async def wait_ready(client, timeout_s: float = 15.0) -> None:
+    """Poll /ready until 200. Needed after entering a real-registry app's
+    lifespan: engine start is a background supervisor task since 3.5, so
+    the first request would otherwise race the build and see a 503."""
+    import time as _time
+
+    deadline = _time.monotonic() + timeout_s
+    while True:
+        r = await client.get("/ready")
+        if r.status_code == 200:
+            return
+        if _time.monotonic() > deadline:
+            raise AssertionError(
+                f"server not ready within {timeout_s}s: {r.text}"
+            )
+        await asyncio.sleep(0.02)
 
 
 # ── SSE parser ────────────────────────────────────────────────────────
