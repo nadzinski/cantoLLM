@@ -37,7 +37,14 @@ def build_debug_router(registry: EngineRegistry) -> APIRouter:
                 detail=f"Model '{name}' is not registered. Available: {names}",
             )
 
-        accumulator = getattr(entry.engine, "engine_stats", None)
+        # Prefer the lifecycle handle's persistent accumulator: it survives
+        # engine restarts (seq-rebased), and it answers even while a
+        # rebuild is in flight (entry.engine is None then). Fake entries
+        # (tests) fall back to the engine attribute.
+        handle = getattr(entry, "handle", None)
+        accumulator = getattr(handle, "engine_stats", None)
+        if accumulator is None:
+            accumulator = getattr(entry.engine, "engine_stats", None)
         if accumulator is None:
             return {
                 "schema_version": STATS_SCHEMA_VERSION,

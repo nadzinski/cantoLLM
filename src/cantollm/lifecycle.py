@@ -118,6 +118,7 @@ class EngineHandle:
         *,
         runtime: Any | None = None,
         drain_timeout_s: float = 30.0,
+        watchdog_timeout_s: float = 60.0,
     ):
         self.name = name
         self.factory = factory
@@ -131,6 +132,12 @@ class EngineHandle:
         self.consecutive_failures = 0
         self.supervisor_task: asyncio.Task | None = None
         self.drain_timeout_s = drain_timeout_s
+        self.watchdog_timeout_s = watchdog_timeout_s  # 0 disables
+        self.watchdog_poll_s = 5.0
+        # Persistent across generations (bench scrapes survive restarts);
+        # None until the first engine with stats is adopted, so sequential
+        # engines keep reporting available:false on /debug/engine-stats.
+        self.engine_stats: Any | None = None
         # Policy knobs, per-instance so tests can shrink them.
         self.backoff_initial_s = BACKOFF_INITIAL_S
         self.backoff_cap_s = BACKOFF_CAP_S
@@ -277,7 +284,16 @@ class EngineHandle:
             # --- serve until something wakes us -------------------------
             self._wake.clear()
             self._wake_reason = None
-            await self._wake.wait()
+            watchdog = self._arm_watchdog()
+            try:
+                await self._wake.wait()
+            finally:
+                if watchdog is not None:
+                    watchdog.cancel()
+                    try:
+                        await watchdog
+                    except asyncio.CancelledError:
+                        pass
             reason = self._wake_reason
 
             if reason == "died":
@@ -367,6 +383,70 @@ class EngineHandle:
         self._wake_reason = "died"
         self._wake.set()
 
+    # --- stats continuity ----------------------------------------------
+
+    def _adopt_stats(self, engine: Any) -> None:
+        """Keep one accumulator across generations so /debug/engine-stats
+        (the bench scrape) survives restarts. First stats-bearing engine
+        donates its accumulator; later generations get the persistent one
+        injected, with per-generation metadata refreshed and the child's
+        restarted step counter rebased (the `since` cursor stays valid)."""
+        fresh = getattr(engine, "engine_stats", None)
+        if fresh is None:
+            return
+        if self.engine_stats is None:
+            self.engine_stats = fresh
+            return
+        if fresh is self.engine_stats:
+            return
+        self.engine_stats.engine_kind = fresh.engine_kind
+        self.engine_stats.load_seconds = fresh.load_seconds
+        self.engine_stats.max_batch = fresh.max_batch
+        self.engine_stats.max_seq_len = fresh.max_seq_len
+        self.engine_stats.note_generation_start()
+        engine.engine_stats = self.engine_stats
+
+    # --- watchdog -------------------------------------------------------
+
+    def _arm_watchdog(self) -> asyncio.Task | None:
+        """Armed only while READY, and only for engines that can be killed
+        (the subprocess client); structurally cannot fire during warm-up.
+        The staleness baseline resets on arming."""
+        if self.watchdog_timeout_s <= 0:
+            return None
+        if not hasattr(self.engine, "kill"):
+            if self.generation == 1:
+                logger.info(
+                    "watchdog unavailable for %s (engine not killable)",
+                    self.name,
+                )
+            return None
+        if self.engine_stats is None:
+            return None
+        self.engine_stats.last_update_mono = time.monotonic()
+        return asyncio.get_running_loop().create_task(
+            self._watchdog(), name=f"engine-watchdog-{self.name}"
+        )
+
+    async def _watchdog(self) -> None:
+        while True:
+            await asyncio.sleep(self.watchdog_poll_s)
+            engine = self.engine
+            if engine is None:
+                return
+            pending = engine.inflight_requests()
+            if not pending:
+                continue
+            stale_s = time.monotonic() - self.engine_stats.last_update_mono
+            if stale_s > self.watchdog_timeout_s:
+                logger.error(
+                    "watchdog: engine for %s has %d pending requests and no "
+                    "step progress for %.0f s; killing the child",
+                    self.name, len(pending), stale_s,
+                )
+                engine.kill()
+                return
+
     async def _build_and_start(self) -> None:
         self.state = EngineState.STARTING
         t0 = time.perf_counter()
@@ -394,6 +474,7 @@ class EngineHandle:
         # sequential engine has no failure path (no on_failed attribute).
         if hasattr(built.engine, "on_failed"):
             built.engine.on_failed = self._on_engine_died
+        self._adopt_stats(built.engine)
         self.engine = built.engine
         if not self._eager_runtime:
             self.runtime = built.runtime

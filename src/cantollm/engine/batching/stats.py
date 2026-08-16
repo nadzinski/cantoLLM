@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import time
 from collections import deque
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 
 from cantollm.engine.types import TokenEvent
 
@@ -203,16 +203,34 @@ class EngineStatsAccumulator:
     max_batch: int | None = None
     max_seq_len: int | None = None
     load_seconds: float | None = None
+    # Watchdog input: wall (monotonic) time of the last recorded update.
+    # Reset by the watchdog when it arms, so a request submitted right
+    # after READY never compares against a stale pre-warm stamp.
+    last_update_mono: float = field(default_factory=time.monotonic)
 
     _steps: deque = field(default_factory=lambda: deque(maxlen=STEP_RING_SIZE))
     _itl: deque = field(default_factory=lambda: deque(maxlen=ITL_RING_SIZE))
     _last_token_t: dict[str, float] = field(default_factory=dict)
     _total_steps: int = 0
     _total_output_tokens: int = 0
+    # Seq rebase across engine generations: a restarted child restarts its
+    # step counter at 0, which would make every `since` cursor filter the
+    # new steps out and silently blank bench scrapes. The lifecycle handle
+    # calls note_generation_start() when it injects this accumulator into
+    # a fresh engine; recorded seqs stay monotonic across restarts.
+    _seq_base: int = 0
+    _last_seen_seq: int = -1
+
+    def note_generation_start(self) -> None:
+        self._seq_base = self._last_seen_seq + 1
 
     def record(self, update: StepUpdate) -> None:
+        self.last_update_mono = time.monotonic()
         stats = update.stats
         if stats is not None:
+            if self._seq_base:
+                stats = replace(stats, seq=stats.seq + self._seq_base)
+            self._last_seen_seq = stats.seq
             self._steps.append(stats)
             self._total_steps += 1
         for evt in update.events:

@@ -269,6 +269,16 @@ class EngineProcessClient(EventMultiplexer):
                 self._failed = msg.reason
                 raise RuntimeError(msg.reason)
 
+    def kill(self) -> None:
+        """Watchdog escalation: SIGKILL the child — a hung child may ignore
+        SIGTERM, and the point is that it stopped listening. The bridge
+        notices the death, fails in-flight streams, and the supervisor
+        rebuilds. Presence of this method is also the watchdog's arming
+        condition (a thread cannot be killed, so the in-process engine has
+        no equivalent)."""
+        if self._proc is not None:
+            self._proc.kill()
+
     async def shutdown(self) -> None:
         # Same latch-first rule as in-process: a submit() arriving during or
         # after shutdown must fail fast, not hang on a dead engine.

@@ -200,6 +200,7 @@ def cmd_serve(args):
             model_name, factory,
             max_request_tokens=config.max_seq_len, runtime=api_runtime,
             drain_timeout_s=args.drain_timeout,
+            watchdog_timeout_s=args.watchdog_timeout,
         )
         engine_desc = (
             f"continuous batching, {where} (max_batch={config.max_batch}, "
@@ -240,6 +241,7 @@ def cmd_serve(args):
             model_name, factory,
             max_request_tokens=cap_spec.arch["max_seq_len"],
             drain_timeout_s=args.drain_timeout,
+            watchdog_timeout_s=args.watchdog_timeout,
         )
         engine_desc = "sequential"
 
@@ -391,6 +393,10 @@ def parse_args():
                               help="Seconds in-flight requests get to finish after "
                                    "SIGTERM/Ctrl-C before being aborted; a second "
                                    "signal forces immediate exit (default: 30)")
+    serve_parser.add_argument("--watchdog-timeout", type=float, default=60.0,
+                              help="Kill and rebuild the engine process if it has "
+                                   "pending requests but makes no step progress for "
+                                   "this many seconds (default: 60; 0 disables)")
     serve_parser.add_argument("--max-batch", type=int, default=8,
                               help="Batched engine: concurrent KV slots (default: 8)")
     serve_parser.add_argument("--batch-max-seq-len", type=int, default=4096,
