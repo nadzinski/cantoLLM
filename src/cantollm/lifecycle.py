@@ -29,6 +29,8 @@ from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import Any, Callable
 
+from cantollm.progress import Progress, bind_sink, unbind_sink
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,17 +42,6 @@ class EngineState(str, Enum):
     RESTARTING = "restarting"  # supervisor rebuilding after a failure
     CRASHED = "crashed"        # gave up; manual restart only
     STOPPED = "stopped"
-
-
-@dataclass(frozen=True)
-class ProgressSnapshot:
-    """Latest warm-up progress, as shown by /ready."""
-
-    stage: str            # "load" | "compile" | "sweep" | "capture"
-    done: int
-    total: int | None
-    detail: str = ""
-    elapsed_s: float = 0.0
 
 
 @dataclass
@@ -119,7 +110,7 @@ class EngineHandle:
         self.runtime: Any | None = runtime
         self._eager_runtime = runtime is not None
         self.generation = 0
-        self.progress: ProgressSnapshot | None = None
+        self.progress: Progress | None = None
         self.last_error: str | None = None
         self.consecutive_failures = 0
         self.supervisor_task: asyncio.Task | None = None
@@ -143,7 +134,11 @@ class EngineHandle:
         return RequestTicket(self)
 
     def _not_ready_detail(self) -> str:
-        if self.state is EngineState.WARMING and self.progress is not None:
+        # Progress can flow in STARTING too: the in-process factory does
+        # the whole build (load + sweep + capture) before the handle ever
+        # reaches WARMING.
+        building = self.state in (EngineState.STARTING, EngineState.WARMING)
+        if building and self.progress is not None:
             p = self.progress
             total = f"/{p.total}" if p.total is not None else ""
             return (f"model '{self.name}' is warming up "
@@ -169,6 +164,17 @@ class EngineHandle:
         if self.state is EngineState.CRASHED:
             s["hint"] = "POST /admin/restart"
         return s
+
+    # --- progress -------------------------------------------------------
+
+    def _progress_sink(self, p: Progress) -> None:
+        """Sink callback; may run on any thread (factory worker, the IPC
+        waiter). Hops onto the loop so handle state stays loop-confined."""
+        if self._loop is not None:
+            self._loop.call_soon_threadsafe(self._apply_progress, p)
+
+    def _apply_progress(self, p: Progress) -> None:
+        self.progress = p
 
     # --- lifecycle ------------------------------------------------------
 
@@ -196,15 +202,25 @@ class EngineHandle:
     async def _build_and_start(self) -> None:
         self.state = EngineState.STARTING
         t0 = time.perf_counter()
-        built = await asyncio.to_thread(self.factory)
-        # Reachable from stop(): if we are cancelled during start() below,
-        # the partially started engine still gets shut down (which reaps a
-        # spawned child even mid-warm-up via join-then-terminate).
-        self._pending = built
-        self.state = EngineState.WARMING
-        await built.runtime.start()
-        await built.engine.start()
+        # Bind the progress sink for the whole build: asyncio.to_thread
+        # copies this context, so an in-process factory reports straight
+        # through it, and the subprocess client's start() picks it up as
+        # the ambient sink to forward child-side Progress into.
+        sink_token = bind_sink(self._progress_sink)
+        try:
+            built = await asyncio.to_thread(self.factory)
+            # Reachable from stop(): if we are cancelled during start()
+            # below, the partially started engine still gets shut down
+            # (which reaps a spawned child even mid-warm-up via
+            # join-then-terminate).
+            self._pending = built
+            self.state = EngineState.WARMING
+            await built.runtime.start()
+            await built.engine.start()
+        finally:
+            unbind_sink(sink_token)
         self._pending = None
+        self.progress = None
         self.engine = built.engine
         if not self._eager_runtime:
             self.runtime = built.runtime

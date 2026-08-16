@@ -24,6 +24,7 @@ from cantollm.models.attention import (
     PaddedAttentionMethod,
     SDPAAttentionMethod,
 )
+from cantollm import progress
 from cantollm.spec import ModelSpec
 from cantollm.speculative import SpeculativeBackend
 from cantollm.standard import StandardBackend
@@ -254,9 +255,11 @@ def _load_model(
     attention: Literal["einsum", "padded", "sdpa"] = "einsum",
 ) -> tuple[torch.nn.Module, str]:
     logger.info("Downloading %s model weights...", spec.size)
+    progress.report("load", 0, 3, "downloading weights")
     local_dir, weights_dict = spec.weights_loader()
 
     logger.info("Creating model...")
+    progress.report("load", 1, 3, "creating model")
     attention_method = _ATTENTION_METHODS[attention]()
     model = spec.model_cls(
         qwen3_config=spec.arch,
@@ -264,11 +267,13 @@ def _load_model(
     )
 
     logger.info("Loading pretrained weights...")
+    progress.report("load", 2, 3, "applying weights")
     spec.apply_weights(model, spec.arch, weights_dict)
     del weights_dict
 
     model.to(device)
     model.eval()
+    progress.report("load", 3, 3, "model on device")
     return model, local_dir
 
 

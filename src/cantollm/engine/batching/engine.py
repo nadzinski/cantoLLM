@@ -38,6 +38,7 @@ import threading
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+from cantollm import progress
 from cantollm.engine.batching.allocator import SlotAllocator
 from cantollm.engine.batching.config import BatchingConfig
 from cantollm.engine.batching.mux import EventMultiplexer
@@ -79,6 +80,9 @@ def scheduler_from_runtime(
         logger.info("torch.compile enabled on the batched forward "
                     "(fullgraph, strategy=%s, artifacts built during "
                     "warm-up)", config.torch_compile_strategy)
+        # One tick, honestly named: this stage only *enables* compile; the
+        # artifacts get built by the sweep's forwards.
+        progress.report("compile", 1, 1, "torch.compile enabled")
     if config.warmup_shapes:
         # Behind Ready in the process split (the factory runs before the
         # Ready handshake) and before from_runtime returns in-process: no

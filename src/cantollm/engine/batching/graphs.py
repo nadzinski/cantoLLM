@@ -41,6 +41,7 @@ from dataclasses import dataclass
 
 import torch
 
+from cantollm import progress
 from cantollm.engine.batching.config import BatchingConfig
 from cantollm.engine.batching.types import BatchedForwardFn
 from cantollm.kv_pool import PaddedKVPool
@@ -213,8 +214,9 @@ class GraphedBatchedForward:
         if self._mem_handle is None:
             self._mem_handle = torch.cuda.graph_pool_handle()
         shapes = sorted(self.decode_shapes(), reverse=True)
-        for batch, kv_len in shapes:
+        for i, (batch, kv_len) in enumerate(shapes):
             self._capture_one(batch, kv_len, pool, device)
+            progress.report("capture", i + 1, len(shapes))
         return len(shapes)
 
     @torch.inference_mode()

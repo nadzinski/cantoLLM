@@ -39,6 +39,7 @@ import time
 
 import torch
 
+from cantollm import progress
 from cantollm.engine.batching.config import BatchingConfig
 from cantollm.engine.batching.types import BatchedForwardFn
 from cantollm.kv_pool import PaddedKVPool
@@ -110,7 +111,7 @@ def warmup_shape_vocabulary(
     # automatic dynamic needs to promote the span.
     family = None
     idx = 0
-    for batch, width, kv_len in vocabulary:
+    for i, (batch, width, kv_len) in enumerate(vocabulary):
         if (batch, width) != family:
             family, idx = (batch, width), 0
         else:
@@ -122,6 +123,7 @@ def warmup_shape_vocabulary(
             scratch_write_map(length, batch, pool.scratch_pos)
         )
         forward_fn(input_ids, meta, pool)
+        progress.report("sweep", i + 1, len(vocabulary))
     if device.type == "cuda":
         torch.cuda.synchronize()
     logger.info(
