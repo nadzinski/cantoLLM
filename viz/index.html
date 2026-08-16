@@ -1524,7 +1524,7 @@ function initRoadmap() {
         'First true before/after bench vs Phase 2’s numbers',
       ] },
     { id: '3.5', title: 'prod hygiene', hw: '5090', status: 'active',
-      statusLine: 'Status (2026-08-15): In progress. Scope set the day Phase 3 closed; production-hygiene-plan.md is the design note + execution plan. Added over the original bundle: OTel tracing to Tempo, a crash supervisor + hang watchdog, a TOML serve config, and the two Phase 1b leftovers (X-Request-ID, OpenAI stream-error parity). Dropped: preemption-count metric (no preemption until Phase 4); systemd unit.',
+      statusLine: 'Status (2026-08-16): Implementation complete on Mac/CPU (513 tests + a 5-scenario chaos suite, all green); production-hygiene-plan.md §6 is the chunk log. Landed: the lifecycle core (supervisor + background start, /ready with warm-up progress over a new pre-Ready IPC message, drain-on-signal, /admin/reload + restart, crash auto-restart, hang watchdog), per-model admission (429 + Retry-After), /metrics, OTel request-phase spans across the IPC boundary, JSON logs + X-Request-ID, OpenAI stream-error parity, --config serve.toml, and the observability compose stack. Open: the 5090 round — chaos on the real CUDA stack, Grafana/Tempo bring-up, phase-end bench vs the Phase 3 records.',
       goal: 'Now that the engine is a separate process and metrics show real things, pick up the production basics deferred from Phase 1.',
       items: [
         '<code>/metrics</code> Prometheus: queue depth, batch size, KV utilization, TTFT/ITL, event-loop lag; Grafana + Prometheus + Tempo via docker-compose · OTel request-phase spans across the IPC boundary (tokenize · queue · prefill chunks · decode)',
@@ -1647,7 +1647,7 @@ function initRoadmap() {
   });
   // "you are here" flag
   mk('text', { x: xActive, y: LY + 68, style: 'font:700 11px var(--sans);letter-spacing:.06em;fill:#8a5a00;text-anchor:middle' }, '▲ YOU ARE HERE');
-  mk('text', { x: xActive, y: LY + 84, style: 'font:10.5px var(--sans);fill:var(--muted);text-anchor:middle' }, 'Phase 3 closed with the H100 day · now: /ready + drain + supervisor + /metrics + traces');
+  mk('text', { x: xActive, y: LY + 84, style: 'font:10.5px var(--sans);fill:var(--muted);text-anchor:middle' }, '3.5 built on CPU: /ready + drain + supervisor + /metrics + traces · next: the 5090 round');
 
   const diagPanel = el('section', 'panel');
   diagPanel.appendChild(el('h2', null, 'The line — phases 0 → 12, from PLAN.md'));

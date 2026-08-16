@@ -169,5 +169,62 @@ Chunks are review-sized and land green individually.
 
 ## 6. Results
 
-(To be written at phase end: chunk log, chaos outcomes, bench comparison, graded
-predictions.)
+### Implementation round (2026-08-16, Mac/CPU): every chunk landed
+
+Chunk log (one commit each, suite green at every step; 513 tests + 5 chaos at
+the end, from 452 at phase start):
+
+1. Foundations `ea9ccc7`: deps, JSON logging + request_id contextvar in both
+   processes, X-Request-ID middleware end to end, /version.
+2. Lifecycle core, five commits: handle + background start + /ready + 503
+   gating `9832c29` (the bench /ready switch, planned as chunk 9, folded in
+   here because the bench tests break the moment startup goes non-blocking);
+   Progress protocol `4d9f8da`; drain + signals `08586d0`; supervisor
+   backoff + admin endpoints `c9440d3`; watchdog + stats continuity
+   `4b961a9`.
+3. Admission control `5e42b2e`. 4. /metrics `0614f7f`. 5. OTel tracing
+   `4e752ae`. 6. OpenAI stream-error parity `d8be454`. 7. Serve config file
+   `7cf2f3d`. 8. Observability stack `17ce18c`. 10. Chaos suite `b197c78`
+   (all five scenarios green on CPU, including a real SIGTERM drain, a real
+   kill -9 of the engine child with supervisor recovery, and a watchdog
+   catch of a wedged child).
+
+Deviations from the written design, all deliberate:
+
+- The API root span is created in the router and ended by the stream
+  wrapper, not by a middleware: a middleware-owned span would end when the
+  handler returns, which for streaming responses is before the first token
+  exists. The span now covers the request's true lifetime.
+- Engine-side spans ride the drive loop (a TraceStepObserver beside the
+  existing StepStatsCollector) rather than hooks inside the hand-written
+  scheduler: the loop's before/after snapshots already see promotions,
+  position diffs, and terminal events, so the scheduler needed zero changes
+  and span resolution is per step, which is the honest granularity anyway.
+- No fabricated finish_reason on the OpenAI error path: the dialect defines
+  no error finish_reason, and the existing contract test explicitly pins
+  the error envelope as the terminal event. Parity gained: the usage chunk
+  ships on the error path when requested, and the error type is
+  consistently server_error.
+- Two env-gated fault hooks landed in the drive loop for the chaos suite
+  (wedge-after-N-steps, per-step delay): the tiny model generates faster
+  than a client can observe, so outside-timed fault injection needed a
+  pacing lever. Test-only, off unless the variables are set.
+- prometheus_client instruments live in a per-app CollectorRegistry, not
+  the global default: the suite builds dozens of apps per process.
+
+Known issue, diagnostics armed: an intermittent stall (minutes, then
+self-recovery; test passes, suite green) around the bench executor's
+server-crash test, seen a handful of times across full-suite runs and never
+at the pre-phase commit in 12 tries. `faulthandler_timeout = 60` is now in
+the pytest config, so the next occurrence dumps every thread's stack into
+the run output and identifies itself.
+
+### 5090 round (pending)
+
+Open items, in order: chaos suite against the real CUDA stack (0.6B, full
+serve default); observability bring-up (compose up, dashboard populates
+under bench load, one trace shows root -> tokenize -> queue -> prefill
+chunks -> decode); /ready progress observed through a real warm-up;
+phase-end bench (standard configs vs the Phase 3 records; overhead gate =
+within repeat noise) committed to bench/history; predictions in §5 graded;
+PLAN.md Phase 3.5 -> Complete + viz close-out.

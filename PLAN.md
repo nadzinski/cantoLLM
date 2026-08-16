@@ -199,16 +199,17 @@ verified; HTTP/SSE contract test suite is green.
 **Goal:** exercise the registry by adding OpenAI, and pick up the small reliability wins
 that fall out of the Phase 1a refactors.
 
-**Status (2026-04-19):** OpenAI Chat Completions surface landed
+**Status (2026-08-16):** OpenAI Chat Completions surface landed 2026-04-19
 (`/v1/chat/completions`) alongside a refactor of `src/cantollm/api/` into
 per-dialect routers (`anthropic_router`, `openai_router`, `common_router`
 for `/health` + a union-payload `/v1/models`) plus shared helpers
 (`phase.py` for the thinking/text classifier, `common.py` for request
 tokenization). Thinking tokens are emitted as DeepSeek-R1-style
 `reasoning_content` on assistant messages / deltas. CLI gained
-`--api {anthropic,openai}` (default anthropic). Open: stream error-event
-parity (OpenAI mid-stream error is minimum-viable today), `X-Request-ID`
-middleware, raw-tokens NDJSON endpoint.
+`--api {anthropic,openai}` (default anthropic). Two of the three leftovers
+closed in Phase 3.5 (2026-08-16): stream error-event parity and the
+`X-Request-ID` middleware. Still open: raw-tokens NDJSON endpoint (a debug
+tool, not production hygiene; unscheduled).
 
 - **OpenAI API surface** (`/v1/chat/completions`) as a second adapter.
   `api/openai_types.py` + `api/openai_adapter.py`. Forces the registry pattern to stay
@@ -558,14 +559,23 @@ iron — especially `torch.compile`, which has more headroom on Hopper.
 things (queue depth, batch size, KV utilization), pick up the production basics that
 were deferred from Phase 1.
 
-**Status (2026-08-15):** In progress. Scope set in the planning session the day Phase 3
-closed; `production-hygiene-plan.md` is the design note and execution plan (decisions,
-alternatives, the lifecycle-core architecture, chunk order). Additions over the
-original bundle: OTel request tracing to Tempo, a crash supervisor with auto-restart,
-a hang watchdog, a TOML serve config, and the two Phase 1b leftovers (X-Request-ID
-middleware, OpenAI stream-error parity). Dropped: preemption-count metric (no
-preemption exists until Phase 4); a systemd unit (considered, skipped). Per-request
-deadlines were considered and left for Phase 4's priority/goodput work.
+**Status (2026-08-16):** Implementation complete on Mac/CPU; open: the 5090 round.
+Scope was set in the planning session the day Phase 3 closed;
+`production-hygiene-plan.md` is the design note, execution plan, and (§6) the chunk
+log. Everything below is built and tested (513 tests + a 5-scenario chaos suite, all
+green): the lifecycle core (EngineHandle supervisor, background start, `/ready` with
+warm-up progress over a new pre-Ready IPC message, 503 gating, drain-on-signal via a
+CantoServer uvicorn subclass, `/admin/reload` + `/admin/restart`, crash auto-restart
+with capped backoff, hang watchdog), per-model admission (429 + Retry-After),
+`/metrics`, OTel request-phase spans across the IPC boundary, JSON logs +
+X-Request-ID, OpenAI stream-error parity, `--config serve.toml`, and the
+observability compose stack with a provisioned dashboard. Additions over the original
+bundle: tracing, supervisor/watchdog, serve config, the two Phase 1b leftovers (now
+closed). Dropped: preemption-count metric (no preemption until Phase 4); a systemd
+unit (considered, skipped). Per-request deadlines were considered and left for
+Phase 4's priority/goodput work. Open on the 5090: chaos against the real CUDA
+stack, Grafana/Tempo bring-up, `/ready` through a real warm-up, and the phase-end
+bench vs the Phase 3 records (observability-overhead gate).
 
 - **Observability**: `/metrics` Prometheus endpoint. Engine metrics (queue depth, active
   requests, tok/s, TTFT, ITL, KV utilization, batch size). HTTP metrics (latency
