@@ -1,0 +1,1455 @@
+{"ts": "2026-08-16T21:28:09.822Z", "level": "INFO", "logger": "httpx", "process": "api", "msg": "HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/tokenizer.json \"HTTP/1.1 302 Found\""}
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+{"ts": "2026-08-16T21:28:09.822Z", "level": "WARNING", "logger": "huggingface_hub.utils._http", "process": "api", "msg": "Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads."}
+INFO:     Started server process [1660425]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Using device: cuda (NVIDIA GeForce RTX 5090)
+
+CantoLLM server starting on http://127.0.0.1:8378
+  POST /v1/messages  — Anthropic-compatible Messages API
+  GET  /health       — Health check (API liveness)
+  GET  /ready        — Readiness + warm-up progress
+  GET  /docs         — OpenAPI docs
+
+Model: qwen3-0.6B  ·  Engine: continuous batching, engine process (max_batch=4, slot=10240 tok, budget=512 tok/step, attention=sdpa, shape_buckets=on, warmup=on, cuda_graphs=on, torch_compile=dynamic)
+
+INFO:     Uvicorn running on http://127.0.0.1:8378 (Press CTRL+C to quit)
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-16T21:28:10.548Z", "level": "INFO", "logger": "cantollm.runtime", "process": "engine", "msg": "Downloading 0.6B model weights..."}
+{"ts": "2026-08-16T21:28:10.638Z", "level": "INFO", "logger": "httpx", "process": "engine", "msg": "HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/tokenizer.json \"HTTP/1.1 302 Found\""}
+{"ts": "2026-08-16T21:28:10.714Z", "level": "INFO", "logger": "httpx", "process": "engine", "msg": "HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/model.safetensors \"HTTP/1.1 302 Found\""}
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+{"ts": "2026-08-16T21:28:10.714Z", "level": "WARNING", "logger": "huggingface_hub.utils._http", "process": "engine", "msg": "Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads."}
+{"ts": "2026-08-16T21:28:10.716Z", "level": "INFO", "logger": "cantollm.runtime", "process": "engine", "msg": "Creating model..."}
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-16T21:28:13.945Z", "level": "INFO", "logger": "cantollm.runtime", "process": "engine", "msg": "Loading pretrained weights..."}
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-16T21:28:14.748Z", "level": "INFO", "logger": "cantollm.engine.batching.engine", "process": "engine", "msg": "torch.compile enabled on the batched forward (fullgraph, strategy=dynamic, artifacts built during warm-up)"}
+{"ts": "2026-08-16T21:28:14.749Z", "level": "INFO", "logger": "cantollm.engine.batching.warmup", "process": "engine", "msg": "warming 477 shapes (batch buckets (1, 2, 4), widths {1} + (128, 256, 512), kv step 256)"}
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_inductor/lowering.py:2156: UserWarning: Torchinductor does not support code generation for complex operators. Performance may be worse than eager.
+  warnings.warn(
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-16T21:32:23.658Z", "level": "INFO", "logger": "cantollm.engine.batching.warmup", "process": "engine", "msg": "shape warm-up done: 477 shapes in 248.9 s"}
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-16T21:32:26.025Z", "level": "INFO", "logger": "cantollm.engine.batching.engine", "process": "engine", "msg": "CUDA graphs: captured 120 decode shapes in 2.4 s"}
+{"ts": "2026-08-16T21:32:26.025Z", "level": "INFO", "logger": "cantollm.lifecycle", "process": "api", "msg": "engine for qwen3-0.6B built and warm in 256.0 s"}
+{"ts": "2026-08-16T21:32:26.026Z", "level": "INFO", "logger": "cantollm.lifecycle", "process": "api", "msg": "engine ready: qwen3-0.6B (generation 1)"}
+INFO:     127.0.0.1:57336 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56368 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56368 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56368 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56368 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56374 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56386 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56400 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56400 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56416 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56432 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56446 - "GET /debug/engine-stats?since=311 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56446 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56460 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56466 - "GET /debug/engine-stats?since=687 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56466 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56470 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56480 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56490 - "GET /debug/engine-stats?since=1002 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56490 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56498 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56508 - "GET /debug/engine-stats?since=1353 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56508 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56520 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56526 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56540 - "GET /debug/engine-stats?since=1643 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56540 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56542 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56554 - "GET /debug/engine-stats?since=2028 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56554 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56560 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56574 - "GET /debug/engine-stats?since=2327 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56574 - "GET /debug/engine-stats?since=2637 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56574 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56590 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56592 - "GET /debug/engine-stats?since=2711 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56592 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48800 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48808 - "GET /debug/engine-stats?since=2952 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48808 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48824 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48838 - "GET /debug/engine-stats?since=3189 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48838 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48842 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48858 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48870 - "GET /debug/engine-stats?since=3490 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48870 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48886 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48894 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48896 - "GET /debug/engine-stats?since=3892 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48896 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48902 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48918 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48922 - "GET /debug/engine-stats?since=4313 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48922 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48930 - "GET /debug/engine-stats?since=4614 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48930 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48936 - "GET /debug/engine-stats?since=4880 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48936 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48950 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48952 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48960 - "GET /debug/engine-stats?since=4948 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48960 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48966 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48970 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48972 - "GET /debug/engine-stats?since=5365 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48972 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48984 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48994 - "GET /debug/engine-stats?since=5769 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48994 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49010 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49014 - "GET /debug/engine-stats?since=6014 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49014 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60176 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60182 - "GET /debug/engine-stats?since=6341 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60182 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60194 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60200 - "GET /debug/engine-stats?since=6585 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60200 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60206 - "GET /debug/engine-stats?since=6891 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60206 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60206 - "GET /debug/engine-stats?since=7063 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60206 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60214 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60228 - "GET /debug/engine-stats?since=7063 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60228 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60242 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60256 - "GET /debug/engine-stats?since=7146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60256 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60264 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60278 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60294 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60296 - "GET /debug/engine-stats?since=7309 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60296 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60304 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60314 - "GET /debug/engine-stats?since=7519 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60314 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60330 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60344 - "GET /debug/engine-stats?since=7693 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60344 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60356 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60372 - "GET /debug/engine-stats?since=7820 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60372 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60374 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60378 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60386 - "GET /debug/engine-stats?since=8021 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60386 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60398 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60412 - "GET /debug/engine-stats?since=8205 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60412 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42108 - "GET /debug/engine-stats?since=8345 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42108 - "GET /debug/engine-stats?since=8491 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42124 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42108 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42134 - "GET /debug/engine-stats?since=8566 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42134 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42150 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42164 - "GET /debug/engine-stats?since=8694 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42164 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42166 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42176 - "GET /debug/engine-stats?since=8781 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42176 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42186 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42198 - "GET /debug/engine-stats?since=8912 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42198 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42214 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42218 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42228 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42244 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42258 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42264 - "GET /debug/engine-stats?since=9143 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42264 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42280 - "GET /debug/engine-stats?since=9429 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42280 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42290 - "GET /debug/engine-stats?since=9573 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42290 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42300 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42302 - "GET /debug/engine-stats?since=9722 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42302 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42306 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42310 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42324 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42336 - "GET /debug/engine-stats?since=9723 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42336 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42352 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44112 - "GET /debug/engine-stats?since=10005 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44112 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44128 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44136 - "GET /debug/engine-stats?since=10209 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44136 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44142 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44152 - "GET /debug/engine-stats?since=10309 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44152 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44162 - "GET /debug/engine-stats?since=10463 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44162 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44174 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44176 - "GET /debug/engine-stats?since=10586 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44176 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44178 - "GET /debug/engine-stats?since=10736 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44178 - "GET /debug/engine-stats?since=10862 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44178 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44178 - "GET /debug/engine-stats?since=10898 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44178 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44186 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44196 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44202 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44210 - "GET /debug/engine-stats?since=10898 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44210 - "GET /debug/engine-stats?since=10944 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44210 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44226 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44244 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44230 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44258 - "GET /debug/engine-stats?since=11065 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44258 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44274 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44284 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44294 - "GET /debug/engine-stats?since=11132 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44294 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42228 - "GET /debug/engine-stats?since=11216 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42228 - "GET /debug/engine-stats?since=11260 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42228 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42244 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42246 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42252 - "GET /debug/engine-stats?since=11329 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42252 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42256 - "GET /debug/engine-stats?since=11393 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42256 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42268 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42270 - "GET /debug/engine-stats?since=11469 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42270 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42274 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42284 - "GET /debug/engine-stats?since=11517 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42284 - "GET /debug/engine-stats?since=11576 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42284 - "GET /debug/engine-stats?since=11641 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42286 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42284 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42298 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42308 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42318 - "GET /debug/engine-stats?since=11724 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42318 - "GET /debug/engine-stats?since=11772 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42318 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42328 - "GET /debug/engine-stats?since=11856 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42328 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42344 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42352 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33024 - "GET /debug/engine-stats?since=11897 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33024 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33040 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33048 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33058 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33064 - "GET /debug/engine-stats?since=11955 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33064 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33074 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33080 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33096 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33104 - "GET /debug/engine-stats?since=12064 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33104 - "GET /debug/engine-stats?since=12200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33104 - "GET /debug/engine-stats?since=12241 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33104 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33120 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33136 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33138 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33154 - "GET /debug/engine-stats?since=12364 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33154 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33164 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33170 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33186 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33192 - "GET /debug/engine-stats?since=12369 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33192 - "GET /debug/engine-stats?since=12536 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33192 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33208 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33214 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33224 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33230 - "GET /debug/engine-stats?since=12632 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33230 - "GET /debug/engine-stats?since=12688 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33230 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33246 - "GET /debug/engine-stats?since=12735 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33246 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33256 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47598 - "GET /debug/engine-stats?since=12810 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47584 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47598 - "GET /debug/engine-stats?since=12848 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47598 - "GET /debug/engine-stats?since=12893 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47598 - "GET /debug/engine-stats?since=12996 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47598 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47598 - "GET /debug/engine-stats?since=13028 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47598 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47600 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47616 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47606 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47628 - "GET /debug/engine-stats?since=13028 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47628 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47642 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47660 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47658 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47664 - "GET /debug/engine-stats?since=13077 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47664 - "GET /debug/engine-stats?since=13199 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47664 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47672 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47682 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47688 - "GET /debug/engine-stats?since=13263 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47688 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47692 - "GET /debug/engine-stats?since=13347 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47692 - "GET /debug/engine-stats?since=13390 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47692 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47704 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47710 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47722 - "GET /debug/engine-stats?since=13460 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47722 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46404 - "GET /debug/engine-stats?since=13524 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46404 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46408 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46414 - "GET /debug/engine-stats?since=13600 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46414 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46422 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46430 - "GET /debug/engine-stats?since=13649 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46430 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46444 - "GET /debug/engine-stats?since=13708 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46444 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46446 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46450 - "GET /debug/engine-stats?since=13756 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46450 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46458 - "GET /debug/engine-stats?since=13809 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46458 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46472 - "GET /debug/engine-stats?since=13868 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46472 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46488 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46494 - "GET /debug/engine-stats?since=13926 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46494 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46510 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46516 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46524 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46526 - "GET /debug/engine-stats?since=14002 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46526 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46528 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46538 - "GET /debug/engine-stats?since=14103 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46538 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51252 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51268 - "GET /debug/engine-stats?since=14169 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51268 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51270 - "GET /debug/engine-stats?since=14248 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51270 - "GET /debug/engine-stats?since=14307 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51270 - "GET /debug/engine-stats?since=14396 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51270 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51282 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51300 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51298 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51310 - "GET /debug/engine-stats?since=14457 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51310 - "GET /debug/engine-stats?since=14509 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51310 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51316 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51322 - "GET /debug/engine-stats?since=14594 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51322 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51326 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51328 - "GET /debug/engine-stats?since=14634 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51328 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51330 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51334 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51342 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51354 - "GET /debug/engine-stats?since=14702 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51354 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51356 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51360 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51364 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51370 - "GET /debug/engine-stats?since=14817 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51370 - "GET /debug/engine-stats?since=14952 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51370 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41974 - "GET /debug/engine-stats?since=15016 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41974 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41984 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41996 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42002 - "GET /debug/engine-stats?since=15075 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42002 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42016 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42026 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42036 - "GET /debug/engine-stats?since=15130 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42036 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42048 - "GET /debug/engine-stats?since=15236 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42048 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42056 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42064 - "GET /debug/engine-stats?since=15308 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42064 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42078 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42088 - "GET /debug/engine-stats?since=15380 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42088 - "GET /debug/engine-stats?since=15426 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42088 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42096 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42104 - "GET /debug/engine-stats?since=15489 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42104 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42114 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42130 - "GET /debug/engine-stats?since=15537 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42130 - "GET /debug/engine-stats?since=15590 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42130 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42138 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42150 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42158 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42174 - "GET /debug/engine-stats?since=15718 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42174 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43380 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43394 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43406 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43410 - "GET /debug/engine-stats?since=15728 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43410 - "GET /debug/engine-stats?since=15892 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43410 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43416 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43418 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43434 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43442 - "GET /debug/engine-stats?since=15993 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43442 - "GET /debug/engine-stats?since=16046 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43442 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43444 - "GET /debug/engine-stats?since=16098 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43444 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43456 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43460 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43468 - "GET /debug/engine-stats?since=16166 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43468 - "GET /debug/engine-stats?since=16206 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43468 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43470 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43478 - "GET /debug/engine-stats?since=16252 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43478 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43492 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43494 - "GET /debug/engine-stats?since=16329 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43494 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43500 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43504 - "GET /debug/engine-stats?since=16412 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43504 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43512 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48174 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48190 - "GET /debug/engine-stats?since=16506 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48190 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48200 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48202 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48218 - "GET /debug/engine-stats?since=16581 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48218 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48228 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48240 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48244 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48250 - "GET /debug/engine-stats?since=16706 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48250 - "GET /debug/engine-stats?since=16823 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48250 - "GET /debug/engine-stats?since=16957 HTTP/1.1" 200 OK
+{"ts": "2026-08-16T21:34:29.013Z", "level": "INFO", "logger": "cantollm.server", "process": "api", "msg": "draining: 0 in-flight, deadline 30 s"}
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1660425]
+/home/nadia/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 6 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

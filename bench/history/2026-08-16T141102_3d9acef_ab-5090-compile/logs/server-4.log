@@ -1,0 +1,1818 @@
+{"ts": "2026-08-16T21:17:11.775Z", "level": "INFO", "logger": "httpx", "process": "api", "msg": "HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/tokenizer.json \"HTTP/1.1 302 Found\""}
+INFO:     Started server process [1657660]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Using device: cuda (NVIDIA GeForce RTX 5090)
+
+CantoLLM server starting on http://127.0.0.1:8378
+  POST /v1/messages  — Anthropic-compatible Messages API
+  GET  /health       — Health check (API liveness)
+  GET  /ready        — Readiness + warm-up progress
+  GET  /docs         — OpenAPI docs
+
+Model: qwen3-0.6B  ·  Engine: continuous batching, engine process (max_batch=16, slot=4096 tok, budget=512 tok/step, attention=sdpa, shape_buckets=on, warmup=on, cuda_graphs=on, torch_compile=batch-bucket)
+
+INFO:     Uvicorn running on http://127.0.0.1:8378 (Press CTRL+C to quit)
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-16T21:17:12.500Z", "level": "INFO", "logger": "cantollm.runtime", "process": "engine", "msg": "Downloading 0.6B model weights..."}
+{"ts": "2026-08-16T21:17:12.587Z", "level": "INFO", "logger": "httpx", "process": "engine", "msg": "HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/tokenizer.json \"HTTP/1.1 302 Found\""}
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+{"ts": "2026-08-16T21:17:12.587Z", "level": "WARNING", "logger": "huggingface_hub.utils._http", "process": "engine", "msg": "Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads."}
+{"ts": "2026-08-16T21:17:12.667Z", "level": "INFO", "logger": "httpx", "process": "engine", "msg": "HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/model.safetensors \"HTTP/1.1 302 Found\""}
+{"ts": "2026-08-16T21:17:12.670Z", "level": "INFO", "logger": "cantollm.runtime", "process": "engine", "msg": "Creating model..."}
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-16T21:17:15.895Z", "level": "INFO", "logger": "cantollm.runtime", "process": "engine", "msg": "Loading pretrained weights..."}
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-16T21:17:16.699Z", "level": "INFO", "logger": "cantollm.engine.batching.engine", "process": "engine", "msg": "torch.compile enabled on the batched forward (fullgraph, strategy=batch-bucket, artifacts built during warm-up)"}
+{"ts": "2026-08-16T21:17:16.700Z", "level": "INFO", "logger": "cantollm.engine.batching.warmup", "process": "engine", "msg": "warming 315 shapes (batch buckets (1, 2, 4, 8, 16), widths {1} + (128, 256, 512), kv step 256)"}
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+/home/nadia/personal-projects/cantoLLM/.venv/lib/python3.11/site-packages/torch/_inductor/lowering.py:2156: UserWarning: Torchinductor does not support code generation for complex operators. Performance may be worse than eager.
+  warnings.warn(
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-16T21:22:45.492Z", "level": "INFO", "logger": "cantollm.engine.batching.warmup", "process": "engine", "msg": "shape warm-up done: 315 shapes in 328.8 s"}
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-16T21:22:47.200Z", "level": "INFO", "logger": "cantollm.engine.batching.engine", "process": "engine", "msg": "CUDA graphs: captured 80 decode shapes in 1.7 s"}
+{"ts": "2026-08-16T21:22:47.201Z", "level": "INFO", "logger": "cantollm.lifecycle", "process": "api", "msg": "engine for qwen3-0.6B built and warm in 335.3 s"}
+{"ts": "2026-08-16T21:22:47.201Z", "level": "INFO", "logger": "cantollm.lifecycle", "process": "api", "msg": "engine ready: qwen3-0.6B (generation 1)"}
+INFO:     127.0.0.1:37022 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52236 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52236 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52236 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52236 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52238 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52254 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52258 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52272 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52282 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52294 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52298 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52312 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52314 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52318 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52330 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52334 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52334 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52348 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52352 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52354 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52356 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52358 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52364 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52380 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52390 - "GET /debug/engine-stats?since=301 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52390 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52392 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52404 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52406 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52412 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52416 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52420 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52436 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52438 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52446 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52448 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52458 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52472 - "GET /debug/engine-stats?since=623 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52472 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52480 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52488 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52490 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52500 - "GET /debug/engine-stats?since=962 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52500 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52504 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52512 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52522 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52530 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52532 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52542 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52554 - "GET /debug/engine-stats?since=1160 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52554 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52570 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52582 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52596 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52602 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52604 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52614 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52624 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52632 - "GET /debug/engine-stats?since=1292 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52632 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52646 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52652 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52664 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52668 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52682 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52684 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52696 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52704 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52716 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52720 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52734 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52738 - "GET /debug/engine-stats?since=1631 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52738 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52740 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52748 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52764 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "GET /debug/engine-stats?since=1973 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52772 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52786 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52798 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52804 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52816 - "GET /debug/engine-stats?since=2192 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52816 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52826 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52832 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52844 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52848 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52858 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52872 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52886 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52892 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52900 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52908 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52922 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43794 - "GET /debug/engine-stats?since=2306 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43794 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43800 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43812 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43822 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43832 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43836 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43848 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43856 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43862 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43874 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43878 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43894 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43902 - "GET /debug/engine-stats?since=2643 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43902 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43906 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43922 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43928 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43938 - "GET /debug/engine-stats?since=2983 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43938 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43938 - "GET /debug/engine-stats?since=3224 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43938 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43940 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43946 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43960 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43966 - "GET /debug/engine-stats?since=3224 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43966 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43978 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43984 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43998 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44010 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44026 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44028 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44030 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44042 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44050 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44060 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44064 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44074 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44082 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44088 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44092 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44104 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44108 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44112 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44124 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44140 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44156 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44172 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44188 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44190 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44198 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44214 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44226 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44230 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44232 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44234 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44242 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44246 - "GET /debug/engine-stats?since=3312 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44246 - "GET /debug/engine-stats?since=3549 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44246 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44252 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44268 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44276 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44292 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44300 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44314 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44328 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44340 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44346 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44356 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44366 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44374 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44390 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44406 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44416 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44426 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44428 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44444 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44458 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44462 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44464 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44480 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44494 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44508 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44512 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44518 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44534 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44536 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44542 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44556 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44570 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44580 - "GET /debug/engine-stats?since=3613 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44580 - "GET /debug/engine-stats?since=3789 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44580 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44590 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44606 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44616 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44626 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44632 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44644 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44660 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44662 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44664 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44680 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44690 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44698 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44706 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44708 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44714 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44726 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44728 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44742 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44754 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44762 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44774 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44780 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44790 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44792 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44802 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44816 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44832 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44848 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44850 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44860 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44864 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44874 - "GET /debug/engine-stats?since=3873 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44874 - "GET /debug/engine-stats?since=4014 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44874 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44874 - "GET /debug/engine-stats?since=4133 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44874 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44890 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44892 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44896 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44898 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44908 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44922 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44930 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44938 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44944 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44956 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44962 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44972 - "GET /debug/engine-stats?since=4133 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44972 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44980 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44984 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44988 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45000 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45014 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45030 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45038 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45054 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45060 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45072 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45074 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45078 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45082 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45084 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45100 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45102 - "GET /debug/engine-stats?since=4282 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45102 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45110 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45114 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45130 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45138 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45144 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45150 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45154 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45158 - "GET /debug/engine-stats?since=4556 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45158 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45166 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45172 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45188 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45204 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45206 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45212 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45214 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45216 - "GET /debug/engine-stats?since=4790 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45216 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45220 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45222 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45228 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45238 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45244 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45252 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45258 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45268 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45272 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45288 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45302 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45316 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45328 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45340 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45346 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45358 - "GET /debug/engine-stats?since=4822 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45358 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45374 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45398 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45390 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45406 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45408 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45420 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45436 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45440 - "GET /debug/engine-stats?since=5094 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45440 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45874 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45884 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45896 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45902 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45906 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45922 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45926 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45930 - "GET /debug/engine-stats?since=5323 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45930 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45946 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45956 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45958 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45960 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45966 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45976 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45982 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45988 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45994 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46010 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46020 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46024 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46034 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46038 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46040 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46050 - "GET /debug/engine-stats?since=5382 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46050 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46056 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46066 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46082 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46084 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46094 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46106 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46110 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46112 - "GET /debug/engine-stats?since=5653 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46112 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46112 - "GET /debug/engine-stats?since=5849 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46112 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46120 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46130 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46134 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46150 - "GET /debug/engine-stats?since=5849 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46150 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46162 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46174 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46184 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46194 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46210 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46218 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46234 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46240 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46242 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46252 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46264 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46268 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46274 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46290 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46304 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46310 - "GET /debug/engine-stats?since=5924 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46310 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46326 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46342 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46358 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46368 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46378 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46386 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46390 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46406 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46410 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46416 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46422 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46432 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46444 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46460 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46462 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46470 - "GET /debug/engine-stats?since=6161 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46470 - "GET /debug/engine-stats?since=6390 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46470 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46474 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46488 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46502 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46506 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46508 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46522 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46532 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46540 - "GET /debug/engine-stats?since=6522 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46540 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46546 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46548 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46560 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46564 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46566 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46570 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46572 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46574 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46576 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46592 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46604 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46614 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46626 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46634 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46638 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46654 - "GET /debug/engine-stats?since=6633 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46654 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46656 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46672 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46674 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46684 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46692 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46708 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46710 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46718 - "GET /debug/engine-stats?since=6837 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46718 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46724 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46728 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46738 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46744 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46760 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46770 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46772 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46784 - "GET /debug/engine-stats?since=7061 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46784 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46786 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46796 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46810 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46820 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46826 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46836 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46846 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46850 - "GET /debug/engine-stats?since=7066 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46850 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46866 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46878 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46880 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46882 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46892 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46896 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46900 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46904 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46916 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46926 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46940 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46944 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46946 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46954 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46966 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46974 - "GET /debug/engine-stats?since=7306 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46974 - "GET /debug/engine-stats?since=7505 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46974 - "GET /debug/engine-stats?since=7597 HTTP/1.1" 200 OK
+{"ts": "2026-08-16T21:23:15.084Z", "level": "INFO", "logger": "cantollm.server", "process": "api", "msg": "draining: 0 in-flight, deadline 30 s"}
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1657660]
+/home/nadia/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 6 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
