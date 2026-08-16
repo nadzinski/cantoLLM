@@ -86,6 +86,13 @@ def cmd_serve(args):
     from cantollm.runtime import build_runtime, build_tokenizer_runtime
 
     configure_logging("api")
+    # Tracing: --otlp-endpoint exports the env var BEFORE the engine child
+    # spawns (it inherits the environment and builds its own provider).
+    if args.otlp_endpoint:
+        os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = args.otlp_endpoint
+    from cantollm.obs.tracing import configure_from_env
+
+    configure_from_env("cantollm-api")
     device = select_device(args.device)
     registry = EngineRegistry()
 
@@ -272,7 +279,16 @@ def cmd_serve(args):
         loop="uvloop", http="httptools", timeout_graceful_shutdown=10,
     )
     drainer = DrainController(registry, drain_timeout_s=args.drain_timeout)
-    CantoServer(config, drainer).run()
+    try:
+        CantoServer(config, drainer).run()
+    finally:
+        # Flush batched trace spans on the paths that unwind normally
+        # (Ctrl-C re-raises as KeyboardInterrupt; a re-raised SIGTERM's
+        # default handler skips this — the batch processor's 5 s cadence
+        # bounds what a SIGTERM exit can lose).
+        from cantollm.obs.tracing import shutdown_tracing
+
+        shutdown_tracing()
 
 
 # ── Subcommand: chat ────────────────────────────────────────────────
@@ -409,6 +425,10 @@ def parse_args():
     serve_parser.add_argument("--admission-timeout", type=float, default=30.0,
                               help="Seconds an over-cap request queues for a slot "
                                    "before 429 + Retry-After (default: 30)")
+    serve_parser.add_argument("--otlp-endpoint", default=None,
+                              help="OTLP/HTTP endpoint for request traces (e.g. "
+                                   "http://localhost:4318); also honors "
+                                   "OTEL_EXPORTER_OTLP_ENDPOINT. Default: tracing off")
     serve_parser.add_argument("--max-batch", type=int, default=8,
                               help="Batched engine: concurrent KV slots (default: 8)")
     serve_parser.add_argument("--batch-max-seq-len", type=int, default=4096,

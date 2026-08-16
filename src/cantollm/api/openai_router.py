@@ -16,7 +16,9 @@ from fastapi.responses import StreamingResponse
 
 from cantollm.api.common import (
     check_admission,
+    end_request_span,
     request_observer_for,
+    start_request_span,
     tokenize_and_build_request,
     tracked_events,
 )
@@ -120,6 +122,7 @@ def build_openai_router(
         # ticket claimed before the first await (see anthropic_router.py).
         engine = entry.ensure_ready()
         ticket = await entry.begin_request()
+        span = start_request_span("openai", body.model)
         try:
             messages, system = _normalize_openai_messages(body.messages)
             if not messages:
@@ -153,6 +156,7 @@ def build_openai_router(
                     tokenizer=tokenizer,
                     executor=tokenizer_executor,
                     ignore_eos=body.ignore_eos,
+                    parent_span=span,
                 )
                 check_admission(req, entry.max_request_tokens)
             except (ValueError, TypeError, KeyError) as exc:
@@ -161,6 +165,7 @@ def build_openai_router(
             events = tracked_events(
                 ticket, engine.submit(req),
                 observe=request_observer_for(entry),
+                span=span,
             )
             input_tokens = len(req.prompt_token_ids)
             completion_id = f"chatcmpl-{uuid.uuid4().hex[:24]}"
@@ -182,8 +187,9 @@ def build_openai_router(
                 logprobs_requested=body.logprobs,
                 stop=body.stop,
             )
-        except BaseException:
+        except BaseException as exc:
             ticket.close()
+            end_request_span(span, error=str(exc))
             raise
 
     return router

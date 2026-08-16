@@ -55,6 +55,10 @@ class InferenceRequest:
     sampling_params: SamplingParams
     max_tokens: int
     stop_token_ids: set[int]
+    # W3C traceparent carrier (Phase 3.5 tracing). Rides the IPC pickle so
+    # engine-side spans join the API root span's trace; None when tracing
+    # is off.
+    trace_context: dict[str, str] | None = None
 
 
 @dataclass

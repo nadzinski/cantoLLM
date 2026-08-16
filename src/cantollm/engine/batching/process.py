@@ -135,9 +135,14 @@ def engine_process_main(
     # didn't come along. Install the same JSON handler the API process
     # uses so both processes speak one format.
     from cantollm.obs.logging import configure_logging
+    from cantollm.obs.tracing import configure_from_env, shutdown_tracing
     from cantollm.progress import bind_sink, unbind_sink
 
     configure_logging("engine")
+    # The parent exports OTEL_EXPORTER_OTLP_ENDPOINT when --otlp-endpoint
+    # is set; spawn inherits the environment, so the child builds its own
+    # provider and exports engine-side spans directly.
+    configure_from_env("cantollm-engine")
     parent = mp.parent_process()
 
     load_start = time.perf_counter()
@@ -160,6 +165,8 @@ def engine_process_main(
         max_batch=getattr(config, "max_batch", None),
         max_seq_len=getattr(config, "max_seq_len", None),
     ))
+    from cantollm.engine.batching.trace import TraceStepObserver
+
     try:
         drive_scheduler(
             scheduler,
@@ -167,11 +174,14 @@ def engine_process_main(
             emit=events.put,
             should_stop=lambda: not parent.is_alive(),
             collector=StepStatsCollector.for_scheduler(scheduler),
+            tracer=TraceStepObserver.create(),
         )
     except Exception as exc:  # batch-wide by construction
         logger.exception("scheduler step failed; engine process exiting")
         events.put(EngineFailed(str(exc)))
         return
+    finally:
+        shutdown_tracing()  # flush batched spans before the child exits
     events.put(Stopped())
 
 

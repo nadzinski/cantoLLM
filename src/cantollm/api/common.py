@@ -14,11 +14,39 @@ from typing import Any
 
 from cantollm.engine.types import InferenceRequest, SamplingParams, TokenEvent
 from cantollm.lifecycle import RequestTicket
+from cantollm.obs import tracing
 from cantollm.obs.logging import request_id_var
 
 
 class AdmissionError(ValueError):
     """Request rejected at the door, before any engine sees it."""
+
+
+def start_request_span(dialect: str, model: str) -> Any | None:
+    """Root span for one inference request; None when tracing is off. The
+    router owns it until tracked_events takes over and ends it at stream
+    end (see end_request_span for the failure paths)."""
+    tracer = tracing.get_tracer()
+    if tracer is None:
+        return None
+    from opentelemetry.trace import SpanKind
+
+    return tracer.start_span(
+        f"{dialect} {model}",
+        kind=SpanKind.SERVER,
+        attributes={
+            "model": model,
+            "request_id": request_id_var.get() or "",
+        },
+    )
+
+
+def end_request_span(span: Any | None, error: str | None = None) -> None:
+    if span is None or not span.is_recording():
+        return
+    if error is not None:
+        span.set_attribute("error", error)
+    span.end()
 
 
 def request_observer_for(entry: Any) -> Any | None:
@@ -33,6 +61,7 @@ async def tracked_events(
     ticket: RequestTicket,
     events: AsyncIterator[TokenEvent],
     observe: Any | None = None,
+    span: Any | None = None,
 ) -> AsyncIterator[TokenEvent]:
     """Wrap an engine event stream so the request's in-flight ticket closes
     exactly once — on exhaustion, on error, or on aclose (the adapter's
@@ -52,6 +81,8 @@ async def tracked_events(
                     first_seen = True
                     if observe is not None:
                         observe.first_token(time.perf_counter() - t0)
+                    if span is not None and span.is_recording():
+                        span.add_event("first_token")
             if evt.finish_reason is not None:
                 reason = evt.finish_reason
             elif evt.error is not None:
@@ -61,6 +92,10 @@ async def tracked_events(
         ticket.close()
         if observe is not None:
             observe.finished(time.perf_counter() - t0, tokens, reason)
+        if span is not None and span.is_recording():
+            span.set_attribute("output_tokens", tokens)
+            span.set_attribute("finish_reason", reason or "disconnect")
+            span.end()
         await events.aclose()
 
 
@@ -113,6 +148,7 @@ async def tokenize_and_build_request(
     tokenizer,
     executor: ThreadPoolExecutor,
     ignore_eos: bool = False,
+    parent_span: Any | None = None,
 ) -> InferenceRequest:
     """Tokenize `messages` on the executor and wrap into an InferenceRequest.
 
@@ -125,8 +161,23 @@ async def tokenize_and_build_request(
     # propagate context into the worker thread. Falls back to a fresh id for
     # callers without the middleware (direct engine tests, clients).
     request_id = request_id_var.get() or uuid.uuid4().hex
+    tok_span = None
+    if parent_span is not None and (tracer := tracing.get_tracer()) is not None:
+        from opentelemetry.trace import set_span_in_context
+
+        tok_span = tracer.start_span(
+            "tokenize", context=set_span_in_context(parent_span)
+        )
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(
-        executor, _build_sync, messages, system, sampling_params, max_tokens,
-        tokenizer, ignore_eos, request_id,
-    )
+    try:
+        req = await loop.run_in_executor(
+            executor, _build_sync, messages, system, sampling_params,
+            max_tokens, tokenizer, ignore_eos, request_id,
+        )
+    finally:
+        if tok_span is not None:
+            tok_span.end()
+    if parent_span is not None:
+        # The engine child parents its queue/prefill/decode spans on this.
+        req.trace_context = tracing.inject_span_context(parent_span)
+    return req

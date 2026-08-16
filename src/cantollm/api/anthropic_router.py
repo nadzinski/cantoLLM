@@ -9,7 +9,9 @@ from cantollm.api.anthropic_adapter import render_message, render_sse
 from cantollm.api.anthropic_types import MessagesRequest
 from cantollm.api.common import (
     check_admission,
+    end_request_span,
     request_observer_for,
+    start_request_span,
     tokenize_and_build_request,
     tracked_events,
 )
@@ -40,6 +42,7 @@ def build_anthropic_router(
         # this request; tracked_events (or the except below) closes it.
         engine = entry.ensure_ready()
         ticket = await entry.begin_request()
+        span = start_request_span("anthropic", body.model)
         try:
             if body.ignore_eos and body.stop_sequences:
                 raise HTTPException(
@@ -60,6 +63,7 @@ def build_anthropic_router(
                     tokenizer=tokenizer,
                     executor=tokenizer_executor,
                     ignore_eos=body.ignore_eos,
+                    parent_span=span,
                 )
                 check_admission(req, entry.max_request_tokens)
             except (ValueError, TypeError, KeyError) as exc:
@@ -68,6 +72,7 @@ def build_anthropic_router(
             events = tracked_events(
                 ticket, engine.submit(req),
                 observe=request_observer_for(entry),
+                span=span,
             )
             input_tokens = len(req.prompt_token_ids)
 
@@ -79,8 +84,9 @@ def build_anthropic_router(
                 )
             return await render_message(events, tokenizer, body.model, input_tokens,
                                         stop_sequences=body.stop_sequences)
-        except BaseException:
+        except BaseException as exc:
             ticket.close()
+            end_request_span(span, error=str(exc))
             raise
 
     return router

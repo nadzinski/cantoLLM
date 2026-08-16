@@ -52,6 +52,7 @@ from cantollm.engine.batching.types import (
 )
 
 if TYPE_CHECKING:
+    from cantollm.engine.batching.trace import TraceStepObserver
     from cantollm.runtime import ModelRuntime
 
 logger = logging.getLogger(__name__)
@@ -121,6 +122,7 @@ def drive_scheduler(
     emit: Callable[[StepUpdate], None],
     should_stop: Callable[[], bool] | None = None,
     collector: StepStatsCollector | None = None,
+    tracer: "TraceStepObserver | None" = None,
 ) -> None:
     """The engine's steady-state loop: drain commands, apply, step, emit —
     until a Shutdown command arrives (returns) or the scheduler raises
@@ -164,6 +166,8 @@ def drive_scheduler(
             if isinstance(cmd, Shutdown):
                 return
             if isinstance(cmd, AddRequest):
+                if tracer is not None:
+                    tracer.on_request(cmd.request)
                 scheduler.add_request(cmd.request)
             elif isinstance(cmd, Abort):
                 scheduler.abort(cmd.request_id)
@@ -173,8 +177,12 @@ def drive_scheduler(
 
         if collector is not None:
             collector.before_step(scheduler)
+        if tracer is not None:
+            tracer.before_step(scheduler)
         events = scheduler.step()
         stats = collector.after_step(scheduler, events) if collector is not None else None
+        if tracer is not None:
+            tracer.after_step(scheduler, events)
         if events or stats is not None:
             # One emission per step, not per token (IPC-shaped).
             emit(StepUpdate(events=events, stats=stats))
@@ -225,6 +233,8 @@ class ContinuousBatchingEngine(EventMultiplexer):
     # --- scheduler thread ---------------------------------------------
 
     def _run(self) -> None:
+        from cantollm.engine.batching.trace import TraceStepObserver
+
         try:
             drive_scheduler(
                 self.scheduler,
@@ -233,6 +243,7 @@ class ContinuousBatchingEngine(EventMultiplexer):
                     self._dispatch_update, update
                 ),
                 collector=StepStatsCollector.for_scheduler(self.scheduler),
+                tracer=TraceStepObserver.create(),
             )
         except Exception as exc:  # batch-wide by construction
             # Log with the traceback here, on the scheduler thread where
