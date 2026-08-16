@@ -49,7 +49,9 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 markers = [
     "slow: spawns real server processes; seconds each, still in the default run",
+    "chaos: the Phase 3.5 load/failure suite; excluded by default, run with -m chaos",
 ]
+addopts = "-m 'not chaos'"
 # Diagnostics for an intermittent multi-minute stall first seen during the
 # Phase 3.5 rounds (test passes after self-recovering; suite stays green):
 # any test exceeding this dumps every thread's stack to stderr and keeps

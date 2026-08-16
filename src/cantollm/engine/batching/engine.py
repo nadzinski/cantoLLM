@@ -143,6 +143,15 @@ def drive_scheduler(
     prefill-only step carries no events but its stats still matter. With
     None the emission rule is unchanged: only steps with events emit.
     """
+    # Test-only fault injection (chaos suite): wedge the loop after N steps
+    # (the hung-but-alive engine only the watchdog can catch), or pace every
+    # step (the tiny model otherwise outruns any outside-observer timing).
+    import os as _os
+    import time as _time
+
+    wedge_after = int(_os.environ.get("CANTOLLM_TEST_WEDGE_AFTER_STEPS") or 0)
+    step_delay = float(_os.environ.get("CANTOLLM_TEST_STEP_DELAY_S") or 0)
+    steps_done = 0
     while True:
         if should_stop is not None and should_stop():
             return
@@ -183,6 +192,12 @@ def drive_scheduler(
         stats = collector.after_step(scheduler, events) if collector is not None else None
         if tracer is not None:
             tracer.after_step(scheduler, events)
+        steps_done += 1
+        if wedge_after and steps_done >= wedge_after:
+            logger.error("test wedge engaged after %d steps; sleeping", steps_done)
+            _time.sleep(3600)
+        if step_delay:
+            _time.sleep(step_delay)
         if events or stats is not None:
             # One emission per step, not per token (IPC-shaped).
             emit(StepUpdate(events=events, stats=stats))

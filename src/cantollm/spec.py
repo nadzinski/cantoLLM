@@ -8,6 +8,7 @@ consumed by `ModelRuntime` (see `runtime.py`); the CLI builds a spec via
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -21,7 +22,6 @@ from cantollm.models.qwen3.weights import (
     download_weights,
     load_weights_into_model,
 )
-
 
 MODEL_CONFIGS: dict[str, dict] = {
     "0.6B": {
@@ -118,6 +118,17 @@ class ModelSpec:
 
 
 def qwen3_spec(size: str) -> ModelSpec:
+    # Test-only escape hatch (the chaos suite): CANTOLLM_TEST_SPEC names a
+    # "module:function" returning a ModelSpec, served under --model tiny.
+    # Lets the suite exercise the REAL serve path (weights load, warm-up,
+    # supervisor, drain) on a milliseconds-fast model with no downloads.
+    if size == "tiny":
+        hook = os.environ.get("CANTOLLM_TEST_SPEC")
+        if hook:
+            import importlib
+
+            mod_name, fn_name = hook.split(":")
+            return getattr(importlib.import_module(mod_name), fn_name)()
     if size not in MODEL_CONFIGS:
         raise ValueError(f"Unknown Qwen3 size '{size}'. Must be one of {list(MODEL_CONFIGS)}")
     arch = MODEL_CONFIGS[size]

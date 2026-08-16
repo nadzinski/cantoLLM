@@ -374,9 +374,16 @@ def _print_bench_summary(handle):
 
 # ── Argument parsing ────────────────────────────────────────────────
 
+def _model_choices() -> list[str]:
+    choices = list(MODEL_CONFIGS.keys())
+    if os.environ.get("CANTOLLM_TEST_SPEC"):
+        choices.append("tiny")  # chaos-suite hook; see spec.qwen3_spec
+    return choices
+
+
 def _add_model_args(parser):
     """Add common model/sampling arguments to a parser."""
-    parser.add_argument("--model", "-m", choices=list(MODEL_CONFIGS.keys()),
+    parser.add_argument("--model", "-m", choices=_model_choices(),
                         default="0.6B", help="Model size (default: 0.6B)")
     parser.add_argument("--temperature", "-t", type=float, default=0.7,
                         help="Sampling temperature (default: 0.7)")
