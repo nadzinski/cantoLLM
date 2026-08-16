@@ -6,16 +6,18 @@ Mounts three routers — common (`/health`, `/v1/models`), Anthropic
 """
 
 import os
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 from cantollm.api.anthropic_router import build_anthropic_router
 from cantollm.api.common_router import build_common_router
 from cantollm.api.debug_router import build_debug_router
 from cantollm.api.errors import install_error_handlers
 from cantollm.api.openai_router import build_openai_router
+from cantollm.obs.logging import request_id_var
 from cantollm.registry import EngineRegistry
 
 
@@ -44,6 +46,22 @@ def create_app(
             tokenizer_executor.shutdown(wait=True, cancel_futures=True)
 
     app = FastAPI(title="CantoLLM", lifespan=lifespan)
+
+    @app.middleware("http")
+    async def request_id_middleware(request: Request, call_next):
+        # Honor an inbound X-Request-ID, else mint one. The contextvar makes
+        # the id visible to JSON log records and to request tokenization
+        # (common.py reads it into InferenceRequest.request_id); streaming
+        # bodies inherit it because the downstream task copies this context.
+        rid = request.headers.get("x-request-id") or uuid.uuid4().hex
+        token = request_id_var.set(rid)
+        try:
+            response = await call_next(request)
+            response.headers["x-request-id"] = rid
+            return response
+        finally:
+            request_id_var.reset(token)
+
     install_error_handlers(app)
     app.include_router(build_common_router(registry))
     app.include_router(build_anthropic_router(registry, tokenizer_executor))

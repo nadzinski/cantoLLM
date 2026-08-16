@@ -130,7 +130,11 @@ def engine_process_main(
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     # spawn starts from a blank interpreter: the parent's logging config
     # didn't come along.
-    logging.basicConfig(level=logging.INFO)
+    # spawn does not inherit the parent's logging config; install the same
+    # JSON handler the API process uses so both processes speak one format.
+    from cantollm.obs.logging import configure_logging
+
+    configure_logging("engine")
     parent = mp.parent_process()
 
     load_start = time.perf_counter()

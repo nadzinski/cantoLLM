@@ -10,6 +10,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 from cantollm.engine.types import InferenceRequest, SamplingParams
+from cantollm.obs.logging import request_id_var
 
 
 class AdmissionError(ValueError):
@@ -42,10 +43,11 @@ def _build_sync(
     max_tokens: int,
     tokenizer,
     ignore_eos: bool,
+    request_id: str,
 ) -> InferenceRequest:
     prompt_token_ids = tokenizer.encode_conversation(messages, system=system)
     return InferenceRequest(
-        request_id=uuid.uuid4().hex,
+        request_id=request_id,
         prompt_token_ids=prompt_token_ids,
         sampling_params=sampling_params,
         max_tokens=max_tokens,
@@ -72,8 +74,12 @@ async def tokenize_and_build_request(
     engine into its own process — keeps tokenization off the API event loop
     and out of the scheduler's critical path.
     """
+    # Read the contextvar here, not in _build_sync: run_in_executor does not
+    # propagate context into the worker thread. Falls back to a fresh id for
+    # callers without the middleware (direct engine tests, clients).
+    request_id = request_id_var.get() or uuid.uuid4().hex
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(
         executor, _build_sync, messages, system, sampling_params, max_tokens,
-        tokenizer, ignore_eos,
+        tokenizer, ignore_eos, request_id,
     )

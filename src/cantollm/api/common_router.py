@@ -1,4 +1,4 @@
-"""Dialect-agnostic routes: /health, /v1/models.
+"""Dialect-agnostic routes: /health, /version, /v1/models.
 
 Both Anthropic and OpenAI SDKs hit `GET /v1/models` but with different
 response shapes. Since FastAPI can't multiplex two routes on the same
@@ -21,6 +21,32 @@ def build_common_router(registry: EngineRegistry) -> APIRouter:
     @router.get("/health")
     async def health():
         return {"status": "ok"}
+
+    # Environment fingerprint, computed once on first request (two git
+    # subprocess calls); bench/env.py already nulls fields gracefully on
+    # no-git trees (the H100 "nogit" case).
+    version_cache: dict | None = None
+
+    @router.get("/version")
+    async def version():
+        nonlocal version_cache
+        if version_cache is None:
+            from cantollm.bench.env import fingerprint
+
+            env = fingerprint()
+            version_cache = {
+                "name": "cantollm",
+                "git_sha": env["git_sha"],
+                "git_dirty": env["git_dirty"],
+                "python": env["python"],
+                "torch": env["torch"],
+                "device_name": env["device_name"],
+                "models": {
+                    name: {"engine": type(entry.engine).__name__}
+                    for name, entry in registry.items()
+                },
+            }
+        return version_cache
 
     @router.get("/v1/models", response_model=ModelListResponse)
     async def list_models():

@@ -8,6 +8,7 @@ calls; everything per-model-specific lives here instead of `main.py`.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import replace
 from typing import Any, Literal
 
@@ -26,6 +27,8 @@ from cantollm.models.attention import (
 from cantollm.spec import ModelSpec
 from cantollm.speculative import SpeculativeBackend
 from cantollm.standard import StandardBackend
+
+logger = logging.getLogger(__name__)
 
 
 class ModelRuntime:
@@ -250,17 +253,17 @@ def _load_model(
     device: torch.device,
     attention: Literal["einsum", "padded", "sdpa"] = "einsum",
 ) -> tuple[torch.nn.Module, str]:
-    print(f"Downloading {spec.size} model weights...")
+    logger.info("Downloading %s model weights...", spec.size)
     local_dir, weights_dict = spec.weights_loader()
 
-    print("Creating model...")
+    logger.info("Creating model...")
     attention_method = _ATTENTION_METHODS[attention]()
     model = spec.model_cls(
         qwen3_config=spec.arch,
         attention_method=attention_method,
     )
 
-    print("Loading pretrained weights...")
+    logger.info("Loading pretrained weights...")
     spec.apply_weights(model, spec.arch, weights_dict)
     del weights_dict
 

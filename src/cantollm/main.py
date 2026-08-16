@@ -80,9 +80,11 @@ def cmd_serve(args):
         SequentialEngine,
     )
     from cantollm.engine.batching import BatchingConfig, build_qwen3_batched_scheduler
+    from cantollm.obs.logging import configure_logging
     from cantollm.registry import EngineRegistry
     from cantollm.runtime import build_runtime, build_tokenizer_runtime
 
+    configure_logging("api")
     device = select_device(args.device)
     registry = EngineRegistry()
 
