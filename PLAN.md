@@ -555,30 +555,54 @@ iron — especially `torch.compile`, which has more headroom on Hopper.
 ## Phase 3.5 — Production hygiene
 
 **Goal:** now that the engine is a separate process and metrics actually show useful
-things (queue depth, batch size, preemption count, KV utilization), pick up the production
-basics that were deferred from Phase 1.
+things (queue depth, batch size, KV utilization), pick up the production basics that
+were deferred from Phase 1.
+
+**Status (2026-08-15):** In progress. Scope set in the planning session the day Phase 3
+closed; `production-hygiene-plan.md` is the design note and execution plan (decisions,
+alternatives, the lifecycle-core architecture, chunk order). Additions over the
+original bundle: OTel request tracing to Tempo, a crash supervisor with auto-restart,
+a hang watchdog, a TOML serve config, and the two Phase 1b leftovers (X-Request-ID
+middleware, OpenAI stream-error parity). Dropped: preemption-count metric (no
+preemption exists until Phase 4); a systemd unit (considered, skipped). Per-request
+deadlines were considered and left for Phase 4's priority/goodput work.
 
 - **Observability**: `/metrics` Prometheus endpoint. Engine metrics (queue depth, active
-  requests, tok/s, TTFT, ITL, KV utilization, preemption count, batch size). HTTP metrics
-  (latency histograms, status codes). Process metrics (CPU, mem, GPU util via nvidia-smi).
-  **Event loop lag** as a core API-side metric. Local Grafana via docker-compose.
-- **Admission control**: bounded in-flight-requests semaphore at the API layer. Over
-  limit: queue with timeout, then 429 with `Retry-After`.
-- **Readiness vs liveness**: `/health` (liveness), `/ready` (readiness — model loaded,
-  warm-up done, engine subprocess healthy, not shutting down). Warm-up does a dummy
-  forward pass before flipping `/ready`.
-- **Graceful shutdown**: SIGTERM → `/ready` flips to 503 → drain in-flight streams with
-  30s deadline → abort the rest. Engine shutdown waits on the scheduler loop rather than
-  being the stub it is today.
-- **Model reload**: build a new engine for the target model, atomically swap it into the
-  registry, drain the old one. Falls out cleanly once the registry exists; wire it to a
-  signal or admin endpoint.
+  requests, tok/s, TTFT, ITL, KV utilization, batch size). HTTP metrics (latency
+  histograms, status codes). Process metrics (CPU, mem via psutil; GPU util via NVML).
+  **Event loop lag** as a core API-side metric. Local Grafana + Prometheus + Tempo via
+  docker-compose, with a provisioned dashboard committed in-repo.
+- **Request tracing**: OTel request-phase spans (HTTP root; tokenize, queue-wait,
+  per-chunk prefill, decode), trace context propagated across the IPC boundary, direct
+  OTLP to Tempo, no collector. Off unless an endpoint is configured. Plus structured
+  JSON logs in both processes carrying `X-Request-ID` (the Phase 1b leftover).
+- **Admission control**: bounded in-flight-requests semaphore at the API layer, per
+  model, default capacity derived from engine slots. Over limit: queue with timeout,
+  then 429 with `Retry-After`.
+- **Readiness vs liveness**: `/health` (liveness), `/ready` (readiness). uvicorn
+  accepts immediately; engine construction runs behind a background supervisor task,
+  and `/ready` reports warm-up progress (load / compile / sweep / capture, with
+  counts) until the engine is warm. The bench polls `/ready` instead of blind-waiting
+  on `/health`.
+- **Graceful shutdown**: SIGTERM or first Ctrl-C → stop admitting, `/ready` flips to
+  503, drain in-flight streams against a configurable 30 s deadline, abort the rest
+  through the normal event path; second signal forces.
+- **Model reload + recovery**: `POST /admin/reload` drains, frees VRAM, rebuilds and
+  re-warms the same model + config (no blue-green: it cannot fit at the sizes that
+  matter). The same machinery gives crash recovery: a supervisor auto-restarts a dead
+  engine with capped exponential backoff, giving up into a `crashed` state that
+  `POST /admin/restart` recovers. A watchdog catches the hung-but-alive engine
+  (work pending, no step progress) and escalates to kill + restart.
+- **Serve config file**: `canto serve --config serve.toml`, CLI flags override file
+  values; same TOML conventions as the bench configs.
 - **Non-goal**: auth and rate limiting stay out of process. Those belong in a sidecar
   (nginx, envoy) and building them in-process is a distraction from the
   learning-vs-production split this project is about.
-- **Load test exit criterion**: 50 concurrent clients with mixed prompt sizes run to
-  completion with no stream truncation. Kill -9 the engine, API serves 503; restart
-  engine, API recovers.
+- **Load test exit criterion**, kept as a pytest chaos suite (marker-gated, loadgen
+  reused as a library): 50 concurrent clients with mixed prompt sizes run to
+  completion with no stream truncation; overload yields clean 429s; SIGTERM mid-load
+  drains without truncation; kill -9 the engine → API serves 503 → supervisor
+  restarts → API recovers; a wedged engine trips the watchdog.
 
 **Hardware:** 5090 primary.
 

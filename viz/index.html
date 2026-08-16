@@ -1523,12 +1523,14 @@ function initRoadmap() {
         'CUDA graphs for steady-state decode, captured per batch-size bucket (1, 4, 16, 32) with eager fallback — “this is exactly how vLLM does it; the implementation detail <i>is</i> the lesson”',
         'First true before/after bench vs Phase 2’s numbers',
       ] },
-    { id: '3.5', title: 'prod hygiene', hw: '5090', status: 'future',
+    { id: '3.5', title: 'prod hygiene', hw: '5090', status: 'active',
+      statusLine: 'Status (2026-08-15): In progress. Scope set the day Phase 3 closed; production-hygiene-plan.md is the design note + execution plan. Added over the original bundle: OTel tracing to Tempo, a crash supervisor + hang watchdog, a TOML serve config, and the two Phase 1b leftovers (X-Request-ID, OpenAI stream-error parity). Dropped: preemption-count metric (no preemption until Phase 4); systemd unit.',
       goal: 'Now that the engine is a separate process and metrics show real things, pick up the production basics deferred from Phase 1.',
       items: [
-        '<code>/metrics</code> Prometheus: queue depth, batch size, KV utilization, preemption count, TTFT/ITL, event-loop lag; local Grafana',
-        'Admission control (429 + Retry-After) · <code>/ready</code> vs <code>/health</code> with warm-up · graceful shutdown with a 30s drain · model reload via registry swap',
-        'Exit criterion: 50 concurrent clients run clean; kill -9 the engine → API serves 503 → restart → recovery. Auth stays a sidecar non-goal',
+        '<code>/metrics</code> Prometheus: queue depth, batch size, KV utilization, TTFT/ITL, event-loop lag; Grafana + Prometheus + Tempo via docker-compose · OTel request-phase spans across the IPC boundary (tokenize · queue · prefill chunks · decode)',
+        'Early-accept startup: <code>/ready</code> reports warm-up progress (load / sweep / capture counts, ends the blind 1800 s bench timeouts) · per-model admission semaphore (429 + Retry-After) · drain on SIGTERM with a 30 s deadline · <code>/admin/reload</code>, drain-then-load',
+        'Crash supervisor: capped-backoff auto-restart of a dead engine · hang watchdog (no step progress while work pends → kill + rebuild) · TOML serve config · X-Request-ID + JSON logs · OpenAI stream-error parity',
+        'Exit criterion, as a pytest chaos suite: 50 clients run clean · overload → clean 429s · SIGTERM drains under load · kill -9 → supervisor recovery · a wedged engine trips the watchdog. Auth stays a sidecar non-goal',
       ] },
     { id: '4', title: 'paged KV + overlap', hw: '5090', status: 'future',
       goal: 'Replace padded contiguous KV with a block-indexed pool + block tables — the memory-management lesson — and overlap scheduling with execution so the CPU plans step N+1 while the GPU runs step N.',
@@ -1645,7 +1647,7 @@ function initRoadmap() {
   });
   // "you are here" flag
   mk('text', { x: xActive, y: LY + 68, style: 'font:700 11px var(--sans);letter-spacing:.06em;fill:#8a5a00;text-anchor:middle' }, '▲ YOU ARE HERE');
-  mk('text', { x: xActive, y: LY + 84, style: 'font:10.5px var(--sans);fill:var(--muted);text-anchor:middle' }, 'SDPA + shape buckets = CUDA default (longctx 2.2×) — compile, CUDA graphs next');
+  mk('text', { x: xActive, y: LY + 84, style: 'font:10.5px var(--sans);fill:var(--muted);text-anchor:middle' }, 'Phase 3 closed with the H100 day · now: /ready + drain + supervisor + /metrics + traces');
 
   const diagPanel = el('section', 'panel');
   diagPanel.appendChild(el('h2', null, 'The line — phases 0 → 12, from PLAN.md'));
