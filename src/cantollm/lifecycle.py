@@ -162,6 +162,11 @@ class EngineHandle:
         # None until the first engine with stats is adopted, so sequential
         # engines keep reporting available:false on /debug/engine-stats.
         self.engine_stats: Any | None = None
+        # Observability hooks, wired by create_app's metrics layer:
+        # stats_observer becomes the accumulator's on_record; the request
+        # observer factory yields per-request TTFT/duration observers.
+        self.stats_observer: Callable | None = None
+        self.request_observer_factory: Callable[[], Any] | None = None
         # Policy knobs, per-instance so tests can shrink them.
         self.backoff_initial_s = BACKOFF_INITIAL_S
         self.backoff_cap_s = BACKOFF_CAP_S
@@ -461,6 +466,7 @@ class EngineHandle:
             return
         if self.engine_stats is None:
             self.engine_stats = fresh
+            self.engine_stats.on_record = self.stats_observer
             return
         if fresh is self.engine_stats:
             return
@@ -469,6 +475,7 @@ class EngineHandle:
         self.engine_stats.max_batch = fresh.max_batch
         self.engine_stats.max_seq_len = fresh.max_seq_len
         self.engine_stats.note_generation_start()
+        self.engine_stats.on_record = self.stats_observer
         engine.engine_stats = self.engine_stats
 
     # --- watchdog -------------------------------------------------------

@@ -6,9 +6,11 @@ wrapping the result into an `InferenceRequest`.
 """
 
 import asyncio
+import time
 import uuid
 from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 
 from cantollm.engine.types import InferenceRequest, SamplingParams, TokenEvent
 from cantollm.lifecycle import RequestTicket
@@ -19,18 +21,46 @@ class AdmissionError(ValueError):
     """Request rejected at the door, before any engine sees it."""
 
 
+def request_observer_for(entry: Any) -> Any | None:
+    """The per-request metrics observer for this entry's model, or None
+    when metrics are unwired (fake entries, direct engine tests)."""
+    handle = getattr(entry, "handle", None)
+    factory = getattr(handle, "request_observer_factory", None)
+    return factory() if factory is not None else None
+
+
 async def tracked_events(
-    ticket: RequestTicket, events: AsyncIterator[TokenEvent]
+    ticket: RequestTicket,
+    events: AsyncIterator[TokenEvent],
+    observe: Any | None = None,
 ) -> AsyncIterator[TokenEvent]:
     """Wrap an engine event stream so the request's in-flight ticket closes
     exactly once — on exhaustion, on error, or on aclose (the adapter's
     disconnect path). Closing this wrapper also closes the inner stream,
-    which is what triggers the engine-side disconnect abort."""
+    which is what triggers the engine-side disconnect abort. The optional
+    observer gets TTFT at the first token and duration/tokens/reason at
+    the end (reason None = client disconnect)."""
+    t0 = time.perf_counter()
+    tokens = 0
+    first_seen = False
+    reason: str | None = None
     try:
         async for evt in events:
+            if evt.token_id is not None:
+                tokens += 1
+                if not first_seen:
+                    first_seen = True
+                    if observe is not None:
+                        observe.first_token(time.perf_counter() - t0)
+            if evt.finish_reason is not None:
+                reason = evt.finish_reason
+            elif evt.error is not None:
+                reason = "error"
             yield evt
     finally:
         ticket.close()
+        if observe is not None:
+            observe.finished(time.perf_counter() - t0, tokens, reason)
         await events.aclose()
 
 

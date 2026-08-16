@@ -158,6 +158,8 @@ def test_ticket_close_is_idempotent():
 
 
 def test_tracked_events_closes_on_exhaustion_and_disconnect():
+    from cantollm.engine.types import TokenEvent
+
     handle = EngineHandle("m", lambda: None)
 
     inner_finalized = []
@@ -165,21 +167,22 @@ def test_tracked_events_closes_on_exhaustion_and_disconnect():
     async def inner(n):
         try:
             for i in range(n):
-                yield i
+                yield TokenEvent(token_id=i, request_id="r")
         finally:
             inner_finalized.append(True)
 
     async def main():
         # Full drain closes the ticket at exhaustion.
         ticket = await handle.begin_request()
-        assert [e async for e in tracked_events(ticket, inner(3))] == [0, 1, 2]
+        seen = [e.token_id async for e in tracked_events(ticket, inner(3))]
+        assert seen == [0, 1, 2]
         assert handle.inflight == 0
         assert inner_finalized == [True]
 
         # aclose mid-stream (the disconnect path) closes ticket AND inner.
         ticket = await handle.begin_request()
         wrapper = tracked_events(ticket, inner(100))
-        assert (await anext(wrapper)) == 0
+        assert (await anext(wrapper)).token_id == 0
         await wrapper.aclose()
         assert handle.inflight == 0
         assert inner_finalized == [True, True]

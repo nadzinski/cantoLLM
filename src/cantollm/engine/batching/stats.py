@@ -220,6 +220,10 @@ class EngineStatsAccumulator:
     # a fresh engine; recorded seqs stay monotonic across restarts.
     _seq_base: int = 0
     _last_seen_seq: int = -1
+    # Optional push hook (Phase 3.5 /metrics): called once per record with
+    # the (rebased) StepStats or None and the newly derived ITL gaps. Set
+    # by the observability layer; the engine stays ignorant of Prometheus.
+    on_record: object = None
 
     def note_generation_start(self) -> None:
         self._seq_base = self._last_seen_seq + 1
@@ -227,6 +231,7 @@ class EngineStatsAccumulator:
     def record(self, update: StepUpdate) -> None:
         self.last_update_mono = time.monotonic()
         stats = update.stats
+        new_gaps: list[float] = []
         if stats is not None:
             if self._seq_base:
                 stats = replace(stats, seq=stats.seq + self._seq_base)
@@ -239,14 +244,18 @@ class EngineStatsAccumulator:
                 if stats is not None:
                     last = self._last_token_t.get(evt.request_id)
                     if last is not None:
+                        gap = stats.t_perf - last
                         self._itl.append(ITLSample(
                             seq=stats.seq,
                             request_id=evt.request_id,
-                            gap_s=stats.t_perf - last,
+                            gap_s=gap,
                         ))
+                        new_gaps.append(gap)
                     self._last_token_t[evt.request_id] = stats.t_perf
             if evt.finish_reason is not None or evt.error is not None:
                 self._last_token_t.pop(evt.request_id, None)
+        if self.on_record is not None:
+            self.on_record(stats, new_gaps)
 
     def recent_decode_rate(self, window: int = 100) -> float | None:
         """Decode tokens/sec over the last `window` steps. None without at

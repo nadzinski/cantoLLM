@@ -16,6 +16,7 @@ from fastapi.responses import StreamingResponse
 
 from cantollm.api.common import (
     check_admission,
+    request_observer_for,
     tokenize_and_build_request,
     tracked_events,
 )
@@ -157,7 +158,10 @@ def build_openai_router(
             except (ValueError, TypeError, KeyError) as exc:
                 raise HTTPException(status_code=400, detail=str(exc))
 
-            events = tracked_events(ticket, engine.submit(req))
+            events = tracked_events(
+                ticket, engine.submit(req),
+                observe=request_observer_for(entry),
+            )
             input_tokens = len(req.prompt_token_ids)
             completion_id = f"chatcmpl-{uuid.uuid4().hex[:24]}"
             created = int(time.time())
