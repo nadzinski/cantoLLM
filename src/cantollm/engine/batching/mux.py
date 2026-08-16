@@ -20,7 +20,7 @@ the KV slot, which is the resource worth reclaiming.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
 from cantollm.engine.batching.stats import EngineStatsAccumulator, StepUpdate
 from cantollm.engine.batching.types import Abort, AddRequest, Command
@@ -35,6 +35,10 @@ class EventMultiplexer:
         # Bench-harness view (batching/stats.py): both engines' per-step
         # updates land here; /debug/engine-stats reads it.
         self.engine_stats = EngineStatsAccumulator()
+        # Lifecycle hook: called (on the event loop, after in-flight
+        # streams got their error events) when the engine fails batch-wide.
+        # The supervisor wires it to trigger auto-restart.
+        self.on_failed: "Callable[[str], None] | None" = None
 
     def _send_command(self, command: Command) -> None:
         raise NotImplementedError
@@ -98,6 +102,8 @@ class EventMultiplexer:
             q.put_nowait(TokenEvent(error=self._failed, request_id=rid))
             q.put_nowait(None)
         self._queues.clear()
+        if self.on_failed is not None:
+            self.on_failed(reason)
 
     def _close_all_streams(self) -> None:
         """Shutdown sweep: nothing will produce events anymore, so close out

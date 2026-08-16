@@ -15,9 +15,15 @@ originating there (warm-up progress, child death) hop over via
 and must capture the engine object once per request (`ensure_ready()`
 returns it) so a mid-request generation swap never mixes generations.
 
-This chunk (3.5/2a) implements first start only: build -> warm -> ready,
-with any failure landing in CRASHED. Backoff, restart wakes, reload, drain,
-and the watchdog arrive in later chunks and extend the supervisor loop.
+The supervisor task per handle IS the state machine: build -> warm -> ready
+-> await a wake (engine died | reload | restart | stop). First startup is
+simply the loop's first iteration, which is why a bad model no longer kills
+the process: build failures retry with capped exponential backoff and land
+in CRASHED after enough consecutive failures, recoverable via
+POST /admin/restart. Reload and restart-from-ready drain this handle's
+in-flight requests, fully shut the old engine down (child joined, queues
+closed — never two engines' VRAM at once), and rebuild through the same
+factory.
 """
 
 from __future__ import annotations
@@ -32,6 +38,15 @@ from typing import Any, Callable
 from cantollm.progress import Progress, bind_sink, unbind_sink
 
 logger = logging.getLogger(__name__)
+
+# Supervisor policy defaults (instance attributes; tests shrink them).
+BACKOFF_INITIAL_S = 1.0
+BACKOFF_FACTOR = 2.0
+BACKOFF_CAP_S = 30.0
+GIVE_UP_AFTER = 5          # consecutive failures -> CRASHED
+STABLE_RESET_S = 60.0      # ready at least this long -> death resets the count
+DRAIN_POLL_S = 0.05
+ABORT_GRACE_S = 2.0
 
 
 class EngineState(str, Enum):
@@ -102,6 +117,7 @@ class EngineHandle:
         factory: Callable[[], BuiltEngine],
         *,
         runtime: Any | None = None,
+        drain_timeout_s: float = 30.0,
     ):
         self.name = name
         self.factory = factory
@@ -114,10 +130,21 @@ class EngineHandle:
         self.last_error: str | None = None
         self.consecutive_failures = 0
         self.supervisor_task: asyncio.Task | None = None
+        self.drain_timeout_s = drain_timeout_s
+        # Policy knobs, per-instance so tests can shrink them.
+        self.backoff_initial_s = BACKOFF_INITIAL_S
+        self.backoff_cap_s = BACKOFF_CAP_S
+        self.give_up_after = GIVE_UP_AFTER
+        self.stable_reset_s = STABLE_RESET_S
         self._inflight = 0
         self._pending: BuiltEngine | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._drain_latched = False
+        self._wake: asyncio.Event = asyncio.Event()
+        self._wake_reason: str | None = None
+        self._restart_requested: asyncio.Event = asyncio.Event()
+        self._died_reason: str | None = None
+        self._retry_at: float | None = None
 
     # --- request-path API (event loop only) ----------------------------
 
@@ -171,7 +198,32 @@ class EngineHandle:
             s["progress"] = asdict(self.progress)
         if self.state is EngineState.CRASHED:
             s["hint"] = "POST /admin/restart"
+        if self.state is EngineState.RESTARTING and self._retry_at is not None:
+            s["retry_in_s"] = max(0.0, round(self._retry_at - time.monotonic(), 1))
         return s
+
+    # --- admin requests (event loop only) -------------------------------
+
+    def request_reload(self) -> bool:
+        """Drain-then-rebuild of the same factory. Accepted only from READY
+        (a build is already in flight in every other live state)."""
+        if self.state is not EngineState.READY:
+            return False
+        self._wake_reason = "reload"
+        self._wake.set()
+        return True
+
+    def request_restart(self) -> bool:
+        """From CRASHED: wake the crashed-wait and try again. From READY:
+        identical to reload. Anything else: a build is already in flight."""
+        if self.state is EngineState.CRASHED:
+            self._restart_requested.set()
+            return True
+        if self.state is EngineState.READY:
+            self._wake_reason = "restart"
+            self._wake.set()
+            return True
+        return False
 
     # --- progress -------------------------------------------------------
 
@@ -194,25 +246,126 @@ class EngineHandle:
         )
 
     async def _supervise(self) -> None:
-        try:
-            await self._build_and_start()
-        except asyncio.CancelledError:
-            raise
-        except Exception as exc:
-            logger.exception("engine build failed for %s", self.name)
-            self.last_error = str(exc)
-            self.consecutive_failures += 1
-            self.state = EngineState.CRASHED
-            return
-        if self._drain_latched:
-            self.state = EngineState.DRAINING
+        backoff = self.backoff_initial_s
+        while True:
+            # --- build (first start, rebuild after death, reload) -------
+            try:
+                await self._build_and_start()
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                logger.exception("engine build failed for %s", self.name)
+                self.last_error = str(exc)
+                self.consecutive_failures += 1
+                backoff = await self._back_off_or_crash(backoff)
+                continue
+            backoff = self.backoff_initial_s
+
+            if self._drain_latched:
+                self.state = EngineState.DRAINING
+                logger.info(
+                    "engine for %s finished building mid-drain; not admitting",
+                    self.name,
+                )
+                return
+            self.state = EngineState.READY
             logger.info(
-                "engine for %s finished building mid-drain; not admitting",
-                self.name,
+                "engine ready: %s (generation %d)", self.name, self.generation
             )
+            ready_since = time.monotonic()
+
+            # --- serve until something wakes us -------------------------
+            self._wake.clear()
+            self._wake_reason = None
+            await self._wake.wait()
+            reason = self._wake_reason
+
+            if reason == "died":
+                # In-flight streams already failed cleanly (_fail ran
+                # before on_failed). A long-stable engine that dies gets a
+                # fresh count; a crash loop escalates.
+                if time.monotonic() - ready_since >= self.stable_reset_s:
+                    self.consecutive_failures = 0
+                self.consecutive_failures += 1
+                self.last_error = self._died_reason or self.last_error
+                self.state = EngineState.RESTARTING
+                await self._retire_engine()
+                backoff = await self._back_off_or_crash(backoff)
+                continue
+
+            if reason in ("reload", "restart"):
+                await self._drain_own_requests()
+                self.state = EngineState.RESTARTING
+                self._retry_at = None
+                await self._retire_engine()
+                self.consecutive_failures = 0
+                continue
+
+    async def _back_off_or_crash(self, backoff: float) -> float:
+        """Shared failure tail: either sleep the backoff (RESTARTING) or,
+        past the give-up threshold, park in CRASHED until a manual restart.
+        Returns the next backoff value."""
+        if self.consecutive_failures >= self.give_up_after:
+            self.state = EngineState.CRASHED
+            self._retry_at = None
+            logger.error(
+                "engine for %s crashed %d times consecutively; giving up "
+                "until POST /admin/restart", self.name,
+                self.consecutive_failures,
+            )
+            self._restart_requested.clear()
+            await self._restart_requested.wait()
+            self.consecutive_failures = 0
+            return self.backoff_initial_s
+        self.state = EngineState.RESTARTING
+        self._retry_at = time.monotonic() + backoff
+        await asyncio.sleep(backoff)
+        self._retry_at = None
+        return min(backoff * BACKOFF_FACTOR, self.backoff_cap_s)
+
+    async def _drain_own_requests(self) -> None:
+        """Reload-scoped drain: stop admitting (state, not the permanent
+        latch), let in-flight finish against the drain deadline, abort
+        survivors through the normal event path."""
+        self.state = EngineState.DRAINING
+        deadline = time.monotonic() + self.drain_timeout_s
+        while self._inflight > 0 and time.monotonic() < deadline:
+            await asyncio.sleep(DRAIN_POLL_S)
+        engine = self.engine
+        pending = getattr(engine, "inflight_requests", None)
+        if pending is not None:
+            survivors = pending()
+            for rid in survivors:
+                engine.abort(rid)
+            if survivors:
+                logger.warning(
+                    "reload drain deadline hit for %s; aborted %d requests",
+                    self.name, len(survivors),
+                )
+                grace = time.monotonic() + ABORT_GRACE_S
+                while self._inflight > 0 and time.monotonic() < grace:
+                    await asyncio.sleep(DRAIN_POLL_S)
+
+    async def _retire_engine(self) -> None:
+        """Fully shut down the current generation before any rebuild: child
+        joined and queues closed, so there is never a moment with two
+        engines (and double VRAM) alive."""
+        engine, self.engine = self.engine, None
+        if not self._eager_runtime:
+            self.runtime = None
+        if engine is None:
             return
-        self.state = EngineState.READY
-        logger.info("engine ready: %s (generation %d)", self.name, self.generation)
+        try:
+            await engine.shutdown()
+        except Exception:
+            logger.exception("shutdown of retired engine for %s failed", self.name)
+
+    def _on_engine_died(self, reason: str) -> None:
+        """Wired as EventMultiplexer.on_failed; runs on the event loop at
+        the end of _fail(), after in-flight streams got their error events."""
+        self._died_reason = reason
+        self._wake_reason = "died"
+        self._wake.set()
 
     async def _build_and_start(self) -> None:
         self.state = EngineState.STARTING
@@ -236,6 +389,11 @@ class EngineHandle:
             unbind_sink(sink_token)
         self._pending = None
         self.progress = None
+        # Death notification: the multiplexer's _fail runs on the loop and
+        # calls this after in-flight streams got their error events. The
+        # sequential engine has no failure path (no on_failed attribute).
+        if hasattr(built.engine, "on_failed"):
+            built.engine.on_failed = self._on_engine_died
         self.engine = built.engine
         if not self._eager_runtime:
             self.runtime = built.runtime

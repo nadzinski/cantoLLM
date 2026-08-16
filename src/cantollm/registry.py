@@ -57,13 +57,17 @@ class EngineRegistry:
         *,
         max_request_tokens: int | None = None,
         runtime: Any | None = None,
+        drain_timeout_s: float = 30.0,
     ) -> None:
         """Register a model by factory. `runtime` may be supplied eagerly
         when it is cheap and generation-independent (the subprocess path's
-        TokenizerRuntime) so tokenization metadata exists pre-Ready."""
+        TokenizerRuntime) so tokenization metadata exists pre-Ready.
+        `drain_timeout_s` bounds the reload/restart drain."""
         if name in self._entries:
             raise ValueError(f"Model '{name}' is already registered")
-        handle = EngineHandle(name, factory, runtime=runtime)
+        handle = EngineHandle(
+            name, factory, runtime=runtime, drain_timeout_s=drain_timeout_s
+        )
         self._entries[name] = RegistryEntry(
             handle=handle, max_request_tokens=max_request_tokens
         )

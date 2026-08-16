@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 
+from cantollm.api.admin_router import build_admin_router
 from cantollm.api.anthropic_router import build_anthropic_router
 from cantollm.api.common_router import build_common_router
 from cantollm.api.debug_router import build_debug_router
@@ -70,4 +71,5 @@ def create_app(
     app.include_router(build_anthropic_router(registry, tokenizer_executor))
     app.include_router(build_openai_router(registry, tokenizer_executor))
     app.include_router(build_debug_router(registry))
+    app.include_router(build_admin_router(registry))
     return app

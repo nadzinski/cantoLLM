@@ -199,6 +199,7 @@ def cmd_serve(args):
         registry.register(
             model_name, factory,
             max_request_tokens=config.max_seq_len, runtime=api_runtime,
+            drain_timeout_s=args.drain_timeout,
         )
         engine_desc = (
             f"continuous batching, {where} (max_batch={config.max_batch}, "
@@ -238,6 +239,7 @@ def cmd_serve(args):
         registry.register(
             model_name, factory,
             max_request_tokens=cap_spec.arch["max_seq_len"],
+            drain_timeout_s=args.drain_timeout,
         )
         engine_desc = "sequential"
 

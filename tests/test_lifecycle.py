@@ -110,6 +110,10 @@ def test_factory_failure_lands_crashed():
         raise RuntimeError("weights exploded")
 
     registry = _registry(factory)
+    # Shrink the supervisor policy so give-up is fast (2d added retries).
+    handle = registry.get("m").handle
+    handle.backoff_initial_s = 0.01
+    handle.give_up_after = 1
 
     async def main():
         app, client = _app_client(registry)
