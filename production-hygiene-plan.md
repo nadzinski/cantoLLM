@@ -219,12 +219,74 @@ at the pre-phase commit in 12 tries. `faulthandler_timeout = 60` is now in
 the pytest config, so the next occurrence dumps every thread's stack into
 the run output and identifies itself.
 
-### 5090 round (pending)
+### 5090 round (2026-08-16): complete, gates pass
 
-Open items, in order: chaos suite against the real CUDA stack (0.6B, full
-serve default); observability bring-up (compose up, dashboard populates
-under bench load, one trace shows root -> tokenize -> queue -> prefill
-chunks -> decode); /ready progress observed through a real warm-up;
-phase-end bench (standard configs vs the Phase 3 records; overhead gate =
-within repeat noise) committed to bench/history; predictions in §5 graded;
-PLAN.md Phase 3.5 -> Complete + viz close-out.
+Run by the box session over Remote Control, driven from the Mac session.
+Environment: RTX 5090, driver 580.173.02 (CUDA 13.0 userspace), torch
+2.10.0+cu128, cuDNN 91002, Python 3.11.13. Records:
+`bench/history/2026-08-16T*_f8a826a_ab-5090-compile*` (untraced pair, with
+the round's agent-summary.md) and the traced sibling under `547705b`.
+
+- Suite on the box: 521 passed, 3 skipped (the CUDA-only tests all ran).
+  The intermittent executor stall did not reproduce; no stacks captured.
+- Chaos: 5/5, first run.
+- Lifecycle on the real stack: `/health` answered within 2 s of launch
+  while `/ready` 503'd with progress advancing load -> compile -> sweep
+  0-240 -> capture 0-80; time-to-ready 83.4 s / 81.7 s (both warm: the
+  pull left the Inductor cache valid because Phase 3.5 never touched the
+  traced forward region). Drain: SIGTERM at 422/1022 deltas of a
+  512-token stream, ran to message_stop with no error event, exit 143.
+  Recovery: kill -9 of the engine child mid-stream produced a clean
+  "engine failed" error event on the open stream, then a full re-warm to
+  generation 2 in 80.6 s.
+- Observability: docker.io + docker-compose-v2 installed (approved);
+  Prometheus serving cantollm samples, Tempo returning traces with the
+  full span set (root + tokenize on cantollm-api; queue / prefill chunk /
+  decode on cantollm-engine), Grafana healthy with the provisioned
+  dashboard. Two follow-ups landed on the box at Nadia's request: a
+  VRAM-in-GiB panel (540d885) and Tempo's metrics-generator enabled so
+  the Traces Drilldown app works (e72f885). Doc quirk: Tempo's
+  /api/search returns empty without explicit start/end params.
+- Bench gate (untraced, medians of 3 vs the 2026-08-08 records): PASS
+  for baselines and compile-dynamic, the serve default. Short config:
+  baselines within +-1.2%, dynamic -2.4% at the hottest cell (short_chat
+  c=16, 3595.9 vs 3682.6) and inside +-2% elsewhere; longctx scattered
+  -2.6% to +4.2% both directions (c=1 dynamic 306.7 vs 294). Always-on
+  metrics cost <= ~2% at the hottest cell, noise elsewhere. 100% decode
+  replay everywhere, zero recompiles.
+- Traced arm (OTLP into live Tempo, 100% sampling): within noise of the
+  untraced run (c=16 dynamic -0.0%; the traced run's own baseline pair
+  disagreed with itself by 4-5%, bounding the scatter as environmental).
+
+Two observations recorded, not chased (candidates for a later look):
+
+1. The compile-batch-bucket arm converged to dynamic exactly (c=16 3594.8
+   vs 3595.9 tok/s; replayed 16-row step 3.994 vs 3.984 ms) and so fails
+   the noise line vs its own 08-08 record (-3.0 to -5.4%) while remaining
+   identical to the default. Its 08-08 record predates the a30f2ee
+   sdpa-pin hoist and bucket was never re-benched after it; the ~3% edge
+   may have been lost there, not in 3.5. No default is affected.
+2. Dynamic-arm TTFT p50 at short_chat c=16 rose 40.2 -> 49.2 ms (+22%,
+   +9 ms) with throughput unchanged; both compile arms now sit at
+   ~49.3 ms. Plausibly the new request path (admission acquire, metrics
+   middleware, JSON logging). Aggregate gates all passed; worth a
+   profile if TTFT matters in a later phase.
+
+### §5 predictions, graded
+
+1. Observability within noise, short c=16 within 2% of 3683 and longctx
+   c=1 within 2% of 294: **mixed**. Longctx beat its anchor (+4.2%);
+   short c=16 landed at -2.4%, just past the 2% clause, though inside the
+   round's own observed repeat noise (the traced run's identical baseline
+   pair differed by 4-5%). The spirit (no measurable observability tax)
+   holds; the letter missed by 0.4 points at one cell.
+2. Drain chaos passes first 5090 run with zero truncation: **confirmed**
+   (all five scenarios, first run).
+3. Kill-9 recovery incl. re-warm under 120 s: **confirmed** (80.6 s).
+4. Zero watchdog false positives across the round: **confirmed** (never
+   fired outside the chaos scenario that provokes it).
+5. `/ready` makes spawn_to_ready_s honest; 1800 s blind timeouts become
+   removable: **confirmed** (progress observed end to end through real
+   warm-ups; removal stays deferred to the next H100 day as written).
+6. New runtime deps stay at 5 and Mac dev needs no compose stack:
+   **confirmed**.

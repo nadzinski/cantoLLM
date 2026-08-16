@@ -1523,8 +1523,8 @@ function initRoadmap() {
         'CUDA graphs for steady-state decode, captured per batch-size bucket (1, 4, 16, 32) with eager fallback — “this is exactly how vLLM does it; the implementation detail <i>is</i> the lesson”',
         'First true before/after bench vs Phase 2’s numbers',
       ] },
-    { id: '3.5', title: 'prod hygiene', hw: '5090', status: 'active',
-      statusLine: 'Status (2026-08-16): Implementation complete on Mac/CPU (513 tests + a 5-scenario chaos suite, all green); production-hygiene-plan.md §6 is the chunk log. Landed: the lifecycle core (supervisor + background start, /ready with warm-up progress over a new pre-Ready IPC message, drain-on-signal, /admin/reload + restart, crash auto-restart, hang watchdog), per-model admission (429 + Retry-After), /metrics, OTel request-phase spans across the IPC boundary, JSON logs + X-Request-ID, OpenAI stream-error parity, --config serve.toml, and the observability compose stack. Open: the 5090 round — chaos on the real CUDA stack, Grafana/Tempo bring-up, phase-end bench vs the Phase 3 records.',
+    { id: '3.5', title: 'prod hygiene', hw: '5090', status: 'done',
+      statusLine: 'Status (2026-08-16): Complete, planned/built/5090-validated in two days. Lifecycle core (supervisor + background start, /ready with warm-up progress over a pre-Ready IPC message, drain-on-signal, /admin/reload + restart, crash auto-restart, hang watchdog), per-model admission (429 + Retry-After), /metrics, OTel request-phase spans across the IPC boundary, JSON logs + X-Request-ID, OpenAI stream-error parity, --config serve.toml, observability compose stack running on the box. Validation: 521 tests + 5/5 chaos; drain completed a mid-stream request under SIGTERM; kill-9 recovery re-warmed to generation 2 in 80.6 s; phase-end bench gate passed (metrics always-on <= ~2% at the hottest cell, tracing at 100% sampling within noise). production-hygiene-plan.md is the record.',
       goal: 'Now that the engine is a separate process and metrics show real things, pick up the production basics deferred from Phase 1.',
       items: [
         '<code>/metrics</code> Prometheus: queue depth, batch size, KV utilization, TTFT/ITL, event-loop lag; Grafana + Prometheus + Tempo via docker-compose · OTel request-phase spans across the IPC boundary (tokenize · queue · prefill chunks · decode)',
@@ -1610,6 +1610,10 @@ function initRoadmap() {
       ] },
   ];
   const ACTIVE_IDX = PHASES.findIndex(p => p.status === 'active');
+  // Between phases nothing is 'active'; anchor the line split and the
+  // marker flag at the last finished phase instead of drawing off-canvas.
+  const MARK_IDX = ACTIVE_IDX !== -1 ? ACTIVE_IDX
+    : PHASES.reduce((last, p, i) => (p.status === 'done' || p.status === 'loose') ? i : last, 0);
 
   /* --- metro line SVG --- */
   const NS = 'http://www.w3.org/2000/svg';
@@ -1626,7 +1630,7 @@ function initRoadmap() {
   const X0 = 60, X1 = 1190, LY = 130;
   const xAt = (i) => X0 + (X1 - X0) * i / (PHASES.length - 1);
   // line: solid where done, dashed into the future
-  const xActive = xAt(ACTIVE_IDX);
+  const xActive = xAt(MARK_IDX);
   mk('path', { d: `M${X0},${LY} L${xActive},${LY}`, style: 'stroke:var(--sB);stroke-width:4;fill:none' });
   mk('path', { d: `M${xActive},${LY} L${X1},${LY}`, style: 'stroke:var(--axis);stroke-width:3;fill:none;stroke-dasharray:7 6' });
 
@@ -1647,7 +1651,7 @@ function initRoadmap() {
   });
   // "you are here" flag
   mk('text', { x: xActive, y: LY + 68, style: 'font:700 11px var(--sans);letter-spacing:.06em;fill:#8a5a00;text-anchor:middle' }, '▲ YOU ARE HERE');
-  mk('text', { x: xActive, y: LY + 84, style: 'font:10.5px var(--sans);fill:var(--muted);text-anchor:middle' }, '3.5 built on CPU: /ready + drain + supervisor + /metrics + traces · next: the 5090 round');
+  mk('text', { x: xActive, y: LY + 84, style: 'font:10.5px var(--sans);fill:var(--muted);text-anchor:middle' }, '3.5 complete: /ready + drain + supervisor + /metrics + traces · next: 4, paged KV + overlap');
 
   const diagPanel = el('section', 'panel');
   diagPanel.appendChild(el('h2', null, 'The line — phases 0 → 12, from PLAN.md'));
@@ -1721,7 +1725,7 @@ function initRoadmap() {
     p.items.forEach(h => { const li = document.createElement('li'); li.innerHTML = h; ul.appendChild(li); });
     cardBody.appendChild(ul);
   }
-  transport.set(ACTIVE_IDX);
+  transport.set(MARK_IDX);
   transport.stop();
 }
 
