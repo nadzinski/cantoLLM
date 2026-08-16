@@ -19,3 +19,22 @@ storage:
 compactor:
   compaction:
     block_retention: 168h   # one week of traces is plenty for a lab
+
+# TraceQL metrics queries ({} | rate() ...) — what Grafana's Traces
+# Drilldown app is built on — are answered by the metrics-generator's
+# local-blocks processor, not by trace search; without this block Tempo
+# returns "empty ring" and Drilldown renders empty.
+metrics_generator:
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write: []
+  traces_storage:
+    path: /var/tempo/generator/traces
+  processor:
+    local_blocks:
+      filter_server_spans: false   # count engine-internal spans too
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [local-blocks]
