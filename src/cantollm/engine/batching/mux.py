@@ -42,6 +42,12 @@ class EventMultiplexer:
     def abort(self, request_id: str) -> None:
         self._send_command(Abort(request_id))
 
+    def inflight_requests(self) -> list[str]:
+        """Request ids with live streams (engine-queued included: submit()
+        registers before AddRequest). Event loop only — the drain task
+        reads it to abort survivors at the deadline."""
+        return list(self._queues)
+
     async def submit(self, req: InferenceRequest) -> AsyncIterator[TokenEvent]:
         rid = req.request_id
         if self._failed is not None:

@@ -117,6 +117,7 @@ class EngineHandle:
         self._inflight = 0
         self._pending: BuiltEngine | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._drain_latched = False
 
     # --- request-path API (event loop only) ----------------------------
 
@@ -151,6 +152,13 @@ class EngineHandle:
         if self.state is EngineState.STOPPED:
             return "server is shutting down"
         return f"model '{self.name}' is {self.state.value}"
+
+    def begin_drain(self) -> None:
+        """Server is going away: stop admitting, permanently. Latched so a
+        build finishing mid-drain cannot flip the handle back to READY and
+        re-open admission behind the drain's back."""
+        self._drain_latched = True
+        self.state = EngineState.DRAINING
 
     def status(self) -> dict:
         s: dict[str, Any] = {
@@ -195,6 +203,13 @@ class EngineHandle:
             self.last_error = str(exc)
             self.consecutive_failures += 1
             self.state = EngineState.CRASHED
+            return
+        if self._drain_latched:
+            self.state = EngineState.DRAINING
+            logger.info(
+                "engine for %s finished building mid-drain; not admitting",
+                self.name,
+            )
             return
         self.state = EngineState.READY
         logger.info("engine ready: %s (generation %d)", self.name, self.generation)

@@ -47,6 +47,9 @@ select = ["E", "F", "I"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+    "slow: spawns real server processes; seconds each, still in the default run",
+]
 
 # CUDA on the 5090 (Blackwell, sm_120): no index override needed — default
 # PyPI Linux wheels for torch >= 2.8 bundle CUDA 12.8+, which includes

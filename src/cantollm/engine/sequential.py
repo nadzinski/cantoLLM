@@ -38,6 +38,10 @@ class SequentialEngine:
         if event is not None:
             event.set()
 
+    def inflight_requests(self) -> list[str]:
+        """Live request ids; the drain task aborts these at its deadline."""
+        return list(self._active)
+
     async def submit(self, req: InferenceRequest) -> AsyncIterator[TokenEvent]:
         queue: asyncio.Queue[TokenEvent | None] = asyncio.Queue(maxsize=_QUEUE_MAXSIZE)
         loop = asyncio.get_running_loop()

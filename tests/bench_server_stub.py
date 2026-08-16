@@ -84,6 +84,7 @@ class StatsStubEngine(StubEngine):
 
 
 def build_app(mode: str, crash_after: int | None):
+    """Returns (app, registry) — the registry feeds the DrainController."""
     from cantollm.api import create_app
 
     if mode == "tiny":
@@ -107,7 +108,7 @@ def build_app(mode: str, crash_after: int | None):
             "tiny", lambda: BuiltEngine(engine, runtime),
             max_request_tokens=64, runtime=runtime,
         )
-        return create_app(registry)
+        return create_app(registry), registry
 
     if mode == "crash":
         engine = StubEngine(crash_after=crash_after)
@@ -118,23 +119,31 @@ def build_app(mode: str, crash_after: int | None):
     registry = FakeRegistry(
         entries={"stub-model": (engine, FakeRuntime(FakeTokenizer()))}
     )
-    return create_app(registry)
+    return create_app(registry), registry
 
 
 def main() -> None:
     import uvicorn
+
+    from cantollm.server import CantoServer, DrainController
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--mode", choices=("fake", "crash", "stats", "tiny"),
                         default="fake")
     parser.add_argument("--crash-after", type=int, default=None)
+    parser.add_argument("--drain-timeout", type=float, default=10.0)
     args = parser.parse_args()
 
-    uvicorn.run(
-        build_app(args.mode, args.crash_after),
-        host="127.0.0.1", port=args.port, log_level="warning",
+    app, registry = build_app(args.mode, args.crash_after)
+    # The real server runner, so drain-on-SIGTERM is testable against the
+    # tiny mode (FakeRegistry modes have no handles; drain is a no-op wait
+    # and stock graceful shutdown applies).
+    config = uvicorn.Config(
+        app, host="127.0.0.1", port=args.port, log_level="warning",
+        timeout_graceful_shutdown=5,
     )
+    CantoServer(config, DrainController(registry, args.drain_timeout)).run()
 
 
 if __name__ == "__main__":

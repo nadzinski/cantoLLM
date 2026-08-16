@@ -253,11 +253,17 @@ def cmd_serve(args):
     # uvloop + httptools, explicitly rather than via "auto": the API now
     # serves many concurrent streams (and, post-split, the IPC bridge), and
     # the end-of-phase baseline shouldn't depend on which extras happened to
-    # be importable.
-    uvicorn.run(
+    # be importable. CantoServer wraps uvicorn with drain-on-signal; the
+    # timeout_graceful_shutdown backstop means a wedged connection can never
+    # hold shutdown open indefinitely.
+    from cantollm.server import CantoServer, DrainController
+
+    config = uvicorn.Config(
         app, host=args.host, port=args.port, log_level="info",
-        loop="uvloop", http="httptools",
+        loop="uvloop", http="httptools", timeout_graceful_shutdown=10,
     )
+    drainer = DrainController(registry, drain_timeout_s=args.drain_timeout)
+    CantoServer(config, drainer).run()
 
 
 # ── Subcommand: chat ────────────────────────────────────────────────
@@ -379,6 +385,10 @@ def parse_args():
                               default="sequential",
                               help="Inference engine (default: sequential; "
                                    "batched = continuous batching)")
+    serve_parser.add_argument("--drain-timeout", type=float, default=30.0,
+                              help="Seconds in-flight requests get to finish after "
+                                   "SIGTERM/Ctrl-C before being aborted; a second "
+                                   "signal forces immediate exit (default: 30)")
     serve_parser.add_argument("--max-batch", type=int, default=8,
                               help="Batched engine: concurrent KV slots (default: 8)")
     serve_parser.add_argument("--batch-max-seq-len", type=int, default=4096,
