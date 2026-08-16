@@ -303,10 +303,20 @@ async def render_chat_completion_sse(
                 await out.put(emit({key: dec_evt.text}, logprobs=chunk_logprobs))
 
             if state.error is not None:
-                # Minimum-viable mid-stream error: one error envelope as a
-                # data chunk, then [DONE]. Proper parity with Anthropic's
-                # SSE contract is a separate Phase 1b bullet.
+                # Mid-stream error (Phase 1b leftover, closed in 3.5): the
+                # typed error envelope is the terminal event — no fabricated
+                # finish_reason chunk (OpenAI defines none for errors; the
+                # Anthropic path likewise skips message_delta/stop). Usage
+                # still ships when asked for: tokens generated before the
+                # failure are real and clients accounting by usage get the
+                # truth.
                 await out.put(_error_line(state.error))
+                if include_usage:
+                    await out.put(_usage_only_chunk_line(
+                        completion_id=completion_id, created=created,
+                        model_name=model_name,
+                        usage=_build_usage_dict(state, input_tokens),
+                    ))
                 await out.put("data: [DONE]\n\n")
                 return
 

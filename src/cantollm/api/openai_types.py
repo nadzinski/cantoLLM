@@ -187,7 +187,9 @@ class ChatCompletionChunk(BaseModel):
 
 class OpenAIError(BaseModel):
     message: str
-    type: str = "api_error"
+    # Engine failures are server-side; matches errors.py's unlisted-status
+    # fallback so mid-stream and pre-stream errors carry one type.
+    type: str = "server_error"
     code: str | None = None
     param: str | None = None
 

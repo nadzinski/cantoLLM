@@ -275,6 +275,40 @@ def test_non_streaming_max_tokens_maps_to_length():
 # ── 6. Mid-stream error: error chunk then [DONE] ─────────────────────
 
 
+def test_streaming_error_still_ships_usage_when_requested():
+    # Phase 3.5 parity: tokens generated before the failure are real; a
+    # client that asked for usage gets it even on the error path.
+    script = [
+        *_script_from_text("ab"),
+        ScriptStep(raise_error=RuntimeError("boom")),
+    ]
+    tokenizer = _tokenizer_for("ab")
+    engine = FakeEngine(script=script)
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            async with client.stream(
+                "POST", "/v1/chat/completions",
+                json=_chat_body(stream=True, max_tokens=100,
+                                stream_options={"include_usage": True}),
+            ) as r:
+                return "".join([c async for c in r.aiter_text()])
+
+    body = _run(run())
+    chunks, saw_done = parse_openai_sse(body)
+    assert saw_done
+
+    error_chunks = [c for c in chunks if "error" in c]
+    assert len(error_chunks) == 1
+    assert error_chunks[0]["error"]["type"] == "server_error"
+
+    usage_chunks = [c for c in chunks if c.get("usage")]
+    assert len(usage_chunks) == 1
+    assert usage_chunks[0]["usage"]["completion_tokens"] == 2
+    # Order: the error envelope precedes the usage chunk.
+    assert chunks.index(error_chunks[0]) < chunks.index(usage_chunks[0])
+
+
 def test_streaming_error_produces_error_chunk_then_done():
     script = [
         *_script_from_text("ab"),

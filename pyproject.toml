@@ -50,6 +50,11 @@ testpaths = ["tests"]
 markers = [
     "slow: spawns real server processes; seconds each, still in the default run",
 ]
+# Diagnostics for an intermittent multi-minute stall first seen during the
+# Phase 3.5 rounds (test passes after self-recovering; suite stays green):
+# any test exceeding this dumps every thread's stack to stderr and keeps
+# running, so the next occurrence identifies itself.
+faulthandler_timeout = 60
 
 # CUDA on the 5090 (Blackwell, sm_120): no index override needed — default
 # PyPI Linux wheels for torch >= 2.8 bundle CUDA 12.8+, which includes
