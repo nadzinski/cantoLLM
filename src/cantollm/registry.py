@@ -42,8 +42,8 @@ class RegistryEntry:
     def ensure_ready(self) -> Any:
         return self.handle.ensure_ready()
 
-    def begin_request(self) -> RequestTicket:
-        return self.handle.begin_request()
+    async def begin_request(self) -> RequestTicket:
+        return await self.handle.begin_request()
 
 
 class EngineRegistry:
@@ -59,17 +59,21 @@ class EngineRegistry:
         runtime: Any | None = None,
         drain_timeout_s: float = 30.0,
         watchdog_timeout_s: float = 60.0,
+        max_inflight: int | None = None,
+        admission_timeout_s: float = 30.0,
     ) -> None:
         """Register a model by factory. `runtime` may be supplied eagerly
         when it is cheap and generation-independent (the subprocess path's
         TokenizerRuntime) so tokenization metadata exists pre-Ready.
         `drain_timeout_s` bounds the reload/restart drain;
-        `watchdog_timeout_s` is the hung-engine threshold (0 disables)."""
+        `watchdog_timeout_s` is the hung-engine threshold (0 disables);
+        `max_inflight` bounds concurrent requests (None = unbounded)."""
         if name in self._entries:
             raise ValueError(f"Model '{name}' is already registered")
         handle = EngineHandle(
             name, factory, runtime=runtime, drain_timeout_s=drain_timeout_s,
-            watchdog_timeout_s=watchdog_timeout_s,
+            watchdog_timeout_s=watchdog_timeout_s, max_inflight=max_inflight,
+            admission_timeout_s=admission_timeout_s,
         )
         self._entries[name] = RegistryEntry(
             handle=handle, max_request_tokens=max_request_tokens

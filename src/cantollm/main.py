@@ -201,6 +201,9 @@ def cmd_serve(args):
             max_request_tokens=config.max_seq_len, runtime=api_runtime,
             drain_timeout_s=args.drain_timeout,
             watchdog_timeout_s=args.watchdog_timeout,
+            # Slots bound the batch; 4x slots bounds the queue behind them.
+            max_inflight=args.max_inflight or 4 * config.max_batch,
+            admission_timeout_s=args.admission_timeout,
         )
         engine_desc = (
             f"continuous batching, {where} (max_batch={config.max_batch}, "
@@ -242,6 +245,8 @@ def cmd_serve(args):
             max_request_tokens=cap_spec.arch["max_seq_len"],
             drain_timeout_s=args.drain_timeout,
             watchdog_timeout_s=args.watchdog_timeout,
+            max_inflight=args.max_inflight or 16,
+            admission_timeout_s=args.admission_timeout,
         )
         engine_desc = "sequential"
 
@@ -397,6 +402,13 @@ def parse_args():
                               help="Kill and rebuild the engine process if it has "
                                    "pending requests but makes no step progress for "
                                    "this many seconds (default: 60; 0 disables)")
+    serve_parser.add_argument("--max-inflight", type=int, default=None,
+                              help="Admission cap: concurrent in-flight requests "
+                                   "per model (default: 4x max-batch for the "
+                                   "batched engine, 16 sequential)")
+    serve_parser.add_argument("--admission-timeout", type=float, default=30.0,
+                              help="Seconds an over-cap request queues for a slot "
+                                   "before 429 + Retry-After (default: 30)")
     serve_parser.add_argument("--max-batch", type=int, default=8,
                               help="Batched engine: concurrent KV slots (default: 8)")
     serve_parser.add_argument("--batch-max-seq-len", type=int, default=4096,

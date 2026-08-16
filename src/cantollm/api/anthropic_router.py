@@ -38,7 +38,7 @@ def build_anthropic_router(
         # handler tick, so a drain beginning on any later await still counts
         # this request; tracked_events (or the except below) closes it.
         engine = entry.ensure_ready()
-        ticket = entry.begin_request()
+        ticket = await entry.begin_request()
         try:
             if body.ignore_eos and body.stop_sequences:
                 raise HTTPException(

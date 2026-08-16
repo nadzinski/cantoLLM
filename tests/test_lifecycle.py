@@ -143,15 +143,18 @@ def test_factory_failure_lands_crashed():
 
 
 def test_ticket_close_is_idempotent():
-    handle = EngineHandle("m", lambda: None)
-    t1 = handle.begin_request()
-    t2 = handle.begin_request()
-    assert handle.inflight == 2
-    t1.close()
-    t1.close()
-    assert handle.inflight == 1
-    t2.close()
-    assert handle.inflight == 0
+    async def main():
+        handle = EngineHandle("m", lambda: None)
+        t1 = await handle.begin_request()
+        t2 = await handle.begin_request()
+        assert handle.inflight == 2
+        t1.close()
+        t1.close()
+        assert handle.inflight == 1
+        t2.close()
+        assert handle.inflight == 0
+
+    asyncio.run(main())
 
 
 def test_tracked_events_closes_on_exhaustion_and_disconnect():
@@ -168,13 +171,13 @@ def test_tracked_events_closes_on_exhaustion_and_disconnect():
 
     async def main():
         # Full drain closes the ticket at exhaustion.
-        ticket = handle.begin_request()
+        ticket = await handle.begin_request()
         assert [e async for e in tracked_events(ticket, inner(3))] == [0, 1, 2]
         assert handle.inflight == 0
         assert inner_finalized == [True]
 
         # aclose mid-stream (the disconnect path) closes ticket AND inner.
-        ticket = handle.begin_request()
+        ticket = await handle.begin_request()
         wrapper = tracked_events(ticket, inner(100))
         assert (await anext(wrapper)) == 0
         await wrapper.aclose()

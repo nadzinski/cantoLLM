@@ -248,6 +248,18 @@ class EngineStatsAccumulator:
             if evt.finish_reason is not None or evt.error is not None:
                 self._last_token_t.pop(evt.request_id, None)
 
+    def recent_decode_rate(self, window: int = 100) -> float | None:
+        """Decode tokens/sec over the last `window` steps. None without at
+        least two steps, or when the window straddles a generation boundary
+        (child perf_counters restart, making the span meaningless)."""
+        steps = list(self._steps)[-window:]
+        if len(steps) < 2:
+            return None
+        span = steps[-1].t_perf - steps[0].t_perf
+        if span <= 0:
+            return None
+        return sum(s.decode_tokens for s in steps[1:]) / span
+
     def read(self, since: int = -1) -> dict:
         steps = [asdict(s) for s in self._steps if s.seq > since]
         itl = [asdict(s) for s in self._itl if s.seq > since]

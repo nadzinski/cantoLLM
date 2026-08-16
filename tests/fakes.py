@@ -146,7 +146,7 @@ class _FakeEntry:
         # registry).
         return self.engine
 
-    def begin_request(self):
+    async def begin_request(self):
         from cantollm.lifecycle import RequestTicket
 
         return RequestTicket(None)

@@ -88,6 +88,17 @@ class NotReadyError(Exception):
         self.retry_after_s = retry_after_s
 
 
+class AdmissionBusyError(Exception):
+    """The model is serving at capacity and the admission queue timed out
+    -> HTTP 429 (rate_limit_error in both dialects) with Retry-After."""
+
+    def __init__(self, model: str, detail: str, retry_after_s: int):
+        super().__init__(detail)
+        self.model = model
+        self.detail = detail
+        self.retry_after_s = retry_after_s
+
+
 class RequestTicket:
     """One admitted request's claim on the in-flight counter.
 
@@ -108,6 +119,8 @@ class RequestTicket:
         self._closed = True
         if self._handle is not None:
             self._handle._inflight -= 1
+            if self._handle._sem is not None:
+                self._handle._sem.release()
 
 
 class EngineHandle:
@@ -119,6 +132,8 @@ class EngineHandle:
         runtime: Any | None = None,
         drain_timeout_s: float = 30.0,
         watchdog_timeout_s: float = 60.0,
+        max_inflight: int | None = None,
+        admission_timeout_s: float = 30.0,
     ):
         self.name = name
         self.factory = factory
@@ -134,6 +149,15 @@ class EngineHandle:
         self.drain_timeout_s = drain_timeout_s
         self.watchdog_timeout_s = watchdog_timeout_s  # 0 disables
         self.watchdog_poll_s = 5.0
+        # Load-based admission: bound concurrent in-flight requests. None
+        # (test fakes, direct-registry uses) means unbounded — the old
+        # behavior; the CLI always passes a capacity-derived bound.
+        self.max_inflight = max_inflight
+        self.admission_timeout_s = admission_timeout_s
+        self._sem = (
+            asyncio.Semaphore(max_inflight) if max_inflight is not None else None
+        )
+        self._admission_waiters = 0
         # Persistent across generations (bench scrapes survive restarts);
         # None until the first engine with stats is adopted, so sequential
         # engines keep reporting available:false on /debug/engine-stats.
@@ -164,9 +188,50 @@ class EngineHandle:
             return self.engine
         raise NotReadyError(self.name, self.state, self._not_ready_detail())
 
-    def begin_request(self) -> RequestTicket:
+    async def begin_request(self) -> RequestTicket:
+        """Claim an admission slot + the in-flight counter. Over capacity,
+        waits up to admission_timeout_s for a slot (a burst that clears in
+        200 ms should not eat rejections), then 429s. After a successful
+        wait the state is re-checked: a drain that began while we queued
+        must still win."""
+        if self._sem is not None:
+            self._admission_waiters += 1
+            try:
+                await asyncio.wait_for(
+                    self._sem.acquire(), self.admission_timeout_s
+                )
+            except TimeoutError:
+                raise AdmissionBusyError(
+                    self.name,
+                    f"model '{self.name}' is at capacity "
+                    f"({self.max_inflight} in flight); retry later",
+                    retry_after_s=self._retry_after_hint(),
+                )
+            finally:
+                self._admission_waiters -= 1
+            if self.state is not EngineState.READY:
+                self._sem.release()
+                raise NotReadyError(
+                    self.name, self.state, self._not_ready_detail()
+                )
         self._inflight += 1
         return RequestTicket(self)
+
+    def _retry_after_hint(self) -> int:
+        """Coarse Retry-After from live stats: how long until a slot
+        plausibly frees, given the recent decode rate and the crowd ahead.
+        A hint, not a promise; clamped to [1, 60]."""
+        estimate = 2.0
+        stats = self.engine_stats
+        rate = stats.recent_decode_rate() if stats is not None else None
+        if rate is not None and self.max_inflight:
+            # Assume a typical short-chat remainder per in-flight request;
+            # the crowd ahead of the caller is every waiter plus one.
+            remaining_tokens = 64.0 * self.max_inflight
+            slots_per_wave = max(1.0, float(self.max_inflight))
+            estimate = (remaining_tokens / max(rate, 1.0)) \
+                * (self._admission_waiters + 1) / slots_per_wave
+        return int(max(1.0, min(60.0, estimate)))
 
     def _not_ready_detail(self) -> str:
         # Progress can flow in STARTING too: the in-process factory does

@@ -20,7 +20,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from cantollm.lifecycle import NotReadyError
+from cantollm.lifecycle import AdmissionBusyError, NotReadyError
 
 # status → Anthropic error `type`. Unlisted codes fall back to api_error.
 _ANTHROPIC_TYPES = {
@@ -120,6 +120,18 @@ def install_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code, content={"detail": exc.detail},
             headers=headers,
+        )
+
+    @app.exception_handler(AdmissionBusyError)
+    async def _on_admission_busy(request: Request, exc: AdmissionBusyError):
+        # At capacity and the admission queue timed out: 429 with a coarse
+        # Retry-After. Both dialects already map 429 -> rate_limit_error.
+        headers = {"Retry-After": str(exc.retry_after_s)}
+        rendered = _render(request.url.path, 429, exc.detail, headers)
+        if rendered is not None:
+            return rendered
+        return JSONResponse(
+            status_code=429, content={"detail": exc.detail}, headers=headers
         )
 
     @app.exception_handler(NotReadyError)

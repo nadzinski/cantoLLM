@@ -118,7 +118,7 @@ def build_openai_router(
         # Same pre-flight as the Anthropic router: ready check + in-flight
         # ticket claimed before the first await (see anthropic_router.py).
         engine = entry.ensure_ready()
-        ticket = entry.begin_request()
+        ticket = await entry.begin_request()
         try:
             messages, system = _normalize_openai_messages(body.messages)
             if not messages:
