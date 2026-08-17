@@ -482,7 +482,7 @@
      the selector here so the shared palette variables are remapped inside it and
      reused components (transport, fw-board, chips) pick up the chapter's colors
      automatically. The JS half of the kit is chapterKit() next to makeTransport. */
-  #view-cudagraphs, #view-quant, #view-quant2, #view-h100 {
+  #view-cudagraphs, #view-quant, #view-quant2, #view-h100, #view-paged {
     --plane: #f4f2ec;
     --surface: #ffffff;
     --grid: #e3dfd3;
@@ -743,6 +743,7 @@
       <a href="#/quant" data-route="quant">Quantization</a>
       <a href="#/quant2" data-route="quant2">Quantization v2</a>
       <a href="#/h100" data-route="h100">H100 day</a>
+      <a href="#/paged" data-route="paged">Paged KV</a>
     </nav>
   </header>
 
@@ -919,6 +920,17 @@
        Charts use the validated chapter palette (sA/sB/sC), light mode. -->
   <section id="view-h100" data-view hidden>
     <div id="h1-body"></div>
+  </section>
+
+  <!-- ================= PAGED KV (PHASE 4) =================
+       Phase 4 read-ahead in the chapter kit's look (serif article, def/aside
+       boxes, framed widgets) but, like the H100 tab, deliberately NOT a full
+       chapter: no predict gates, no quiz, no exercises. Interactive toys use
+       small illustrative pools; every number presented as measured is real
+       (bench history, flex-spike-results.md, the vLLM paper) and the closing
+       note lists sources. Built in initPaged(). -->
+  <section id="view-paged" data-view hidden>
+    <div id="pg-body"></div>
   </section>
 
   <footer id="foot"></footer>
@@ -1318,6 +1330,7 @@ const VIEW_INIT = {
   'quant': initQuant,
   'quant2': initQuant2,
   'h100': initH100,
+  'paged': initPaged,
 };
 
 function route() {
@@ -1534,7 +1547,7 @@ function initRoadmap() {
       ] },
     { id: '4', title: 'paged KV + overlap', hw: '5090', status: 'future',
       goal: 'Replace padded contiguous KV with a block-indexed pool + block tables — the memory-management lesson — and overlap scheduling with execution so the CPU plans step N+1 while the GPU runs step N.',
-      statusLine: 'Status (2026-07-22): Not started. Scope notes: the flash-proper attention restructure moved here from Phase 3 — lengths metadata instead of an explicit mask is the same interface change paging requires. The 2026-07-19 roadmap review added async/overlap scheduling here (deliberately not Phase 3: reshape the scheduler loop once, on the paged engine), plus preemption victim-selection policies and per-request priorities, judged by a new goodput-under-joint-SLO bench metric.',
+      statusLine: 'Status (2026-08-16): Not started (no code yet), but the kernel route is decided: FlexAttention first, flash-attn kept as a possible later A/B arm. A viability spike on the 5090 passed all four gates (flex decode within 2x of cuDNN, parity by KV 2048; BlockMask.from_kv_blocks over engine-owned table tensors mutated in place per step; compiled Flex captures and replays in CUDA graphs with in-place table updates); flex-spike-results.md is the record and becomes the design note’s gates section. flash-attn deferred on concrete grounds: no torch-2.10/sm_120 wheel, and its paged path requires 256-token pages, so the allocator keeps block size configurable. Prior scope notes stand (flash-proper restructure from Phase 3; overlap scheduling, preemption policies, per-request priorities, and the goodput-under-joint-SLO metric from the 2026-07-19 review). Next: the phase design note. Read-ahead: the Paged KV tab.',
       items: [
         '16-token blocks in one preallocated pool; per-request block tables mapping logical position → block id',
         'Allocator with free-list, refcounts, eviction; preemption via recompute-on-resume (swap-to-CPU as the fancy alternative) — plus victim-selection policies (LIFO / priority-weighted / cost-aware) and per-request priorities on both API dialects',
@@ -10788,6 +10801,1045 @@ numbers as noisier. Aggregate-throughput medians are clean everywhere.</aside>
 `;
 
   $id('h1-body').appendChild(article);
+  article.querySelectorAll('figure.fig [data-tip]').forEach((n) => {
+    n.addEventListener('mousemove', showTip);
+    n.addEventListener('mouseleave', hideTip);
+  });
+}
+
+/* =============== paged KV (phase 4) =============== */
+
+function initPaged() {
+  const { html, widget, wireGoto, mountWidgets } = chapterKit('cantollm-viz-pg-chapter');
+
+  const RUST = 'var(--sC)', BLUE = 'var(--sA)', GREEN = 'var(--sB)';
+  const INK2 = 'var(--ink2)', MUTED = 'var(--muted)', GRID = 'var(--grid)';
+  /* 0.6B KV bytes per token at bf16: 28 layers x 8 kv heads x 128 dim x (K and V) x 2 bytes */
+  const KVB = 114688;
+  const GiB = 1024 ** 3, MiB = 1024 ** 2;
+  const SLOTS = 16, CAP = 4096;   /* the 5090 short_chat serve geometry */
+  const gibOf = (tokens, dp) => (tokens * KVB / GiB).toFixed(dp === undefined ? 2 : dp);
+
+  /* control helpers (house pattern: duplicated per chapter view) */
+  const mkSeg = (opts, cur, onPick) => {
+    const root = el('span');
+    root.style.cssText = 'display:inline-flex;gap:0;border:1px solid var(--grid);border-radius:8px;overflow:hidden;';
+    const btns = opts.map((o, i) => {
+      const b = el('button', null, o);
+      b.style.cssText = 'font:600 11.5px var(--sans);padding:4px 10px;border:0;cursor:pointer;background:var(--surface);color:var(--ink2);border-left:' + (i ? '1px solid var(--grid)' : '0') + ';';
+      b.addEventListener('click', () => { set(i); onPick(i); });
+      root.appendChild(b);
+      return b;
+    });
+    const set = (i) => btns.forEach((b, j) => {
+      b.style.background = j === i ? 'var(--sA)' : 'var(--surface)';
+      b.style.color = j === i ? '#fff' : 'var(--ink2)';
+    });
+    set(cur);
+    return { root, set };
+  };
+  const mkRange = (min, max, step, val, onInput) => {
+    const r = document.createElement('input');
+    r.type = 'range'; r.min = min; r.max = max; r.step = step; r.value = val;
+    r.style.cssText = 'width:150px;accent-color:var(--sA);';
+    r.addEventListener('input', () => onInput(Number(r.value)));
+    return r;
+  };
+  const ctrlRow = (...kids) => {
+    const c = el('div', 'widget-controls');
+    kids.forEach((k) => c.appendChild(typeof k === 'string' ? html('span', null, k) : k));
+    return c;
+  };
+
+  /* string-SVG helpers (same shapes as the H100 tab) */
+  const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const txt = (x, y, s, size, fill, anchor, extra) =>
+    '<text x="' + x + '" y="' + y + '" style="font-size:' + size + 'px;fill:' + fill +
+    ';font-family:inherit;' + (extra || '') + '" text-anchor="' + (anchor || 'start') + '">' + s + '</text>';
+  const tipRect = (x, y, w, h, tip) =>
+    '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h +
+    '" fill="transparent" data-tip="' + esc(tip) + '"/>';
+  const svgOpen = (h) =>
+    '<svg viewBox="0 0 700 ' + h + '" style="width:100%;height:auto;display:block" role="img">';
+  const legendChip = (x, y, color, opacity, label) =>
+    '<rect x="' + x + '" y="' + y + '" width="12" height="12" rx="3" fill="' + color +
+    '" fill-opacity="' + opacity + '"/>' + txt(x + 17, y + 10, label, 11, INK2);
+  const wireTips = (rootEl) => rootEl.querySelectorAll('[data-tip]').forEach((n) => {
+    n.addEventListener('mousemove', showTip);
+    n.addEventListener('mouseleave', hideTip);
+  });
+
+  /* the three illustrative request mixes shared by w-waste and w-blocksize
+     (prompt tokens, output tokens); deterministic, loosely shaped like the
+     bench workload sets but NOT measurements */
+  const MIXES = {
+    short: {
+      label: 'short chat',
+      p: [34, 88, 52, 61, 45, 77, 39, 66, 58, 83, 47, 71, 36, 90, 55, 62],
+      o: [180, 420, 260, 510, 330, 150, 470, 290, 380, 220, 440, 200, 350, 120, 400, 310],
+    },
+    mixed: {
+      label: 'mixed',
+      p: [140, 700, 260, 1500, 90, 420, 880, 190, 1100, 350, 60, 520, 240, 960, 150, 610],
+      o: [400, 300, 600, 250, 500, 350, 200, 450, 300, 550, 650, 400, 380, 220, 500, 420],
+    },
+    long: {
+      label: 'long context',
+      p: [1757, 3200, 2400, 3900, 2050, 2800, 3500, 1900, 2600, 3050, 2200, 3700, 1850, 2950, 2500, 3400],
+      o: [128, 256, 192, 128, 256, 160, 128, 224, 192, 160, 256, 128, 224, 160, 192, 128],
+    },
+  };
+  const mixLens = (mix, tPct) =>
+    mix.p.map((p, i) => Math.min(CAP, p + Math.round(mix.o[i] * tPct / 100)));
+
+  /* ---------- static figure: the spike timings ---------- */
+  const figSpike = (() => {
+    const groups = [
+      ['KV = 512', 12.6, 24.6, '1.96x'],
+      ['KV = 1024', 14.4, 23.9, '1.66x'],
+      ['KV = 2048', 84.2, 87.8, '1.04x'],
+    ];
+    const X0 = 8, PW = 560, MAX = 95, sc = (v) => X0 + (v / MAX) * PW;
+    let y = 26, s = '';
+    s += legendChip(8, 4, RUST, 1, 'cuDNN SDPA (the padded baseline)') +
+         legendChip(280, 4, BLUE, 1, 'compiled FlexAttention');
+    for (const [name, cud, flex, ratio] of groups) {
+      s += txt(X0, y + 12, name, 12, 'var(--ink)', 'start', 'font-weight:600');
+      s += txt(X0 + 92, y + 12, 'Flex / cuDNN = ' + ratio, 11, MUTED);
+      y += 18;
+      s += '<rect x="' + X0 + '" y="' + y + '" width="' + Math.max(sc(cud) - X0, 2) + '" height="14" rx="3" fill="' + RUST + '"/>' +
+           txt(sc(cud) + 6, y + 11, cud + ' µs', 11, INK2) +
+           tipRect(X0, y - 1, PW, 16, 'cuDNN: ' + cud + ' µs per call'); y += 17;
+      s += '<rect x="' + X0 + '" y="' + y + '" width="' + Math.max(sc(flex) - X0, 2) + '" height="14" rx="3" fill="' + BLUE + '"/>' +
+           txt(sc(flex) + 6, y + 11, flex + ' µs', 11, INK2) +
+           tipRect(X0, y - 1, PW, 16, 'compiled Flex: ' + flex + ' µs per call'); y += 26;
+    }
+    return svgOpen(y - 6) + s + '</svg>';
+  })();
+
+  /* ---------- the article ---------- */
+  const article = el('article', 'chapter');
+  article.innerHTML = `
+<p class="ch-kicker">cantoLLM · Phase 4 read-ahead · visual notes</p>
+<h1>Paged KV and the overlap scheduler</h1>
+<p class="lede">Phase 4 rebuilds three things at once. The KV cache moves from padded
+per-request slots to a shared pool of small blocks. The attention call moves off
+<code>F.scaled_dot_product_attention</code>, which cannot read those blocks, onto
+FlexAttention, which can. And the scheduler learns to plan the next step while the GPU is
+still executing the current one. On top of the new pool come preemption, per-request
+priorities, and a new bench metric to judge them by. This tab walks through each idea
+with a picture.</p>
+
+<aside class="note"><span class="label">What is real here</span>
+Every number this tab presents as a measurement is one: the engine anchors come from the
+bench history, the kernel timings from the FlexAttention viability spike run on the 5090
+on 2026-08-16 (<code>flex-spike-results.md</code> is the record), and the memory-waste
+figure from the PagedAttention paper. The little pools and request mixes inside the
+interactive toys are illustrative: sized to read at a glance, not traced from runs.
+Nothing in this tab is built yet; PLAN.md&rsquo;s Phase 4 section is the scope and the
+design note comes next.</aside>
+
+<h2>The waste in padded slots</h2>
+<p>Today the batched engine preallocates one contiguous KV region per slot: 16 slots of
+4,096 tokens each in the short-chat serve geometry. A request admitted into a slot owns
+the whole thing until it finishes, no matter how many tokens it actually holds. At the
+0.6B model&rsquo;s 112 KiB of KV per token, that pool is 7.00 GiB whether it currently
+stores two requests or sixteen, and whether those requests are 300 tokens long or 4,000.</p>
+<p>The reservation is the problem, not the tokens. A short chat holds a few hundred
+tokens but reserves 4,096 from the moment of admission. This is not specific to our
+engine: the PagedAttention paper (Kwon et al., SOSP 2023, the vLLM paper) measured
+serving systems of its day and found that only 20 to 38 percent of KV memory held actual
+token states. The rest was reservation for tokens that did not exist yet, plus
+fragmentation between differently-sized regions. Their fix, borrowed directly from how
+operating systems manage RAM, is the subject of this tab.</p>
+
+<div data-widget="w-waste"></div>
+<p class="widget-caption">Interactive. Sixteen requests in the padded pool. Blue is
+tokens that exist; the pale rust is space reserved for them but empty. Drag the slider
+to move through generation, switch the mix, and watch the totals: the paged pool
+allocates almost exactly what exists, and the difference is room for more requests.</p>
+
+<p>The point of paging is that the freed space turns into admission capacity. More
+requests resident at once means more rows per forward pass, and Phase 2 established
+what rows are worth: on the 5090, aggregate throughput keeps climbing well past the
+point where the padded pool runs out of slots.</p>
+
+<h2>Blocks, block tables, and the allocator</h2>
+<div class="def"><span class="label">Definition · block table</span>
+The paged pool is one preallocated tensor holding many fixed-size blocks (16 tokens
+each, the vLLM default). Each request carries a small integer array, its block table,
+mapping logical positions to physical blocks: entry 0 says where its first 16 tokens
+live, entry 1 where the next 16 live, and so on. The table is the request&rsquo;s only
+claim on memory; the blocks it names can sit anywhere in the pool.</div>
+<p>Allocation becomes ordinary systems bookkeeping, all of it on the CPU. A free list
+holds unused block ids. Admission takes enough blocks for the prompt. Decode grows a
+request by one token per step, so most steps allocate nothing; only when a request
+crosses a 16-token boundary does it take one more block from the free list. When a
+request finishes, its blocks go back. Reference counts sit on each block so that later
+phases can share them between requests (that is Phase 5&rsquo;s prefix caching, which
+stacks directly on this machinery).</p>
+
+<div data-widget="w-table"></div>
+<p class="widget-caption">Interactive. Three requests share a 32-block pool. Step
+through with the buttons or arrow keys: prompts claim runs of blocks, decode crosses
+boundaries one block at a time, arrivals interleave, and when A finishes its blocks are
+reused by B and C with no copying. The block tables keep logical order even as the
+physical placement scatters.</p>
+
+<h2>Picking the block size</h2>
+<p>Block size is a dial with two costs pulling in opposite directions. Small blocks
+waste less: a request&rsquo;s only waste is the unfilled tail of its last block, at most
+15 tokens when blocks hold 16, about 8 on average. Small blocks also share better later,
+because prefix caching shares whole blocks, and two prompts that diverge mid-block
+cannot share the block they diverge in. Large blocks make shorter tables, fewer lookups,
+and longer contiguous runs of memory, which is what GPU memory systems like reading.
+The vLLM paper swept this dial and found performance flat across a broad middle, so it
+took the small end of the flat region: 16.</p>
+
+<div data-widget="w-blocksize"></div>
+<p class="widget-caption">Interactive. The same sixteen finished requests under six
+block sizes: total tail waste on the left scale, total block-table entries on the
+right. Both are computed live from the mix you pick. The two annotated rows matter to
+Phase 4: 16 is the vLLM default, and 256 is the only granularity flash-attn&rsquo;s
+paged path accepts, one reason it dropped to a deferred arm.</p>
+
+<h2>Three layouts for the same tokens</h2>
+<p>Paging forces a second change that is easy to miss: the attention kernel has to stop
+thinking in rectangles. Today the padded path slices every row out to the longest row
+in the batch, builds a boolean mask saying which positions are real, and hands both to
+the kernel. Validity is data the kernel reads from memory. The varlen layout deletes
+the rectangle instead: concatenate every sequence end to end, and describe the
+boundaries with a small array of offsets.</p>
+<div class="def"><span class="label">Definition · cu_seqlens</span>
+Short for cumulative sequence lengths: an integer array of boundary offsets into a
+packed tensor. For three sequences of 11, 5, and 8 tokens it reads [0, 11, 16, 24].
+Sequence i&rsquo;s tokens live between entry i and entry i+1. There is no padding and no
+mask tensor; a kernel computes what each query may see by comparing integers it already
+holds.</div>
+
+<div data-widget="w-layouts"></div>
+<p class="widget-caption">Interactive. The same three sequences three ways. The padded
+rectangle carries dead cells and a mask tensor. The packed layout carries neither, just
+the offsets. The paged layout is the packed idea plus one indirection: tokens live in
+fixed-size blocks and each sequence&rsquo;s table says which physical blocks are its.</p>
+
+<p>The deep change is where the lengths live. In the padded world, per-row lengths are
+tensor dimensions, and kernels specialize on dimensions. That is the whole reason
+Phase 3 needed a bounded shape vocabulary: cuDNN compiles an execution plan of roughly
+200 ms per distinct shape, continuous batching churned shapes every step, and long
+context collapsed from 80 to as low as 23 tok/s until warm-up sweeps and bucket padding
+contained it (measured in <code>sdpa-results.md</code> and
+<code>shape-buckets-results.md</code>). In the varlen world the lengths are values
+inside <code>cu_seqlens</code>, not shapes. The one shape left is the total token
+count. The problem class the vocabulary was built to contain stops existing on the
+attention path.</p>
+
+<h2>A decode step through the block table</h2>
+<p>The last piece is the kernel itself: how does attention read K and V when a
+sequence&rsquo;s blocks are scattered across the pool? The answer is that the
+translation folds into address arithmetic the kernel was already doing. A flash-style
+kernel walks a sequence&rsquo;s keys in tiles; with paging, the walk becomes: for each
+entry in the block table, look up the physical block, stream its 16 keys and values,
+fold them into the running softmax, move to the next entry. One extra integer read per
+block, from a table small enough to sit in cache.</p>
+
+<div data-widget="w-kernelwalk"></div>
+<p class="widget-caption">Interactive. One decode query against a 37-token history at
+block size 16. The table reads [7, 2, 9]; the last block holds only 5 real positions,
+and the kernel knows that from the length 37 alone, by comparing indices. No mask
+tensor exists anywhere in this picture.</p>
+
+<p>The alternative, gathering every request&rsquo;s scattered blocks into a contiguous
+scratch copy before calling an ordinary kernel, would mean pool-scale copies on every
+step. The engine has already met that failure mode once: when Inductor functionalized
+the KV write path in the compile round&rsquo;s first act, steps went from 9 ms to
+213 ms. Paged attention without a table-reading kernel is that, on purpose, every step.
+This is why the kernel decision below is not a detail; it is the phase.</p>
+
+<h2>The kernel decision: FlexAttention first</h2>
+<p>Two routes can read block tables. The flash-attn library ships purpose-built entry
+points (<code>flash_attn_varlen_func</code> for ragged prefill,
+<code>flash_attn_with_kvcache</code> for decode, which takes a block table directly).
+FlexAttention, in PyTorch itself, goes the other way: you write the attention
+variant&rsquo;s rules as small functions over indices, and <code>torch.compile</code>
+generates the fused kernel. The decision, recorded in PLAN.md on 2026-08-16, is
+FlexAttention first, flash-attn kept as a possible later A/B arm. The reasons: writing
+the index translation yourself is the educational core of the phase; Flex&rsquo;s eager
+fallback fits the CPU oracle-equivalence test pattern every backend here is validated
+with; and the next model families on the roadmap (sliding-window layers in Phase 6, the
+architecture zoo in Phase 8) are each one more index rule under Flex, versus a feature
+request under flash-attn.</p>
+<p>Four viability gates ran on the 5090 the same day, all scratch scripts, nothing
+committed. All four passed. The headline numbers, per call, decode shape (16 rows, one
+query token, GQA 16/8, head dim 128, bf16):</p>
+
+<figure class="fig">${figSpike}
+<figcaption>Compiled FlexAttention decode against the cuDNN SDPA baseline, CUDA-event
+timing, 200 iterations after warm-up. The gap shrinks as the KV history grows and
+reaches parity at 2,048, which is where the time actually goes. Worst case across a
+28-layer model: about 0.3 ms on a 4 ms step. <code>flex-spike-results.md</code> is the
+record.</figcaption></figure>
+
+<table class="h1-score">
+<tr><th>gate</th><th>what it checked</th><th>result</th></tr>
+<tr><td>1</td><td>Feature floor: torch 2.10.0+cu128 has <code>flex_attention</code>
+with GQA support, <code>BlockMask</code>, and the dedicated short-query decode
+kernel</td><td><span class="h1-pass">pass</span></td></tr>
+<tr><td>2</td><td>Decode speed at one query token: within 2x of cuDNN everywhere,
+parity by KV 2048</td><td><span class="h1-pass">pass</span></td></tr>
+<tr><td>3</td><td>Per-step mask cost: build one <code>BlockMask</code> over
+engine-owned tensors, then mutate those tensors in place each step; nothing is rebuilt
+per step</td><td><span class="h1-pass">pass</span></td></tr>
+<tr><td>4</td><td>CUDA-graph capture: the compiled call captures and replays, and
+replays follow in-place edits to the block table, exactly</td>
+<td><span class="h1-pass">pass</span></td></tr>
+</table>
+
+<p>The spike also settled the interface: <code>BlockMask.from_kv_blocks</code> builds
+the kernel&rsquo;s view directly from caller-owned integer tensors, and those tensors
+are the block table. The engine allocates them once, the scheduler writes ids into
+them each step, and the same compiled kernel reads them, which is the same
+seeded-buffer discipline the CUDA-graph decode path already uses. The flash-attn side
+of the ledger, checked the same day: no official wheel exists for torch 2.10, sm_120
+needs a source build or the FA4 beta line, and the paged path documents that block
+size must be a multiple of 256, which forfeits most of the small-block story above.</p>
+
+<h2>Running out of blocks on purpose</h2>
+<p>Preemption is not an optional extra on top of paging; it is the direct consequence
+of paging&rsquo;s capacity win. The padded pool cannot run out of memory mid-flight,
+because every admitted request owns its worst case up front, and that guarantee is
+exactly the waste. The paged pool admits more requests than the worst case allows,
+betting that most will stay short. When the bet loses, a batch of long generations
+exhausts the free list mid-decode, and some running request has to give its blocks
+back.</p>
+<div class="def"><span class="label">Definition · recompute-on-resume</span>
+The simple preemption mechanism, and Phase 4&rsquo;s first choice: drop the
+victim&rsquo;s blocks entirely, return the request to the waiting queue, and when space
+frees up, run its prompt plus everything it had generated back through prefill to
+rebuild the KV it lost. Costs compute to save memory. The alternative, copying blocks
+out to CPU RAM and back, saves the recompute but adds transfer machinery; it is noted
+in the plan as the fancier variant, not the first move.</div>
+
+<div data-widget="w-preempt"></div>
+<p class="widget-caption">Interactive. A 24-block pool, four running requests, and a
+growth pattern that will not fit. Step until the free list empties, then watch the
+policy you picked choose a victim. The recompute counter is the cost of every
+eviction paid so far; switch the policy and reset to compare instincts.</p>
+
+<p>Once eviction exists, who gets evicted is a policy question, and the phase treats it
+as one: evict the newest request (least work lost, vLLM&rsquo;s default), evict the
+lowest priority (which requires the API to carry priorities, so both dialects gain a
+per-request priority field this phase), or evict whoever is cheapest to rebuild. The
+per-request deadlines that Phase 3.5 deferred land in the same bundle.</p>
+
+<h2>Judging the policies: goodput under a joint SLO</h2>
+<p>Aggregate tok/s barely notices any of this, because the GPU stays busy no matter
+whose tokens it is producing. What preemption and priority policies actually move is
+who waits and who stalls. So the bench gains a metric that can see that: pick a TTFT
+target and an inter-token-latency target, and count the fraction of requests that meet
+both. That fraction is goodput under a joint SLO, and it is the number the Phase 4
+policies will be judged by.</p>
+
+<div data-widget="w-goodput"></div>
+<p class="widget-caption">Interactive. An illustrative population of 28 requests (not a
+measurement). Drag the two targets and watch goodput move. Every configuration of this
+picture has the same aggregate throughput; only the joint-SLO fraction tells the
+policies apart.</p>
+
+<h2>Overlap scheduling: planning during the forward pass</h2>
+<p>Today&rsquo;s engine loop is serial where it hurts. Plan the step, launch the
+forward, sample, copy the sampled tokens to the CPU, decode them into text, check the
+stop conditions, and only then plan the next step. The copy in the middle is the
+problem: step N+1&rsquo;s input tokens are step N&rsquo;s sampled tokens, and because
+the host also wants those tokens for detokenization and stop checks, the loop
+synchronizes on a device-to-host copy every single step. The GPU sits idle while the
+CPU plans.</p>
+<p>The overlap trick splits the two consumers. The next forward pass does not need the
+token values on the host: it can read them straight from a GPU-side buffer that the
+plan wires in without knowing what the values are. The host still gets its copy, on a
+separate CUDA stream, one step behind. The CPU can then plan step N+1 from metadata
+alone (every running row grows by one; allocate blocks accordingly) while the GPU
+executes step N. The accepted cost is that end-of-sequence is discovered one step
+late, so each finishing request wastes roughly one token of compute.</p>
+
+<div data-widget="w-overlap"></div>
+<p class="widget-caption">Interactive. The same three steps, scheduled two ways. In the
+serial loop the GPU waits out every plan and every sync. In the overlapped loop the
+forward passes run back to back, planning hides under execution, and the
+device-to-host copy rides a side stream one step behind.</p>
+
+<p>The reason to care is measured. On the 5090 the tuned 16-row decode step is about
+4 ms, and on the H100 the 32B model runs 27.5 ms steps against a 19.6 ms
+memory-bandwidth floor, with the gap coming largely from work the CPU does between
+forward passes on a server host that dispatches slowly. Overlap attacks that gap from
+the scheduling side, and it is deliberately placed in this phase: it reshapes the
+scheduler loop, and reshaping it once, on the paged engine, beats doing it twice.
+vLLM&rsquo;s async scheduler is about 75 lines over its base scheduler; the lesson is
+how small the change gets once the state objects are right.</p>
+
+<h2>What happens to the Phase 3 stack</h2>
+<p>The CUDA serve default is five interlocking pieces, and paging touches every one of
+them. The summary: everything whose job was containing rectangle shapes shrinks,
+because varlen dissolves the rectangle; everything that captures or compiles stays and
+gets more central.</p>
+
+<table class="h1-score">
+<tr><th>piece</th><th>its job today</th><th>under paging</th></tr>
+<tr><td>cuDNN priority pin</td><td>routes padded SDPA to the one fused kernel that
+accepts a mask plus GQA</td><td>survives only on the padded fallback arm; the Flex path
+never calls SDPA</td></tr>
+<tr><td>shape buckets</td><td>bound the rectangle shapes so cuDNN stops compiling a
+plan per shape</td><td>shrinks: per-row lengths stop being shapes at all; batch-width
+buckets stay, because graphs and compile still see shapes</td></tr>
+<tr><td>warm-up sweep</td><td>pre-builds every vocabulary shape behind
+<code>/ready</code></td><td>redefined, not removed: fewer axes to sweep, and it now
+also warms the compiled Flex kernels</td></tr>
+<tr><td>CUDA graphs</td><td>replay the decode step; launches went from 1,859 to
+50</td><td>stays: block tables join the seeded input buffers edited in place between
+replays (spike gate 4 verified exactly this)</td></tr>
+<tr><td>torch.compile</td><td>fuses the forward; one optional piece of
+five</td><td>stops being optional: FlexAttention only performs when compiled, so the
+compile stack and the attention stack become one thing</td></tr>
+</table>
+
+<p>One expectation to hold on to: there will be a stretch of Phase 4 where the paged
+engine loses to the padded one. The padded stack is a high bar (3,683 tok/s at
+short_chat c=16 on the 5090), and the phase discipline is the same as Phase 3&rsquo;s:
+keep the padded arm runnable as the reference in every A/B until the paged engine with
+overlap beats it, then flip the default.</p>
+
+<aside class="note"><span class="label">Sources and status</span>
+Measured: the 5090 and H100 bench history (<code>bench/history/</code>), the cuDNN
+plan-churn story in <code>sdpa-results.md</code> and
+<code>shape-buckets-results.md</code>, the spike numbers in
+<code>flex-spike-results.md</code>, and the 20-38 percent utilization figure from the
+PagedAttention paper (SOSP 2023). Illustrative: the request mixes, the toy pools, the
+preemption sandbox, and the goodput scatter. Scope: PLAN.md Phase 4 (status line dated
+2026-08-16). The phase design note is the next artifact; nothing shown here is
+implemented yet.</aside>
+`;
+
+  /* ---------- widgets ---------- */
+  const W = {};
+
+  /* w-waste: padded reservation vs paged allocation */
+  W['w-waste'] = (mount) => {
+    const { box, body } = widget('Padded slots vs paged blocks · where the memory goes');
+    let mixKey = 'short', t = 40;
+    const svgHost = el('div');
+    const readout = el('div', 'widget-readout');
+    const tLabel = html('span', null, '');
+    const seg = mkSeg(Object.values(MIXES).map((m) => m.label), 0, (i) => {
+      mixKey = Object.keys(MIXES)[i];
+      render();
+    });
+    const slider = mkRange(0, 100, 5, t, (v) => { t = v; render(); });
+    body.append(ctrlRow('request mix:', seg.root, 'generation progress:', slider, tLabel), svgHost, readout);
+
+    const render = () => {
+      const lens = mixLens(MIXES[mixKey], t);
+      const usedTok = lens.reduce((a, b) => a + b, 0);
+      const allocTok = lens.reduce((a, b) => a + Math.ceil(b / 16) * 16, 0);
+      const reservedTok = SLOTS * CAP;
+      const fit = Math.floor(reservedTok / (allocTok / SLOTS));
+      tLabel.textContent = t + '% of each output generated';
+
+      const X0 = 46, PW = 610, sc = (v) => X0 + (v / CAP) * PW;
+      let s = '', y = 8;
+      lens.forEach((L, i) => {
+        s += txt(X0 - 6, y + 10, 'r' + i, 9.5, MUTED, 'end');
+        s += '<rect x="' + X0 + '" y="' + y + '" width="' + PW + '" height="12" rx="3" fill="' + RUST + '" fill-opacity="0.22"/>';
+        s += '<rect x="' + X0 + '" y="' + y + '" width="' + Math.max(sc(L) - X0, 2) + '" height="12" rx="3" fill="' + BLUE + '"/>';
+        s += tipRect(X0, y - 1, PW, 14, 'request ' + i + ': ' + L.toLocaleString('en-US') +
+          ' of 4,096 reserved tokens (' + Math.round(L / CAP * 100) + '%)');
+        y += 17;
+      });
+      y += 12;
+      const totals = [
+        ['padded reserves', reservedTok, RUST, 0.5],
+        ['tokens that exist', usedTok, BLUE, 1],
+        ['paged allocates', allocTok, GREEN, 1],
+      ];
+      const TX0 = 150, TPW = 460;
+      const scT = (v) => (v / reservedTok) * TPW;
+      for (const [name, v, color, op] of totals) {
+        s += txt(TX0 - 8, y + 11, name, 10.5, INK2, 'end');
+        s += '<rect x="' + TX0 + '" y="' + y + '" width="' + Math.max(scT(v), 2) + '" height="14" rx="3" fill="' + color + '" fill-opacity="' + op + '"/>';
+        s += txt(TX0 + Math.max(scT(v), 2) + 6, y + 11, gibOf(v) + ' GiB', 11, INK2);
+        s += tipRect(TX0, y - 1, TPW + 70, 16, name + ': ' + v.toLocaleString('en-US') + ' tokens = ' + gibOf(v) + ' GiB of KV');
+        y += 22;
+      }
+      svgHost.innerHTML = svgOpen(y) + s + '</svg>';
+      wireTips(svgHost);
+      readout.textContent =
+        'padded pool:  ' + gibOf(reservedTok) + ' GiB reserved, ' + Math.round(usedTok / reservedTok * 100) + '% holds tokens\n' +
+        'paged pool:   ' + gibOf(allocTok) + ' GiB allocated, ' + Math.round(usedTok / allocTok * 100) + '% holds tokens (waste = last-block tails only)\n' +
+        'same 7.00 GiB, paged: room for ~' + fit + ' requests of this mix instead of 16';
+    };
+    render();
+    mount.replaceWith(box);
+  };
+
+  /* w-table: the block-pool stepper (this route's arrow-key transport) */
+  W['w-table'] = (mount) => {
+    const { box, body } = widget('A block pool under three requests · step by step');
+    const BS = 16, NBLK = 32;
+    const RCOLOR = { A: BLUE, B: GREEN, C: RUST };
+
+    /* deterministic simulator; snapshots at scripted moments */
+    const owner = new Array(NBLK).fill(null);
+    let free = [];
+    for (let i = 0; i < NBLK; i++) free.push(i);
+    const reqs = {};
+    const snaps = [];
+    const snap = (title, narr, hl) => snaps.push({
+      title, narr, hl: hl || [],
+      owner: owner.slice(), free: free.length,
+      reqs: JSON.parse(JSON.stringify(reqs)),
+    });
+    const alloc = (name) => { const b = free.shift(); owner[b] = name; reqs[name].table.push(b); return b; };
+    const admit = (name, prompt) => {
+      reqs[name] = { table: [], len: 0, done: false };
+      const got = [];
+      for (let i = 0; i < Math.ceil(prompt / BS); i++) got.push(alloc(name));
+      reqs[name].len = prompt;
+      return got;
+    };
+    const decode = (n) => {
+      const grew = [];
+      for (let s = 0; s < n; s++) {
+        for (const name of Object.keys(reqs)) {
+          const r = reqs[name];
+          if (r.done) continue;
+          r.len += 1;
+          if (r.len > r.table.length * BS) grew.push(alloc(name));
+        }
+      }
+      return grew;
+    };
+    const finish = (name) => {
+      const r = reqs[name];
+      r.done = true;
+      const freed = r.table.slice();
+      freed.forEach((b) => { owner[b] = null; });
+      free = freed.concat(free);   /* most recently freed is handed out first */
+      r.table = [];
+      return freed;
+    };
+
+    snap('the empty pool',
+      'The pool: 32 physical blocks of 16 tokens each, one preallocated tensor per layer. Every block starts on the free list. Nothing here is per-request yet.');
+    let hl = admit('A', 40);
+    snap('A arrives (40-token prompt)',
+      'A needs ceil(40 / 16) = 3 blocks. The free list hands over blocks 0, 1, 2 and prefill writes K/V straight into them. A’s block table now reads [0, 1, 2]; its last block holds 8 of 16 positions.', hl);
+    hl = admit('B', 24);
+    snap('B arrives (24-token prompt)',
+      'B takes 2 blocks. Two requests now interleave in the pool, each seeing its own contiguous logical sequence through its table.', hl);
+    decode(1);
+    snap('one decode step',
+      'Both requests grow by one token, into room their last blocks already have. No allocation happens. Most decode steps look exactly like this: growth is one token, blocks hold 16.');
+    decode(7);
+    snap('seven more steps',
+      'A is at 48 tokens and B at 32: both last blocks are now exactly full. The next token each generates will need a new block.');
+    hl = decode(1);
+    snap('crossing a boundary',
+      'A takes block 5 and B takes block 6. Their tables grow by one entry each; the pool’s physical order and the requests’ logical order have now fully diverged, and nothing cares.', hl);
+    hl = admit('C', 19);
+    snap('C arrives mid-flight (19-token prompt)',
+      'Continuous batching means arrivals land whenever they land. C takes blocks 7 and 8; no other request’s memory moved to make room.', hl);
+    hl = decode(14);
+    snap('fourteen more steps',
+      'Only C crossed a boundary in this stretch (block 9). A and B sit just under theirs. Allocation traffic is rare and cheap: integer bookkeeping on the host.', hl);
+    hl = finish('A');
+    snap('A finishes',
+      'A hit its end-of-sequence token. Its four blocks return to the free list in one motion. No compaction, no copying: freeing memory is editing a list.', hl);
+    hl = decode(16);
+    snap('reuse without copying',
+      'B and C each cross a boundary and are handed blocks 0 and 1, the blocks A vacated a moment ago. The pool stays dense under churn; this is the fragmentation story ending.', hl);
+    snap('where things stand',
+      'B’s table reads [3, 4, 6, 0] and C’s [7, 8, 9, 1]: logical order in the table, physical scatter in the pool. The attention kernel walks the table; everything else just does list operations.');
+
+    const board = el('div');
+    const narr = html('div', 'panel-sub', '');
+    narr.style.cssText = 'margin-top:0.7rem;';
+    const draw = (i) => {
+      const S = snaps[i];
+      board.innerHTML = '';
+      const grid = el('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(8, 1fr);gap:4px;';
+      const logical = {};
+      for (const nm of Object.keys(S.reqs)) S.reqs[nm].table.forEach((b, j) => { logical[b] = nm + j; });
+      for (let b = 0; b < NBLK; b++) {
+        const own = S.owner[b];
+        const cell = el('div');
+        cell.style.cssText = 'border:1.5px solid ' + (own ? RCOLOR[own] : 'var(--grid)') +
+          ';border-radius:6px;padding:4px 2px;text-align:center;font:600 10px var(--mono);color:' +
+          (own ? 'var(--ink)' : 'var(--cg-faint)') + ';background:' +
+          (own ? 'color-mix(in srgb, ' + RCOLOR[own] + ' 18%, var(--surface))' : 'var(--cg-paper)') + ';' +
+          (S.hl.indexOf(b) >= 0 ? 'box-shadow:0 0 0 2px ' + (own ? RCOLOR[own] : 'var(--axis)') + ';' : '');
+        cell.textContent = own ? b + ' ' + logical[b] : String(b);
+        const r = own && S.reqs[own];
+        tipify(cell, own
+          ? 'physical block ' + b + ' = ' + own + '’s logical block ' + logical[b].slice(1) +
+            ' (' + Math.max(0, Math.min(16, r.len - Number(logical[b].slice(1)) * 16)) + '/16 positions filled)'
+          : 'physical block ' + b + ': free');
+        grid.appendChild(cell);
+      }
+      board.appendChild(grid);
+      const tables = el('div');
+      tables.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:10px;font:11.5px var(--mono);color:var(--ink2);align-items:center;';
+      for (const nm of Object.keys(S.reqs)) {
+        const r = S.reqs[nm];
+        const chip = html('span', null,
+          '<b style="color:' + RCOLOR[nm] + '">' + nm + '</b> ' +
+          (r.done ? 'finished' : r.len + ' tok · table [' + r.table.join(', ') + ']'));
+        tables.appendChild(chip);
+      }
+      tables.appendChild(html('span', null, '<span style="color:var(--muted)">free: ' + S.free + ' blocks</span>'));
+      board.appendChild(tables);
+      narr.textContent = S.narr;
+    };
+    const transport = makeTransport({
+      max: snaps.length - 1,
+      labelFn: (i) => 'step ' + i + ' / ' + (snaps.length - 1) + ' · ' + snaps[i].title,
+      onSet: draw,
+      playMs: 2600,
+    });
+    box.insertBefore(transport.root, body);
+    body.append(board, narr);
+    transport.set(0);
+    activeTransports['paged'] = transport;
+    mount.replaceWith(box);
+  };
+
+  /* w-blocksize: the block-size dial */
+  W['w-blocksize'] = (mount) => {
+    const { box, body } = widget('Block size · tail waste vs table size');
+    const SIZES = [8, 16, 32, 64, 128, 256];
+    const NOTES = { 16: 'vLLM default', 256: 'flash-attn paged minimum (multiples of 256)' };
+    let mixKey = 'mixed';
+    const svgHost = el('div');
+    const seg = mkSeg(Object.values(MIXES).map((m) => m.label), 1, (i) => {
+      mixKey = Object.keys(MIXES)[i];
+      render();
+    });
+    body.append(ctrlRow('request mix (all outputs fully generated):', seg.root), svgHost);
+
+    const render = () => {
+      const lens = mixLens(MIXES[mixKey], 100);
+      const rows = SIZES.map((B) => {
+        const waste = lens.reduce((a, L) => a + (Math.ceil(L / B) * B - L), 0);
+        const entries = lens.reduce((a, L) => a + Math.ceil(L / B), 0);
+        return { B, waste, entries };
+      });
+      const maxW = Math.max(...rows.map((r) => r.waste));
+      const maxE = Math.max(...rows.map((r) => r.entries));
+      const X0 = 60, HALF = 262, X1 = X0 + HALF + 48;
+      let s = '', y = 26;
+      s += txt(X0, 12, 'tail waste (MiB of KV)', 11, INK2, 'start', 'font-weight:600');
+      s += txt(X1, 12, 'block-table entries (all 16 requests)', 11, INK2, 'start', 'font-weight:600');
+      for (const r of rows) {
+        const note = NOTES[r.B];
+        s += txt(X0 - 8, y + 11, String(r.B), 11.5, note ? 'var(--ink)' : MUTED, 'end', note ? 'font-weight:700' : '');
+        const wPx = Math.max((r.waste / maxW) * HALF, 2);
+        s += '<rect x="' + X0 + '" y="' + y + '" width="' + wPx + '" height="14" rx="3" fill="' + RUST + '"/>' +
+             txt(X0 + wPx + 5, y + 11, (r.waste * KVB / MiB).toFixed(0), 10.5, INK2) +
+             tipRect(X0, y - 1, HALF, 16, 'block size ' + r.B + ': ' + r.waste.toLocaleString('en-US') +
+               ' wasted tail tokens = ' + (r.waste * KVB / MiB).toFixed(0) + ' MiB');
+        const ePx = Math.max((r.entries / maxE) * HALF, 2);
+        s += '<rect x="' + X1 + '" y="' + y + '" width="' + ePx + '" height="14" rx="3" fill="' + BLUE + '"/>' +
+             txt(X1 + ePx + 5, y + 11, String(r.entries), 10.5, INK2) +
+             tipRect(X1, y - 1, HALF, 16, 'block size ' + r.B + ': ' + r.entries + ' table entries total');
+        if (note) s += txt(X0 - 30, y + 25, note, 9.5, MUTED, 'start');
+        y += note ? 34 : 22;
+      }
+      svgHost.innerHTML = svgOpen(y) + s + '</svg>';
+      wireTips(svgHost);
+    };
+    render();
+    mount.replaceWith(box);
+  };
+
+  /* w-layouts: rectangle / packed / paged, same tokens */
+  W['w-layouts'] = (mount) => {
+    const { box, body } = widget('Three layouts · padded rectangle, packed varlen, paged blocks');
+    const SEQ = [['A', 11, BLUE], ['B', 5, GREEN], ['C', 8, RUST]];
+    const CELL = 20, GAP = 2;
+    const svgHost = el('div');
+    const seg = mkSeg(['padded rectangle', 'packed (varlen)', 'paged blocks'], 0, (i) => render(i));
+    body.append(ctrlRow('layout:', seg.root), svgHost);
+
+    const cellRect = (x, y, color, faded, extra) =>
+      '<rect x="' + x + '" y="' + y + '" width="' + (CELL - GAP) + '" height="' + (CELL - GAP) +
+      '" rx="3" fill="' + (faded ? 'var(--cg-paper)' : 'color-mix(in srgb, ' + color + ' 30%, var(--surface))') +
+      '" stroke="' + (faded ? 'var(--grid)' : color) + '" stroke-width="1.2"' +
+      (faded ? ' stroke-dasharray="2.5 2.5"' : '') + '/>' + (extra || '');
+
+    const render = (mode) => {
+      let s = '', h = 0;
+      if (mode === 0) {
+        const X0 = 40, maxL = 11;
+        SEQ.forEach(([nm, L, color], r) => {
+          const y = 10 + r * (CELL + 6);
+          s += txt(X0 - 8, y + 13, nm, 11.5, INK2, 'end');
+          for (let c = 0; c < maxL; c++) {
+            const pad = c >= L;
+            s += cellRect(X0 + c * CELL, y, color, pad);
+            if (pad) s += txt(X0 + c * CELL + 8, y + 13, '·', 11, 'var(--cg-faint)');
+          }
+        });
+        h = 10 + 3 * (CELL + 6) + 8;
+        s += txt(X0 + maxL * CELL + 16, 10 + 13, 'shape: (3, 11)', 11.5, INK2, 'start', 'font-weight:600');
+        s += txt(X0 + maxL * CELL + 16, 10 + 32, 'plus a 3×11 boolean mask', 10.5, MUTED);
+        s += txt(X0 + maxL * CELL + 16, 10 + 47, 'telling the kernel which', 10.5, MUTED);
+        s += txt(X0 + maxL * CELL + 16, 10 + 62, 'cells are real', 10.5, MUTED);
+        s += txt(X0, h + 8, '9 of 33 cells are padding; every batch of new lengths is a new shape.', 10.5, MUTED);
+        h += 22;
+      } else if (mode === 1) {
+        const X0 = 40, y = 18;
+        let x = X0, bounds = [0];
+        SEQ.forEach(([nm, L, color]) => {
+          for (let c = 0; c < L; c++) { s += cellRect(x, y, color, false); x += CELL; }
+          bounds.push(bounds[bounds.length - 1] + L);
+        });
+        /* boundary ticks */
+        bounds.forEach((b) => {
+          const bx = X0 + b * CELL - GAP / 2;
+          s += '<line x1="' + bx + '" y1="' + (y - 6) + '" x2="' + bx + '" y2="' + (y + CELL + 2) +
+               '" stroke="var(--ink)" stroke-width="1.6"/>';
+          s += txt(bx, y + CELL + 16, String(b), 10.5, 'var(--ink)', 'middle', 'font-weight:600');
+        });
+        s += txt(X0, y - 10, 'A', 11, BLUE, 'start', 'font-weight:700');
+        s += txt(X0 + 11 * CELL, y - 10, 'B', 11, GREEN, 'start', 'font-weight:700');
+        s += txt(X0 + 16 * CELL, y - 10, 'C', 11, RUST, 'start', 'font-weight:700');
+        h = y + CELL + 28;
+        s += txt(X0, h + 4, 'shape: (24,) · cu_seqlens = [0, 11, 16, 24] · no padding cells, no mask tensor', 11, INK2, 'start', 'font-weight:600');
+        s += txt(X0, h + 20, 'the lengths are values in a tiny integer array; the only tensor shape left is the total.', 10.5, MUTED);
+        h += 34;
+      } else {
+        const BS = 4, X0 = 40, y = 18;
+        /* physical pool of 8 blocks, scattered ownership */
+        const phys = [['A', 0], ['B', 0], ['C', 0], ['A', 1], ['C', 1], [null, 0], ['A', 2], ['B', 1]];
+        const lenOf = { A: 11, B: 5, C: 8 };
+        const colorOf = { A: BLUE, B: GREEN, C: RUST };
+        phys.forEach(([own, li], b) => {
+          const bx = X0 + b * (BS * CELL + 10);
+          for (let c = 0; c < BS; c++) {
+            const filled = own && (li * BS + c < lenOf[own]);
+            s += cellRect(bx + c * CELL, y, own ? colorOf[own] : 'var(--grid)', !filled);
+          }
+          s += txt(bx, y + CELL + 14, 'blk ' + b + (own ? ' · ' + own + li : ' · free'), 9.5, own ? INK2 : 'var(--cg-faint)');
+          s += tipRect(bx, y, BS * CELL, CELL, own
+            ? 'physical block ' + b + ' holds ' + own + '’s logical block ' + li
+            : 'physical block ' + b + ': free');
+        });
+        h = y + CELL + 26;
+        s += txt(X0, h + 6, 'tables:  A [0, 3, 6]   B [1, 7]   C [2, 4]   (block size 4 in this toy; 16 for real)', 11, INK2, 'start', 'font-weight:600');
+        s += txt(X0, h + 22, 'the packed idea plus one indirection: table[logical block] gives the physical block.', 10.5, MUTED);
+        h += 36;
+      }
+      svgHost.innerHTML = svgOpen(h) + s + '</svg>';
+      wireTips(svgHost);
+    };
+    render(0);
+    mount.replaceWith(box);
+  };
+
+  /* w-kernelwalk: one decode query through the block table */
+  W['w-kernelwalk'] = (mount) => {
+    const { box, body } = widget('One decode query through the block table');
+    const TABLE = [7, 2, 9], KVLEN = 37, NBLK = 12;
+    const STEPS = [
+      ['the setup', 'One request at decode: one query token, a 37-token KV history, block size 16. Its block table reads [7, 2, 9]. Since 37 = 16 + 16 + 5, the last block holds only 5 real positions.', -1, false],
+      ['read table[0]', 'The kernel reads entry 0 of the table: the first 16 keys live at physical block 7. One integer load from a tensor small enough to sit in cache.', 0, false],
+      ['load block 7', 'Block 7’s 16 K rows and 16 V rows stream from the pool into on-chip memory. Inside a block, addresses are contiguous, so this is an ordinary coalesced read.', 0, true],
+      ['score and fold', 'The query is dotted against the 16 keys; 16 scores appear in registers and fold into the running max, denominator, and output accumulator. That is the online softmax (the Flash walkthrough tab builds it by hand). Blocks folded: 1 of 3.', 0, true],
+      ['read table[1]', 'Entry 1 says the next 16 logical positions live at physical block 2, far from block 7. The jump costs one integer read; the loads stay coalesced within the block.', 1, false],
+      ['load, score, fold block 2', 'Same routine: stream 16 K/V rows, 16 scores in registers, fold. Blocks folded: 2 of 3.', 1, true],
+      ['read table[2]', 'The last entry points at physical block 9.', 2, false],
+      ['the partial block', 'Only 5 of block 9’s 16 positions hold real tokens. The kernel knows because it holds the length 37: any position index of 37 or higher is skipped by an integer comparison computed in registers. No mask tensor is read from memory, because none exists.', 2, true],
+      ['fold the last partial', 'The 5 valid scores fold in. Blocks folded: 3 of 3.', 2, true],
+      ['epilogue', 'Divide the accumulator by the denominator and write one output row. The 37 scores were never materialized as a tensor; the block table was never copied; the pool was read in three contiguous bursts.', -1, false],
+    ];
+    const board = el('div');
+    const narr = html('div', 'panel-sub', '');
+    narr.style.cssText = 'margin-top:0.7rem;';
+    const draw = (i) => {
+      const [, text, tIdx, loaded] = STEPS[i];
+      let s = '';
+      /* the table */
+      s += txt(8, 16, 'block table', 10.5, MUTED);
+      TABLE.forEach((phys, j) => {
+        const x = 8 + j * 58, active = j === tIdx;
+        s += '<rect x="' + x + '" y="24" width="50" height="30" rx="6" fill="' +
+          (active ? 'color-mix(in srgb, ' + BLUE + ' 22%, var(--surface))' : 'var(--cg-paper)') +
+          '" stroke="' + (active ? BLUE : 'var(--grid)') + '" stroke-width="' + (active ? 2 : 1.2) + '"/>';
+        s += txt(x + 25, 37, '[' + j + ']', 9, MUTED, 'middle');
+        s += txt(x + 25, 49, String(phys), 12, 'var(--ink)', 'middle', 'font-weight:700');
+        s += tipRect(x, 24, 50, 30, 'logical block ' + j + ' → physical block ' + phys);
+      });
+      /* the pool strip */
+      s += txt(8, 84, 'the pool (physical blocks)', 10.5, MUTED);
+      for (let b = 0; b < NBLK; b++) {
+        const x = 8 + b * 57, mine = TABLE.indexOf(b), active = mine === tIdx;
+        s += '<rect x="' + x + '" y="92" width="49" height="26" rx="5" fill="' +
+          (mine >= 0 ? 'color-mix(in srgb, ' + BLUE + ' ' + (active && loaded ? 34 : 14) + '%, var(--surface))' : 'var(--cg-paper)') +
+          '" stroke="' + (active ? BLUE : mine >= 0 ? 'color-mix(in srgb, ' + BLUE + ' 55%, var(--grid))' : 'var(--grid)') +
+          '" stroke-width="' + (active ? 2 : 1.1) + '"/>';
+        s += txt(x + 24, 109, String(b), 10.5, mine >= 0 ? 'var(--ink)' : 'var(--cg-faint)', 'middle',
+          mine >= 0 ? 'font-weight:600' : '');
+        if (b === 9) s += txt(x + 24, 130, '5/16 valid', 8.5, RUST, 'middle');
+      }
+      /* on-chip panel */
+      const folded = i < 3 ? 0 : i < 5 ? 1 : i < 8 ? 2 : 3;
+      s += txt(8, 158, 'on chip', 10.5, MUTED);
+      s += '<rect x="8" y="166" width="676" height="34" rx="6" fill="var(--plane)"/>';
+      s += txt(20, 187, 'q (1×128)', 11, INK2);
+      s += txt(110, 187, loaded ? 'K/V of block ' + TABLE[tIdx] + ' in SRAM' : 'no block loaded', 11,
+        loaded ? 'var(--ink)' : 'var(--cg-faint)');
+      s += txt(320, 187, 'running m, l, O · blocks folded: ' + folded + ' / 3', 11, folded ? 'var(--ink)' : 'var(--cg-faint)');
+      s += txt(560, 187, i === STEPS.length - 1 ? 'output written ✓' : 'output: pending', 11,
+        i === STEPS.length - 1 ? GREEN : 'var(--cg-faint)', 'start', i === STEPS.length - 1 ? 'font-weight:700' : '');
+      board.innerHTML = svgOpen(210) + s + '</svg>';
+      wireTips(board);
+      narr.textContent = text;
+    };
+    const transport = makeTransport({
+      max: STEPS.length - 1,
+      labelFn: (i) => 'step ' + i + ' / ' + (STEPS.length - 1) + ' · ' + STEPS[i][0],
+      onSet: draw,
+      playMs: 3200,
+    });
+    box.insertBefore(transport.root, body);
+    body.append(board, narr);
+    transport.set(0);
+    mount.replaceWith(box);
+  };
+
+  /* w-preempt: the eviction sandbox */
+  W['w-preempt'] = (mount) => {
+    const { box, body } = widget('Preemption sandbox · pick a victim policy, run out of blocks');
+    const NBLK = 24;
+    const PRIO_RANK = { high: 2, normal: 1, low: 0 };
+    let policy = 0;   /* 0 lifo, 1 priority, 2 cost-aware */
+    let reqs, freeN, evictions, recomputed, stepN, lastLog;
+
+    const init = () => {
+      reqs = [
+        { name: 'R0', prio: 'high', blocks: 5, state: 'running', arrival: 0 },
+        { name: 'R1', prio: 'normal', blocks: 4, state: 'running', arrival: 1 },
+        { name: 'R2', prio: 'low', blocks: 3, state: 'running', arrival: 2 },
+        { name: 'R3', prio: 'normal', blocks: 2, state: 'running', arrival: 3 },
+      ];
+      freeN = NBLK - 14;
+      evictions = 0; recomputed = 0; stepN = 0;
+      lastLog = 'Four requests are resident (14 of 24 blocks). Each step, every running request needs one more block.';
+    };
+
+    const pickVictim = () => {
+      /* the requester is a candidate too: under the priority policy a
+         low-priority request that asks for a block preempts itself */
+      const cands = reqs.filter((r) => r.state === 'running');
+      if (!cands.length) return null;
+      let best = cands[0];
+      for (const c of cands) {
+        if (policy === 0) { if (c.arrival > best.arrival) best = c; }
+        else if (policy === 1) {
+          if (PRIO_RANK[c.prio] < PRIO_RANK[best.prio] ||
+              (PRIO_RANK[c.prio] === PRIO_RANK[best.prio] && c.arrival > best.arrival)) best = c;
+        } else {
+          if (c.blocks < best.blocks ||
+              (c.blocks === best.blocks && c.arrival > best.arrival)) best = c;
+        }
+      }
+      return best;
+    };
+
+    const step = () => {
+      stepN += 1;
+      const log = [];
+      /* resume phase */
+      for (const r of reqs) {
+        if (r.state === 'waiting' && freeN >= r.blocks + 1) {
+          freeN -= r.blocks;
+          r.state = 'running';
+          recomputed += r.blocks * 16;
+          log.push(r.name + ' resumes: its ' + r.blocks + ' blocks are re-prefilled from scratch (+' + (r.blocks * 16) + ' recomputed tokens).');
+        }
+      }
+      /* growth phase */
+      for (const r of reqs) {
+        if (r.state !== 'running') continue;
+        if (freeN === 0) {
+          const v = pickVictim();
+          if (!v) { log.push(r.name + ' stalls: no blocks and nobody to evict.'); continue; }
+          freeN += v.blocks;
+          v.state = 'waiting';
+          evictions += 1;
+          log.push(v.name + ' evicted (' + ['newest request', 'lowest priority', 'fewest blocks to rebuild'][policy] +
+            '): its ' + v.blocks + ' blocks return to the pool; it will re-prefill later.' +
+            (v === r ? ' It was also the one asking, so it yields its own place.' : ''));
+          if (v === r) continue;
+        }
+        if (r.state === 'running') { freeN -= 1; r.blocks += 1; }
+      }
+      lastLog = log.length ? log.join(' ') : 'Every running request grew by one block. No pressure yet.';
+      render();
+    };
+
+    const seg = mkSeg(['evict newest (LIFO)', 'evict lowest priority', 'evict cheapest to rebuild'], 0,
+      (i) => { policy = i; });
+    const stepBtn = el('button', 'btn', 'Step');
+    stepBtn.addEventListener('click', step);
+    const resetBtn = el('button', 'btn', 'Reset');
+    resetBtn.addEventListener('click', () => { init(); render(); });
+    const board = el('div');
+    const logLine = html('div', 'panel-sub', '');
+    logLine.style.cssText = 'margin-top:0.7rem;';
+    const readout = el('div', 'widget-readout');
+    body.append(ctrlRow('victim policy:', seg.root, stepBtn, resetBtn), board, logLine, readout);
+
+    const RC = { R0: BLUE, R1: GREEN, R2: RUST, R3: 'var(--cg-thm-border)' };
+    const render = () => {
+      let s = '', x = 8;
+      let cells = [];
+      for (const r of reqs) if (r.state === 'running') for (let i = 0; i < r.blocks; i++) cells.push(r.name);
+      for (let i = 0; i < NBLK; i++) {
+        const own = cells[i] || null;
+        s += '<rect x="' + (8 + i * 28) + '" y="8" width="24" height="24" rx="5" fill="' +
+          (own ? 'color-mix(in srgb, ' + RC[own] + ' 26%, var(--surface))' : 'var(--cg-paper)') +
+          '" stroke="' + (own ? RC[own] : 'var(--grid)') + '" stroke-width="1.2"/>' +
+          tipRect(8 + i * 28, 8, 24, 24, own ? 'held by ' + own : 'free');
+      }
+      board.innerHTML = svgOpen(40) + s + '</svg>';
+      wireTips(board);
+      const chips = reqs.map((r) =>
+        '<span style="border:1.5px solid ' + RC[r.name] + ';border-radius:999px;padding:2px 10px;font:600 11px var(--sans);color:var(--ink2);' +
+        (r.state === 'waiting' ? 'opacity:0.55;border-style:dashed;' : '') + '">' +
+        r.name + ' · ' + r.prio + ' · ' + r.blocks + ' blk · ' + r.state + '</span>').join(' ');
+      readout.innerHTML =
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;font-family:var(--sans)">' + chips + '</div>' +
+        'step ' + stepN + ' · free: ' + freeN + ' / ' + NBLK + ' blocks · evictions: ' + evictions +
+        ' · recomputed tokens so far: ' + recomputed;
+      logLine.textContent = lastLog;
+    };
+    init(); render();
+    mount.replaceWith(box);
+  };
+
+  /* w-goodput: joint-SLO sliders over an illustrative population */
+  W['w-goodput'] = (mount) => {
+    const { box, body } = widget('Goodput under a joint SLO · TTFT and ITL together');
+    const TTFT = [62, 85, 110, 140, 95, 180, 220, 260, 310, 150, 410, 480, 90, 560, 640, 120, 730, 820, 200, 930, 1050, 170, 1180, 1350, 240, 1600, 2100, 2600];
+    const ITL = [9, 11, 10, 14, 12, 13, 15, 18, 16, 12, 21, 19, 11, 24, 22, 13, 27, 25, 15, 31, 29, 14, 35, 33, 17, 41, 48, 55];
+    let ttftSlo = 1000, itlSlo = 30;
+    const svgHost = el('div');
+    const readout = el('div', 'widget-readout');
+    const tL = html('span', null, ''), iL = html('span', null, '');
+    const tS = mkRange(100, 2800, 50, ttftSlo, (v) => { ttftSlo = v; render(); });
+    const iS = mkRange(8, 60, 1, itlSlo, (v) => { itlSlo = v; render(); });
+    body.append(ctrlRow('TTFT target:', tS, tL, 'ITL p99 target:', iS, iL), svgHost, readout);
+
+    const render = () => {
+      tL.textContent = ttftSlo + ' ms'; iL.textContent = itlSlo + ' ms';
+      const X0 = 52, PW = 600, Y0 = 12, PH = 220, XMAX = 2800, YMAX = 60;
+      const xs = (v) => X0 + (v / XMAX) * PW;
+      const ys = (v) => Y0 + PH - (v / YMAX) * PH;
+      let s = '';
+      s += '<rect x="' + X0 + '" y="' + ys(itlSlo) + '" width="' + (xs(ttftSlo) - X0) + '" height="' + (Y0 + PH - ys(itlSlo)) +
+           '" fill="color-mix(in srgb, ' + GREEN + ' 8%, transparent)"/>';
+      for (const g of [0, 20, 40, 60]) {
+        s += '<line x1="' + X0 + '" y1="' + ys(g) + '" x2="' + (X0 + PW) + '" y2="' + ys(g) +
+             '" stroke="' + GRID + '" stroke-width="1"/>' + txt(X0 - 8, ys(g) + 4, g + ' ms', 10, MUTED, 'end');
+      }
+      for (const g of [0, 700, 1400, 2100, 2800]) {
+        s += txt(xs(g), Y0 + PH + 16, g >= 1000 ? (g / 1000) + ' s' : g + ' ms', 10, MUTED, 'middle');
+      }
+      s += '<line x1="' + xs(ttftSlo) + '" y1="' + Y0 + '" x2="' + xs(ttftSlo) + '" y2="' + (Y0 + PH) +
+           '" stroke="var(--ink)" stroke-width="1.4" stroke-dasharray="5 4"/>';
+      s += '<line x1="' + X0 + '" y1="' + ys(itlSlo) + '" x2="' + (X0 + PW) + '" y2="' + ys(itlSlo) +
+           '" stroke="var(--ink)" stroke-width="1.4" stroke-dasharray="5 4"/>';
+      let pass = 0;
+      TTFT.forEach((t, k) => {
+        const ok = t <= ttftSlo && ITL[k] <= itlSlo;
+        if (ok) pass += 1;
+        s += '<circle cx="' + xs(t) + '" cy="' + ys(ITL[k]) + '" r="5" fill="' + (ok ? GREEN : '#fff') +
+             '" stroke="' + (ok ? GREEN : RUST) + '" stroke-width="1.8"/>' +
+             tipRect(xs(t) - 9, ys(ITL[k]) - 9, 18, 18, 'TTFT ' + t + ' ms · ITL p99 ' + ITL[k] + ' ms · ' +
+               (ok ? 'meets both targets' : 'misses a target'));
+      });
+      s += txt(X0 + PW / 2, Y0 + PH + 34, 'time to first token', 10.5, MUTED, 'middle');
+      s += legendChip(X0, Y0 + PH + 44, GREEN, 1, 'meets both targets') +
+           '<circle cx="' + (X0 + 186) + '" cy="' + (Y0 + PH + 50) + '" r="5" fill="#fff" stroke="' + RUST + '" stroke-width="1.8"/>' +
+           txt(X0 + 197, Y0 + PH + 54, 'misses at least one', 11, INK2);
+      svgHost.innerHTML = svgOpen(Y0 + PH + 62) + s + '</svg>';
+      wireTips(svgHost);
+      readout.textContent = 'goodput: ' + pass + ' of 28 requests (' + Math.round(pass / 28 * 100) +
+        '%) meet TTFT ≤ ' + ttftSlo + ' ms AND ITL p99 ≤ ' + itlSlo +
+        ' ms\naggregate tok/s: identical in every configuration of this picture';
+    };
+    render();
+    mount.replaceWith(box);
+  };
+
+  /* w-overlap: the serial loop vs the overlapped loop */
+  W['w-overlap'] = (mount) => {
+    const { box, body } = widget('The step loop · serial vs overlapped');
+    const svgHost = el('div');
+    const seg = mkSeg(['serial (today)', 'overlapped (Phase 4)'], 0, (i) => render(i));
+    body.append(ctrlRow('schedule:', seg.root), svgHost);
+
+    const span = (x, y, w, color, label, tip, faded) =>
+      '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="22" rx="4" fill="' + color +
+      '" fill-opacity="' + (faded ? 0.35 : 0.9) + '"/>' +
+      txt(x + w / 2, y + 15, label, 10, '#fff', 'middle', 'font-weight:600') +
+      tipRect(x, y, w, 22, tip);
+
+    const render = (mode) => {
+      const X0 = 78;
+      let s = '';
+      const lane = (y, name) => {
+        s += txt(X0 - 8, y + 15, name, 11, INK2, 'end', 'font-weight:600');
+        s += '<line x1="' + X0 + '" y1="' + (y + 33) + '" x2="680" y2="' + (y + 33) + '" stroke="' + GRID + '" stroke-width="1"/>';
+      };
+      let h;
+      if (mode === 0) {
+        lane(30, 'CPU'); lane(80, 'GPU');
+        const PLAN = 52, FWD = 104, SYNC = 32;
+        for (let i = 0; i < 3; i++) {
+          const cx = X0 + i * (PLAN + FWD + SYNC);
+          s += span(cx, 30, PLAN, RUST, 'plan ' + i, 'CPU plans step ' + i + ': admission, water-fill, build inputs. The GPU is idle the whole time.');
+          s += span(cx + PLAN, 80, FWD, GREEN, 'fwd ' + i, 'GPU runs forward pass ' + i + '.');
+          s += span(cx + PLAN + FWD, 30, SYNC, RUST, 'sync', 'CPU blocks on the device-to-host copy of the sampled tokens, then detokenizes and checks stops. The GPU is idle again.');
+          s += '<rect x="' + cx + '" y="80" width="' + PLAN + '" height="22" fill="url(#pg-hatch)" opacity="0.5"/>';
+          s += '<rect x="' + (cx + PLAN + FWD) + '" y="80" width="' + SYNC + '" height="22" fill="url(#pg-hatch)" opacity="0.5"/>';
+        }
+        s += txt(X0, 132, 'the GPU idles through every plan and every sync: the gaps are pure loss, every step.', 10.5, MUTED);
+        h = 144;
+      } else {
+        lane(30, 'CPU'); lane(80, 'GPU'); lane(130, 'copy');
+        const FWD = 150;
+        for (let i = 0; i < 3; i++) {
+          const gx = X0 + i * (FWD + 4);
+          s += span(gx, 80, FWD, GREEN, 'fwd ' + i, 'GPU runs forward pass ' + i + ' with no gap before the next: its input tokens are read from a GPU-side buffer step ' + (i - 1) + ' sampled into.');
+          s += span(gx + 20, 30, 66, BLUE, 'plan ' + (i + 1), 'CPU plans step ' + (i + 1) + ' from metadata alone (each row grows by one; allocate blocks) while the GPU is busy with step ' + i + '.');
+          s += span(gx + 96, 130, 40, BLUE, 'D2H ' + (i - 1 < 0 ? ' ' : i - 1), 'The sampled tokens of step ' + (i - 1) + ' copy to the host on a side stream; detokenization and stop checks run one step behind.', i === 0);
+        }
+        s += txt(X0, 182, 'no GPU gaps. The cost: a request that finished at step N is noticed during step N+1, one wasted token.', 10.5, MUTED);
+        h = 194;
+      }
+      svgHost.innerHTML = svgOpen(h) +
+        '<defs><pattern id="pg-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">' +
+        '<line x1="0" y1="0" x2="0" y2="6" stroke="var(--cg-faint)" stroke-width="1.4"/></pattern></defs>' + s + '</svg>';
+      wireTips(svgHost);
+    };
+    render(0);
+    mount.replaceWith(box);
+  };
+
+  $('pg-body').appendChild(article);
+  mountWidgets(article, W);
+  wireGoto(article);
   article.querySelectorAll('figure.fig [data-tip]').forEach((n) => {
     n.addEventListener('mousemove', showTip);
     n.addEventListener('mouseleave', hideTip);

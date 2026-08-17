@@ -127,6 +127,21 @@ detail lives behind the zoom targets):
   32B stack-vs-eager A/B, the decode-step-vs-bandwidth-floor figure, the
   open-loop knee, and the graded-predictions scoreboard. Charts are static
   SVG with hover tooltips, validated chapter palette, light mode.
+- **Paged KV** (`#/paged`): Phase 4 read-ahead in the chapter kit's look
+  (serif article, def/aside boxes, framed widgets) but, like the H100 tab,
+  not a full chapter: no predict gates, no quiz. Visualization-first: the
+  padded-vs-paged memory comparison with switchable request mixes, a
+  steppable block-pool allocator (three requests, boundary crossings, free
+  and reuse), the block-size dial (tail waste vs table size, with the vLLM
+  16 and flash-attn 256 annotations), the padded/varlen/paged layout
+  switcher, a steppable decode query through a block table, the
+  FlexAttention-vs-cuDNN spike chart plus the four-gate table, a preemption
+  sandbox with three victim policies, joint-SLO goodput sliders, and the
+  serial-vs-overlapped step-loop timeline. Measured numbers are real
+  (bench history, `flex-spike-results.md`, the vLLM paper); the toy pools
+  and the goodput population are illustrative and labeled as such. Static
+  design content, no trace needed; update alongside PLAN.md Phase 4 as the
+  phase lands.
 
 ## Regenerating the traces
 
