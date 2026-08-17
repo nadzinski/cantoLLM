@@ -628,15 +628,24 @@ unchanged (plausibly the new request path).
 memory management lesson — and overlap scheduling with execution so the CPU plans step
 N+1 while the GPU runs step N.
 
-**Status (2026-07-22):** Not started. Scope notes: the flash-proper attention
-restructure moved here from Phase 3 (see its Status) — expressing raggedness
-as lengths metadata instead of an explicit mask tensor is the same interface
-change paging requires, so the two land together. The 2026-07-19 roadmap
-review added async/overlap scheduling here (deliberately not Phase 3: it
-reshapes the scheduler loop, and doing that once, on the paged engine, beats
-doing it twice), plus preemption victim-selection policies and per-request
-priority scheduling, with a goodput-under-joint-SLO bench metric to judge
-them by.
+**Status (2026-08-16):** Not started (no code yet), but the kernel route is
+decided: the paged attention path lands on FlexAttention first, with
+flash-attn kept as a possible later A/B arm. A viability spike on the 5090
+passed all four gates (flex-decoding within 2x of cuDNN at decode and at
+parity by KV 2048; `BlockMask.from_kv_blocks` over engine-owned table
+tensors, mutated in place per step; compiled Flex captures and replays in
+CUDA graphs with in-place table updates); `flex-spike-results.md` is the
+record and becomes the design note's gates section. flash-attn is deferred
+on concrete grounds: no torch-2.10/sm_120 wheel, and its paged path
+requires 256-token pages, so the block allocator keeps block size
+configurable to leave that arm open. Prior scope notes stand: the
+flash-proper attention restructure moved here from Phase 3 (raggedness as
+lengths metadata is the same interface change paging requires, so the two
+land together), and the 2026-07-19 roadmap review added async/overlap
+scheduling (it reshapes the scheduler loop; doing that once, on the paged
+engine, beats doing it twice), preemption victim-selection policies, and
+per-request priority scheduling, with a goodput-under-joint-SLO bench
+metric to judge them by. Next: the phase design note.
 
 - KV blocks of fixed size (16 tokens is the vLLM default) in a single preallocated pool.
 - Per-request block table mapping logical token positions → block IDs.
