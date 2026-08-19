@@ -11049,6 +11049,31 @@ block size 16. The table reads [7, 2, 9]; the last block holds only 5 real posit
 and the kernel knows that from the length 37 alone, by comparing indices. No mask
 tensor exists anywhere in this picture.</p>
 
+<aside class="note"><span class="label">How the kernel knows where a block lives</span>
+A fair question hides in this picture: the allocator and its free list are Python
+objects on the CPU, but the kernel that needs the answer runs on the GPU. The bridge is
+that the block table exists twice. The scheduler keeps its bookkeeping copy in host
+memory, and the engine also owns a device-side integer tensor of fixed shape (max rows
+by max blocks per row), allocated once at startup; that tensor is what
+<code>BlockMask.from_kv_blocks</code> wraps. Each step, after planning, the scheduler
+writes the step&rsquo;s tables into that device tensor: a few kilobytes of int32s,
+staged in a pinned host buffer and sent as one asynchronous host-to-device copy on the
+same CUDA stream as the forward pass. The input token ids and the KV write map already
+travel this way every step today, so paging adds one more small passenger, not a new
+mechanism. Because the copy is enqueued on the stream ahead of the attention kernel,
+stream ordering guarantees the kernel sees this step&rsquo;s table; nothing
+synchronizes or waits.<br><br>
+From there, no address ever crosses from the CPU. The kernel receives two tensor
+arguments: the pool (one base address) and the table (integers). When a thread block
+needs logical block j of row i, it reads table[i][j] from device memory, multiplies by
+the size of one block in elements, and adds the result to the pool&rsquo;s base
+address. That is ordinary integer arithmetic in registers, the same gather machinery
+any indexed read on a GPU uses; the CPU never computes or ships a pointer. This is
+also exactly why CUDA-graph replay keeps working (spike gate 4): capture bakes in the
+two tensors&rsquo; <em>addresses</em>, not their contents, so overwriting the table in
+place before each replay is enough for the replayed kernel to read from the new
+physical blocks.</aside>
+
 <p>The alternative, gathering every request&rsquo;s scattered blocks into a contiguous
 scratch copy before calling an ordinary kernel, would mean pool-scale copies on every
 step. The engine has already met that failure mode once: when Inductor functionalized
