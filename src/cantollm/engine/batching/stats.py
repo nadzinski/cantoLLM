@@ -13,16 +13,24 @@ step. `EngineStatsAccumulator` lives on the API side (`EventMultiplexer`),
 keeps bounded rings of steps and engine-ITL samples, and serves the
 `/debug/engine-stats` scrapes with a `since` cursor.
 
-Derivation notes (the two scheduler invariants this borrows — revisit for
-Phase 4 paged KV):
-  - a row can only finish (`end_turn`/`max_tokens`) once past prefill, so a
-    finished row consumed either 1 decode token or, when it completed its
-    final prefill chunk and stopped immediately, its remaining prompt;
-  - finished rows free their slot within the same step, so post-step
-    `active` plus this step's row-finish events reconstructs the forward's
-    row count. Abort acks and zero-token rejections are *pending* events,
-    flushed at the head of `step()`'s return — the collector snapshots
-    `len(pending_events)` beforehand so they are never mistaken for rows.
+Derivation notes: the real scheduler states its per-step row/token counts
+at plan time (`last_step_plan`, Phase 4 chunk 1) and the collector prefers
+them — the older snapshot-diff reconstruction leaned on two invariants
+("a row can only finish once past prefill", "finished rows free their
+slot within the same step") that Phase 4's preemption and overlap break.
+The reconstruction is kept as the fallback for schedulers that expose the
+observed surface but not the plan-time counters:
+  - a row that finished consumed either 1 decode token or, when it
+    completed its final prefill chunk and stopped immediately, its
+    remaining prompt;
+  - post-step `active` plus this step's row-finish events reconstructs the
+    forward's row count. Abort acks and zero-token rejections are *pending*
+    events, flushed at the head of `step()`'s return — the collector
+    snapshots `len(pending_events)` beforehand so they are never mistaken
+    for rows.
+KV capacity fields: padded pools derive (allocated, capacity) from slots
+here in the collector; the paged scheduler will expose `kv_state`
+(allocated_tokens, capacity_tokens) and the collector prefers it.
 """
 
 from __future__ import annotations
@@ -33,7 +41,10 @@ from dataclasses import asdict, dataclass, field, replace
 
 from cantollm.engine.types import TokenEvent
 
-STATS_SCHEMA_VERSION = 1
+# v2 (Phase 4 chunk 1): additive — kv_allocated_tokens / kv_capacity_tokens
+# optional fields, and prefill/decode preferred from the scheduler's
+# plan-time counters over the snapshot-diff reconstruction.
+STATS_SCHEMA_VERSION = 2
 
 STEP_RING_SIZE = 4096
 ITL_RING_SIZE = 65536
@@ -60,6 +71,12 @@ class StepStats:
     fwd_width: int | None = None   # forward's num_new_max (incl. pad columns)
     fwd_kv_len: int | None = None  # forward's max_history_len (post-bucketing)
     graph_replayed: bool | None = None  # this step rode a CUDA graph; None = graphs off
+    # Pool-memory view (schema v2). kv_tokens above stays "tokens in use";
+    # these are what the pool has RESERVED for them and its total, so
+    # utilization stops assuming slot layout. Padded: occupied_slots *
+    # max_seq_len / max_batch * max_seq_len. Paged: blocks * block_size.
+    kv_allocated_tokens: int | None = None
+    kv_capacity_tokens: int | None = None
 
 
 @dataclass(frozen=True)
@@ -130,26 +147,45 @@ class StepStatsCollector:
             if e.finish_reason in _ROW_FINISH_REASONS
         }
 
-        prefill = 0
-        decode = 0
-        kv_tokens = 0
-        for seq in scheduler.active:
-            pre_pos, prompt_len = self._snapshot.get(
-                seq.request_id, (0, len(seq.prompt_token_ids))
-            )
-            consumed_prefill = min(seq.position, prompt_len) - min(pre_pos, prompt_len)
-            prefill += consumed_prefill
-            decode += (seq.position - pre_pos) - consumed_prefill
-            kv_tokens += seq.position
-        for request_id in finished:
-            pre_pos, prompt_len = self._snapshot[request_id]
-            if pre_pos >= prompt_len:
-                decode += 1
-            else:
-                # Completed its final prefill chunk and stopped immediately.
-                prefill += prompt_len - pre_pos
+        kv_tokens = sum(seq.position for seq in scheduler.active)
+        planned = getattr(scheduler, "last_step_plan", None)
+        if planned is not None:
+            # The real scheduler states its counts at plan time (Phase 4
+            # chunk 1) — exact under preemption/overlap, where the
+            # snapshot-diff below misattributes.
+            rows, prefill, decode = planned
+        else:
+            rows = len(scheduler.active) + len(finished)
+            prefill = 0
+            decode = 0
+            for seq in scheduler.active:
+                pre_pos, prompt_len = self._snapshot.get(
+                    seq.request_id, (0, len(seq.prompt_token_ids))
+                )
+                consumed_prefill = (
+                    min(seq.position, prompt_len) - min(pre_pos, prompt_len)
+                )
+                prefill += consumed_prefill
+                decode += (seq.position - pre_pos) - consumed_prefill
+            for request_id in finished:
+                pre_pos, prompt_len = self._snapshot[request_id]
+                if pre_pos >= prompt_len:
+                    decode += 1
+                else:
+                    # Completed its final prefill chunk, stopped immediately.
+                    prefill += prompt_len - pre_pos
 
         max_batch = scheduler.config.max_batch
+        occupied = max_batch - scheduler.allocator.num_free()
+        # (allocated, capacity) pool tokens: the paged scheduler exposes
+        # kv_state (blocks are its unit of reservation); padded reservation
+        # is whole slots, derivable right here.
+        kv_state = getattr(scheduler, "kv_state", None)
+        if kv_state is not None:
+            kv_allocated, kv_capacity = kv_state
+        else:
+            kv_allocated = occupied * scheduler.config.max_seq_len
+            kv_capacity = max_batch * scheduler.config.max_seq_len
         # (B, num_new_max, max_history_len) of the forward this step ran —
         # the shape the kernel saw, which bucketing changes and `rows`
         # (real sequences) cannot reconstruct. None when no forward ran.
@@ -166,8 +202,8 @@ class StepStatsCollector:
             t_wall=time.time(),
             t_perf=t_perf,
             dur_s=dur_s,
-            rows=len(scheduler.active) + len(finished),
-            occupied_slots=max_batch - scheduler.allocator.num_free(),
+            rows=rows,
+            occupied_slots=occupied,
             queue_depth=self._queue_depth,
             kv_tokens=kv_tokens,
             prefill_tokens=prefill,
@@ -176,6 +212,8 @@ class StepStatsCollector:
             fwd_width=fwd_shape[1],
             fwd_kv_len=fwd_shape[2],
             graph_replayed=graph_replayed,
+            kv_allocated_tokens=kv_allocated,
+            kv_capacity_tokens=kv_capacity,
         )
         self._seq += 1
         return stats

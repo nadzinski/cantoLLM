@@ -108,10 +108,17 @@ def summarize_repeat(
             s.occupancy_mean = statistics.fmean(
                 st["occupied_slots"] / max_batch for st in engine_steps
             )
-        if max_batch and max_seq_len:
-            s.kv_fill_mean = statistics.fmean(
-                st["kv_tokens"] / (max_batch * max_seq_len) for st in engine_steps
-            )
+        # Tokens-in-use over pool capacity. Steps carry their own capacity
+        # from stats schema v2 on (layout-true: blocks for the paged pool);
+        # the slot-geometry product covers pre-v2 history replays.
+        fallback_cap = (max_batch * max_seq_len) if max_batch and max_seq_len else 0
+        fills = [
+            st["kv_tokens"] / cap
+            for st in engine_steps
+            if (cap := st.get("kv_capacity_tokens") or fallback_cap)
+        ]
+        if fills:
+            s.kv_fill_mean = statistics.fmean(fills)
         s.queue_depth_max = max(st["queue_depth"] for st in engine_steps)
     if engine_itl:
         gaps = [g["gap_s"] for g in engine_itl]

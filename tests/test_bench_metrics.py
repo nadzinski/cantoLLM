@@ -87,6 +87,22 @@ def test_summarize_repeat_engine_side_and_fixed_length_check():
     assert any("unexpected finish reasons" in w for w in s.warnings)
 
 
+def test_kv_fill_prefers_per_step_capacity():
+    # Stats schema v2 steps carry kv_capacity_tokens (layout-true: block
+    # capacity for the paged pool); the slot-geometry product only covers
+    # pre-v2 history replays.
+    records = [rec(0, finish="stop")]
+    steps = [
+        {"dur_s": 0.1, "occupied_slots": 1, "kv_tokens": 40,
+         "queue_depth": 0, "kv_capacity_tokens": 80},
+        {"dur_s": 0.1, "occupied_slots": 1, "kv_tokens": 40, "queue_depth": 0},
+    ]
+    s = summarize_repeat(
+        0, records, engine_steps=steps, max_batch=4, max_seq_len=100,
+    )
+    assert s.kv_fill_mean == pytest.approx((40 / 80 + 40 / 400) / 2)
+
+
 def test_open_loop_dispatch_lag_warning():
     records = [rec(i, t0=float(i), scheduled=float(i) - 0.5) for i in range(3)]
     s = summarize_repeat(0, records)

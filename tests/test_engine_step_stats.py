@@ -153,6 +153,49 @@ def test_finish_on_final_prefill_chunk_counts_as_prefill():
     assert s.occupied_slots == 0
 
 
+def test_kv_capacity_fields_padded():
+    # Schema v2 (Phase 4 chunk 1): reservation vs use. Padded reservation
+    # is whole slots — 1 of 2 held, 32 tokens each — while kv_tokens stays
+    # token-true.
+    sched = make_scheduler(max_batch=2, max_seq_len=32, max_tokens_per_step=8)
+    collector = StepStatsCollector.for_scheduler(sched)
+    sched.add_request(request("r1", [1, 2, 3], max_tokens=4))
+
+    _, s = stepped(sched, collector)
+    assert s.kv_allocated_tokens == 32
+    assert s.kv_capacity_tokens == 64
+    assert s.kv_tokens == 3
+
+
+def test_kv_state_hook_wins_over_slot_derivation():
+    # The paged scheduler (chunk 5) exposes kv_state — blocks are its unit
+    # of reservation, slot geometry would be a lie — and the collector must
+    # prefer it.
+    sched = make_scheduler()
+    sched.kv_state = (48, 96)
+    collector = StepStatsCollector.for_scheduler(sched)
+    sched.add_request(request("r1", [1, 2]))
+
+    _, s = stepped(sched, collector)
+    assert (s.kv_allocated_tokens, s.kv_capacity_tokens) == (48, 96)
+
+
+def test_snapshot_fallback_matches_plan_time_counts():
+    # Schedulers exposing the observed surface but no plan-time counts keep
+    # the snapshot-diff derivation, and on invariant-preserving traffic the
+    # two must agree exactly.
+    sched = make_scheduler(max_batch=2, max_seq_len=32, max_tokens_per_step=8)
+    collector = StepStatsCollector.for_scheduler(sched)
+    sched.add_request(request("r1", list(range(1, 13)), max_tokens=2))
+
+    collector.before_step(sched)
+    events = sched.step()
+    planned = sched.last_step_plan
+    del sched.last_step_plan            # simulate a pre-chunk-1 scheduler
+    s = collector.after_step(sched, events)
+    assert planned == (s.rows, s.prefill_tokens, s.decode_tokens) == (1, 8, 0)
+
+
 def test_graph_replayed_none_without_counters():
     # Graphs off: the forward_fn (ToyStepper) has no hit counters, so the
     # flag is None, distinguishing "graphs off" from "graphs on, eager step".

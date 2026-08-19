@@ -38,7 +38,9 @@ def test_engine_without_accumulator_reports_unavailable():
 
     body = asyncio.run(main())
     assert body == {
-        "schema_version": 1, "model": "test-model", "available": False,
+        # 2 = Phase 4 chunk 1 (kv_allocated/kv_capacity fields, plan-time
+        # counts); a future bump should consciously touch this pin.
+        "schema_version": 2, "model": "test-model", "available": False,
     }
 
 

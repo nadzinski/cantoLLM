@@ -10,7 +10,35 @@ runtime-owned pool.
 
 from __future__ import annotations
 
+from typing import Protocol, runtime_checkable
+
 import torch
+
+
+@runtime_checkable
+class KVPool(Protocol):
+    """The pool surface everything outside the attention method consumes
+    (Phase 4 chunk 1, paged-kv-plan.md §5).
+
+    `BatchedForwardFn`, the scheduler, and the runtime front are typed
+    against this, so the paged pool slots in beside `PaddedKVPool` without
+    retyping them. `max_seq_len` here means per-request logical token
+    capacity — the admission cap and (for the paged pool) the block-table
+    length bound — not preallocated memory: each layout sizes its memory its
+    own way (`max_batch` slots here, `num_kv_blocks` there). Layout-specific
+    surface (`scratch_pos` vs a scratch block, slot vs block geometry)
+    deliberately stays off this protocol; code that needs it (warm-up map
+    seeding, graph marshaling) is layout-specific by nature and keeps the
+    concrete type.
+    """
+
+    num_layers: int
+    max_seq_len: int
+    device: torch.device
+
+    def layer(self, i: int) -> tuple[torch.Tensor, torch.Tensor]:
+        """(k, v) storage tensors for layer i; shapes are layout-defined."""
+        ...
 
 
 class PaddedKVPool:

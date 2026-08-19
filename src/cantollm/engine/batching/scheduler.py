@@ -32,7 +32,7 @@ from cantollm.engine.batching.shaping import shape_step
 from cantollm.engine.batching.types import BatchedForwardFn, CBSequence
 from cantollm.engine import sampler
 from cantollm.engine.types import InferenceRequest, TokenEvent
-from cantollm.kv_pool import PaddedKVPool
+from cantollm.kv_pool import KVPool
 from cantollm.models.attention.protocol import BatchMeta
 
 
@@ -114,13 +114,16 @@ class ContinuousBatchingScheduler:
     def __init__(
         self,
         forward_fn: BatchedForwardFn,
-        pool: PaddedKVPool,
+        pool: KVPool,
         allocator: SlotAllocator,
         config: BatchingConfig,
     ):
-        if pool.max_batch != config.max_batch:
+        # Slot-count check is padded-layout-specific (the paged pool sizes
+        # memory in blocks, not slots); its capacity checks land with it.
+        pool_slots = getattr(pool, "max_batch", None)
+        if pool_slots is not None and pool_slots != config.max_batch:
             raise ValueError(
-                f"pool has {pool.max_batch} slots but config.max_batch is "
+                f"pool has {pool_slots} slots but config.max_batch is "
                 f"{config.max_batch}"
             )
         if allocator.max_batch != config.max_batch:
@@ -225,8 +228,9 @@ class ContinuousBatchingScheduler:
         events = self.pending_events
         self.pending_events = []
         # Cleared up front so a no-forward step (pending flush only) never
-        # reports the previous step's shape.
+        # reports the previous step's shape or token counts.
         self.last_forward_shape = None
+        self.last_step_plan = None
 
         self._promote_queued()
 
@@ -247,6 +251,19 @@ class ContinuousBatchingScheduler:
         # stats collector — StepStats.rows counts real sequences only.
         self.last_forward_shape = (
             len(meta.rows), meta.num_new_max, meta.max_history_len
+        )
+        # (rows, prefill, decode) of this forward, stated at plan time for
+        # the stats collector: the snapshot-diff derivation it replaces
+        # leaned on invariants ("finish implies past prefill", "finished
+        # rows free slots in-step") that preemption and overlap break in
+        # Phase 4. A chunk never straddles the prompt boundary, so a row
+        # is all-prefill or all-decode.
+        prefill = sum(
+            r.num_new for r in rows
+            if r.start_pos < len(r.sequence.prompt_token_ids)
+        )
+        self.last_step_plan = (
+            len(rows), prefill, sum(r.num_new for r in rows) - prefill
         )
 
         logits = self.forward_fn(input_ids, meta, self.pool)

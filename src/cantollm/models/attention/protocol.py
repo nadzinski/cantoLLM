@@ -233,16 +233,19 @@ class AttentionMethod(Protocol):
         self,
         meta: BatchMeta,
         device: torch.device,
-    ) -> torch.Tensor:
+    ) -> object:
         """Mask for one mixed prefill/decode batch, built once per step.
 
-        Returns (B, num_new_max, max_history_len) bool, True = masked.
-        Pure per-row causality: mask[b, i, j] = j > start_pos[b] + i.
-        That alone covers everything: future tokens, stale K/V beyond a
-        row's own history (its hist_len is within the masked bound), and
-        pad query rows stay finite (they attend to their own earlier
-        keys) — the last-token gather never reads them. Callers broadcast
-        over the group/head dims at use.
+        The mask object is method-opaque: the model builds it here and
+        passes it to `forward_batched` unchanged, never inspecting it.
+        Padded/sdpa return a (B, num_new_max, max_history_len) bool tensor,
+        True = masked, pure per-row causality: mask[b, i, j] =
+        j > start_pos[b] + i. That alone covers everything: future tokens,
+        stale K/V beyond a row's own history (its hist_len is within the
+        masked bound), and pad query rows stay finite (they attend to
+        their own earlier keys) — the last-token gather never reads them.
+        Callers broadcast over the group/head dims at use. The Flex method
+        (Phase 4) returns a `BlockMask` over engine-owned table tensors.
         """
         ...
 
@@ -251,7 +254,7 @@ class AttentionMethod(Protocol):
         queries: torch.Tensor,
         keys: torch.Tensor,
         values: torch.Tensor,
-        mask: torch.Tensor,
+        mask: object,
         layer_k: torch.Tensor,
         layer_v: torch.Tensor,
         meta: BatchMeta,
@@ -269,8 +272,11 @@ class AttentionMethod(Protocol):
           queries: (B, num_new_max, groups, heads_per_group, head_dim), post-RoPE
           keys:    (B, num_new_max, groups, head_dim), post-RoPE
           values:  (B, num_new_max, groups, head_dim)
-          mask:    (B, num_new_max, max_history_len) bool, from build_batched_mask
-          layer_k: (max_batch, max_seq_len, groups, head_dim) pool view, written in place
+          mask:    from build_batched_mask, method-opaque (padded/sdpa:
+                   (B, num_new_max, max_history_len) bool)
+          layer_k: layer i's pool storage, written in place; the shape is
+                   pool-layout-defined (padded: (max_batch, max_seq_len + 1,
+                   groups, head_dim); paged: flat block rows)
           layer_v: same shape as layer_k
           returns: (B, num_new_max, groups, heads_per_group, head_dim)
         """

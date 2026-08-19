@@ -4,8 +4,10 @@ Engine config, deliberately not `ModelSpec` (decision 7): these are sized to
 the machine (smaller on the Mac than on the 5090), not to the model. Note the
 two coexisting "max seq lens": the model's `spec.arch["max_seq_len"]` (40 960
 for Qwen3) is a RoPE-table bound and far too large to preallocate KV for;
-`max_seq_len` here is the per-slot pool capacity, and doubles as the
-admission cap (`prompt_len + max_tokens <= max_seq_len`).
+`max_seq_len` here is the per-request logical capacity, and doubles as the
+admission cap (`prompt_len + max_tokens <= max_seq_len`). For the padded
+pool that is also literal per-slot memory; for the paged pool (Phase 4)
+memory is sized separately by `num_kv_blocks`.
 """
 
 from __future__ import annotations
@@ -19,7 +21,8 @@ class BatchingConfig:
     """Slots in the KV pool == max concurrently active sequences."""
 
     max_seq_len: int
-    """Per-slot token capacity; also the per-request admission cap."""
+    """Per-request logical token capacity; also the admission cap. Padded:
+    literal per-slot memory. Paged: the block-table length bound."""
 
     max_tokens_per_step: int
     """Total new tokens (prefill chunks + decodes) per forward pass."""
@@ -73,6 +76,25 @@ class BatchingConfig:
     the batch dim is pinned static, one artifact per batch bucket with
     the row count baked into the fused kernels as a constant."""
 
+    paged_kv: bool = False
+    """Use the block-indexed paged KV pool + FlexAttention read path
+    (Phase 4, paged-kv-plan.md) instead of the padded slot pool.
+    `max_seq_len` then means per-request logical capacity (block-table
+    length bound), not preallocated memory. On CUDA this requires
+    `torch_compile`: Flex only performs compiled (flex-spike-results.md
+    §7) — enforced at engine assembly, where the device is known."""
+
+    block_size: int = 16
+    """Paged pool block size in tokens. 16 is the vLLM default; the
+    deferred flash-attn arm would need 256, which is why this stays a
+    knob (paged-kv-plan.md §2.1). Ignored without `paged_kv`."""
+
+    num_kv_blocks: int | None = None
+    """Paged pool capacity in blocks. None = parity capacity
+    (max_batch * max_seq_len / block_size): exhaustion is impossible and
+    the paged engine is a drop-in. Benches undercommit explicitly to
+    make scarcity happen — preemption needs someone to preempt."""
+
     def __post_init__(self) -> None:
         if self.max_batch <= 0:
             raise ValueError(f"max_batch must be positive, got {self.max_batch}")
@@ -87,6 +109,51 @@ class BatchingConfig:
                 f"max_batch ({self.max_batch})"
             )
         self._validate_shape_knobs()
+        self._validate_paged_knobs()
+
+    def _validate_paged_knobs(self) -> None:
+        if self.block_size < 1:
+            raise ValueError(
+                f"block_size must be positive, got {self.block_size}"
+            )
+        if self.num_kv_blocks is not None and not self.paged_kv:
+            raise ValueError("num_kv_blocks is a paged_kv-only knob")
+        if not self.paged_kv:
+            return
+        if self.max_seq_len % self.block_size != 0:
+            raise ValueError(
+                f"paged_kv requires max_seq_len ({self.max_seq_len}) to be "
+                f"a multiple of block_size ({self.block_size}): the "
+                "admission cap must land on a block boundary"
+            )
+        blocks_per_request = self.max_seq_len // self.block_size
+        if (
+            self.num_kv_blocks is not None
+            and self.num_kv_blocks < blocks_per_request
+        ):
+            raise ValueError(
+                f"num_kv_blocks ({self.num_kv_blocks}) cannot hold even one "
+                f"max-length request ({blocks_per_request} blocks): an "
+                "admitted max-size request could never complete, alone"
+            )
+        if self.kv_bucket is not None and self.kv_bucket % self.block_size:
+            raise ValueError(
+                f"kv_bucket ({self.kv_bucket}) must be a multiple of "
+                f"block_size ({self.block_size}) under paged_kv — the "
+                "bucket is inert on the paged kernel path "
+                "(paged-kv-plan.md §2.6) but geometry that rounds to it "
+                "must still land on block boundaries"
+            )
+
+    @property
+    def resolved_kv_blocks(self) -> int:
+        """Paged pool capacity in blocks: `num_kv_blocks`, or parity
+        capacity when unset (see the field docstring)."""
+        if not self.paged_kv:
+            raise ValueError("resolved_kv_blocks is meaningful only with paged_kv")
+        if self.num_kv_blocks is not None:
+            return self.num_kv_blocks
+        return self.max_batch * (self.max_seq_len // self.block_size)
 
     def _validate_shape_knobs(self) -> None:
         if self.prefill_widths is not None:

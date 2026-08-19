@@ -10,7 +10,7 @@ import pytest
 import torch
 
 from cantollm.engine.batching import BatchingConfig, SlotAllocator
-from cantollm.kv_pool import PaddedKVPool
+from cantollm.kv_pool import KVPool, PaddedKVPool
 from cantollm.runtime import ModelRuntime
 from tests.tiny_model import TINY_ARCH, tiny_qwen3_spec
 
@@ -147,3 +147,33 @@ class TestRuntimeNewKVPool:
         # 121 + 8 - 2 = 127 < 128 — the largest that fits.
         config = BatchingConfig(max_batch=2, max_seq_len=121, max_tokens_per_step=8)
         assert runtime.new_kv_pool(config).max_seq_len == 121
+
+    def test_paged_layout_branch_is_chunk_2(self):
+        # Chunk-1 state (paged-kv-plan.md §5): the config accepts paged_kv,
+        # the layout branch refuses it until the paged pool exists.
+        runtime = ModelRuntime(
+            spec=tiny_qwen3_spec(), device=torch.device("cpu"),
+            model=None, tokenizer=None, backend=None,
+        )
+        config = BatchingConfig(
+            max_batch=2, max_seq_len=32, max_tokens_per_step=8, paged_kv=True,
+        )
+        with pytest.raises(NotImplementedError, match="chunk 2"):
+            runtime.new_kv_pool(config)
+
+
+class TestKVPoolProtocol:
+    """The structural surface everything outside the attention method is
+    typed against (Phase 4 chunk 1) — the paged pool must satisfy exactly
+    this to slot in beside PaddedKVPool."""
+
+    def test_padded_pool_satisfies_the_protocol(self):
+        assert isinstance(make_pool(), KVPool)
+
+    def test_layerless_object_does_not(self):
+        class NotAPool:
+            num_layers = 1
+            max_seq_len = 8
+            device = torch.device("cpu")
+
+        assert not isinstance(NotAPool(), KVPool)

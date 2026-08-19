@@ -421,4 +421,35 @@ failures only.
 
 ## 10. Results
 
-Appended per round as they complete. Nothing yet.
+Appended per round as they complete.
+
+### Chunk log
+
+Suite green at every step (530 tests + 5 chaos at chunk 1, from 521 at
+phase start; Mac/CPU counts).
+
+1. Precondition refactors (2026-08-19). `KVPool` structural Protocol
+   (runtime-checkable) with `BatchedForwardFn`, the scheduler ctor, and the
+   runtime front retyped against it; the ctor's slot-count check gated on
+   the pool actually having slots. `BatchingConfig` gains `paged_kv` /
+   `block_size` / `num_kv_blocks` + validation (block-aligned capacity,
+   one-max-request minimum, block-aligned `kv_bucket`) and
+   `resolved_kv_blocks`; `new_kv_pool` is the layout branch (refusing paged
+   until chunk 2); `scheduler_from_runtime` fails the build when paged +
+   CUDA lacks torch_compile. Stats: scheduler states `last_step_plan =
+   (rows, prefill, decode)` at plan time and the collector prefers it over
+   the snapshot-diff derivation (kept as fallback);
+   `kv_allocated_tokens` / `kv_capacity_tokens` added (STATS_SCHEMA_VERSION
+   2, additive) with the `kv_state` hook reserved for the paged scheduler;
+   bench `kv_fill_mean` prefers per-step capacity. `protocol.py` mask types
+   loosened to method-opaque. New `tests/test_paged_config.py` plus pins in
+   the kv-pool/stats/bench-metrics suites.
+   Deviations from §5's wording, all deliberate: `graphs.py` and
+   `warmup.py` keep the concrete `PaddedKVPool` type (both consume
+   `scratch_pos`, genuinely padded-specific until chunks 8 and 6 rework
+   them); the `preemption_policy` / `overlap_scheduling` knobs land with
+   their chunks instead of as dead fields; the `main.py` check waits for
+   chunk 7, where the CLI flag it guards first exists. One touch inside the
+   hand-written scheduler (`step()`): the two-line `last_step_plan`
+   addition, following the `last_forward_shape` precedent — flagged for
+   author review.

@@ -24,7 +24,7 @@ from typing import Protocol
 import torch
 
 from cantollm.engine.types import InferenceRequest, SamplingParams, TokenEvent
-from cantollm.kv_pool import PaddedKVPool
+from cantollm.kv_pool import KVPool
 from cantollm.models.attention.protocol import BatchMeta
 
 
@@ -110,7 +110,7 @@ class BatchedForwardFn(Protocol):
         self,
         input_ids: torch.Tensor,
         meta: BatchMeta,
-        pool: PaddedKVPool,
+        pool: KVPool,
     ) -> torch.Tensor:
         """One mixed prefill/decode step.
 

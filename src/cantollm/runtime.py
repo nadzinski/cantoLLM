@@ -17,7 +17,7 @@ import torch
 from cantollm.engine.backend import InferenceBackend
 from cantollm.engine.batching import BatchingConfig
 from cantollm.kv_cache import KVCache
-from cantollm.kv_pool import PaddedKVPool
+from cantollm.kv_pool import KVPool, PaddedKVPool
 from cantollm.models.attention import (
     BatchMeta,
     EinsumAttentionMethod,
@@ -52,14 +52,21 @@ class ModelRuntime:
     def new_cache(self) -> KVCache:
         return KVCache(self.spec.arch["num_transformers"])
 
-    def new_kv_pool(self, config: BatchingConfig) -> PaddedKVPool:
+    def new_kv_pool(self, config: BatchingConfig) -> KVPool:
         """Preallocate the shared KV pool for a continuous-batching engine.
 
         Layer count / groups / head_dim come from `spec.arch` and dtype from
-        `spec.dtype`; capacity (`max_batch`, `max_seq_len`) comes from the
-        engine config. Memory only — the allocator lives with the scheduler
-        (decision 1).
+        `spec.dtype`; capacity comes from the engine config. This is the
+        layout branch: `config.paged_kv` selects the paged pool (Phase 4;
+        memory sized by `num_kv_blocks`) over the padded slot pool (memory
+        sized by `max_batch` x `max_seq_len`). Memory only either way — the
+        allocator lives with the scheduler (decision 1).
         """
+        if config.paged_kv:
+            raise NotImplementedError(
+                "the paged KV pool lands in Phase 4 chunk 2 "
+                "(paged-kv-plan.md §5)"
+            )
         # A step mixes a decode row near its slot end (position up to
         # max_seq_len - 1) with a prefill row up to max_tokens_per_step wide;
         # the batched RoPE gather indexes freqs_cis at the decode row's padded
@@ -90,7 +97,7 @@ class ModelRuntime:
         self,
         input_ids: torch.Tensor,
         meta: BatchMeta,
-        pool: PaddedKVPool,
+        pool: KVPool,
     ) -> torch.Tensor:
         """The batched-forward front the CB scheduler drives (decision 4).
 

@@ -333,7 +333,7 @@ class Qwen3(nn.Module):
                 row order matching `meta.rows`.
             meta: `BatchMeta` — per-row slot/position geometry, built once
                 per step and shared by every layer.
-            pool: `PaddedKVPool`; layer i reads/writes `pool.layer(i)`.
+            pool: a `KVPool`; layer i reads/writes `pool.layer(i)`.
 
         Returns:
             (B, vocab) logits at each row's last real token.

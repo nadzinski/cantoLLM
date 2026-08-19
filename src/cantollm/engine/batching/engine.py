@@ -70,6 +70,20 @@ def scheduler_from_runtime(
     and by the engine-process factory after the split."""
     from cantollm.engine.batching.scheduler import ContinuousBatchingScheduler
 
+    if (
+        config.paged_kv
+        and runtime.device.type == "cuda"
+        and not config.torch_compile
+    ):
+        # Device-coupled rule the device-blind config cannot enforce:
+        # FlexAttention only performs compiled (flex-spike-results.md §7),
+        # so a paged CUDA engine without compile would silently serve the
+        # slow eager kernel. Fail the build loudly instead, like the
+        # graphs-off-CUDA check in capture_decode_shapes.
+        raise RuntimeError(
+            "paged_kv on CUDA requires torch_compile "
+            "(paged-kv-plan.md §2.8)"
+        )
     pool = runtime.new_kv_pool(config)
     forward_fn = runtime.forward_batched
     if config.torch_compile:
