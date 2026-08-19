@@ -628,24 +628,26 @@ unchanged (plausibly the new request path).
 memory management lesson — and overlap scheduling with execution so the CPU plans step
 N+1 while the GPU runs step N.
 
-**Status (2026-08-16):** Not started (no code yet), but the kernel route is
-decided: the paged attention path lands on FlexAttention first, with
-flash-attn kept as a possible later A/B arm. A viability spike on the 5090
-passed all four gates (flex-decoding within 2x of cuDNN at decode and at
-parity by KV 2048; `BlockMask.from_kv_blocks` over engine-owned table
-tensors, mutated in place per step; compiled Flex captures and replays in
-CUDA graphs with in-place table updates); `flex-spike-results.md` is the
-record and becomes the design note's gates section. flash-attn is deferred
-on concrete grounds: no torch-2.10/sm_120 wheel, and its paged path
-requires 256-token pages, so the block allocator keeps block size
-configurable to leave that arm open. Prior scope notes stand: the
-flash-proper attention restructure moved here from Phase 3 (raggedness as
-lengths metadata is the same interface change paging requires, so the two
-land together), and the 2026-07-19 roadmap review added async/overlap
-scheduling (it reshapes the scheduler loop; doing that once, on the paged
-engine, beats doing it twice), preemption victim-selection policies, and
-per-request priority scheduling, with a goodput-under-joint-SLO bench
-metric to judge them by. Next: the phase design note.
+**Status (2026-08-18):** Designed, implementation not started. Kernel route
+decided by the 5090 spike (all four gates passed; `flex-spike-results.md` is
+the record): FlexAttention via `BlockMask.from_kv_blocks` over engine-owned
+tables mutated in place; flash-attn deferred to a possible A/B arm (no
+torch-2.10/sm_120 wheel, 256-token pages), block size stays configurable.
+The phase plan landed 2026-08-18: `paged-kv-plan.md` is the merged design
+note, 13-chunk execution order, hazards, predictions, and A/B protocol, with
+results appended per round (the 3.5 doc pattern). Division of labor settled:
+the author hand-writes the block allocator, the Flex paged attend (both
+index-translation sites), and preemption + victim policies; the overlap
+restructure and all plumbing are delegated. Order: paging CPU-first against
+the padded oracle, two 5090 rounds (compile, then graphs), preemption /
+priority / goodput round, overlap last, H100 close-out. One structural
+consequence on record: Flex only performs compiled, so torch.compile is
+required on the CUDA paged path, and kv length becomes a value rather than a
+shape (the shape vocabulary collapses to batch × width). Prior scope notes
+stand: the flash-proper restructure moved here from Phase 3; the 2026-07-19
+review added overlap scheduling, preemption policies, per-request priority,
+and the goodput-under-joint-SLO metric. Next: chunk 1, precondition
+refactors.
 
 - KV blocks of fixed size (16 tokens is the vLLM default) in a single preallocated pool.
 - Per-request block table mapping logical token positions → block IDs.
