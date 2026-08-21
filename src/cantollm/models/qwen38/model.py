@@ -23,6 +23,8 @@ The constructor keyword is `qwen3_config` because runtime._load_model
 passes it by that name for every model family; accepted PoC wart.
 """
 
+from dataclasses import dataclass
+
 import torch
 from torch import nn
 
@@ -30,6 +32,7 @@ from cantollm.models.attention import AttentionMethod
 from cantollm.models.qwen38.gdn import GatedDeltaNet
 from cantollm.models.qwen38.rope import (
     apply_partial_rotary_emb,
+    apply_partial_rotary_emb_batched,
     precompute_partial_freqs_cis,
 )
 
@@ -155,6 +158,42 @@ class GatedAttention(nn.Module):
         z_flat = z_context.reshape(batches, seq_len, self.q_out_dim)
         return self.out_proj(z_flat * torch.sigmoid(gate))
 
+    def forward_batched(self, x, mask, freqs_cis, layer_k, layer_v, meta):
+        """Mixed prefill/decode batch: same projections/norm/gate as
+        `forward`, per-row RoPE positions, attention via the method's
+        pooled path (identical mechanics to qwen3's)."""
+        batches, seq_len, _ = x.shape
+        queries, keys, values, gate = self._project(x)
+
+        queries = apply_partial_rotary_emb_batched(queries, freqs_cis, meta.positions)
+        keys = apply_partial_rotary_emb_batched(keys, freqs_cis, meta.positions)
+
+        z_context = self.attention_method.forward_batched(
+            queries, keys, values, mask, layer_k, layer_v, meta
+        )
+        z_flat = z_context.reshape(batches, seq_len, self.q_out_dim)
+        return self.out_proj(z_flat * torch.sigmoid(gate))
+
+
+@dataclass(frozen=True)
+class _BatchedStep:
+    """Per-step context shared by every layer of one batched forward:
+    the geometry (meta), the pool, the method-opaque mask, and the
+    derived tensors the GDN layers need (built once, not per layer)."""
+
+    meta: object
+    pool: object
+    mask: object
+    active_mask: torch.Tensor
+    """(B, num_new_max) bool: column < num_new[row]."""
+    num_new_dev: torch.Tensor
+    """meta.num_new on the compute device (conv-state gather indices)."""
+    real_row_idx: torch.Tensor
+    """(R,) long, host: rows with num_new > 0; filler rows are excluded
+    from every state write-back (they alias slot 0, which may be live)."""
+    real_slots: torch.Tensor
+    """(R,) long, host: those rows' slots (unique by allocator contract)."""
+
 
 class Qwen38Block(nn.Module):
     """One decoder layer: pre-norm residual around the mixer (full
@@ -216,6 +255,35 @@ class Qwen38Block(nn.Module):
             layer_cache["conv"] = new_conv
             layer_cache["pos"] = layer_cache.get("pos", 0) + h.shape[1]
         return out
+
+    def forward_batched(self, x, freqs_cis, step: _BatchedStep, layer_idx: int):
+        bypass = x
+        h = self.input_norm(x)
+        if self.kind == FULL:
+            layer_k, layer_v = step.pool.layer(layer_idx)
+            h = self.attention.forward_batched(
+                h, step.mask, freqs_cis, layer_k, layer_v, step.meta
+            )
+        else:
+            s_pool, conv_pool = step.pool.gdn_state(layer_idx)
+            # Gather may repeat slot 0 (filler rows); read-only, harmless.
+            s_state = s_pool[step.meta.slots]
+            conv_state = conv_pool[step.meta.slots]
+            h, new_s, new_conv = self.linear_attn.forward_core(
+                h,
+                s_state,
+                conv_state,
+                active_mask=step.active_mask,
+                num_new=step.num_new_dev,
+            )
+            # Write back REAL rows only: filler rows alias slot 0, and a
+            # scatter with duplicate destinations against a live slot 0
+            # would race its real update.
+            s_pool[step.real_slots] = new_s[step.real_row_idx]
+            conv_pool[step.real_slots] = new_conv[step.real_row_idx]
+        x = bypass + h
+
+        return x + self.feed_forward(self.post_attention_norm(x))
 
 
 class Qwen38(nn.Module):
@@ -280,6 +348,76 @@ class Qwen38(nn.Module):
                         f"start_pos={start_pos} but kv_cache[{i}] GDN state is at "
                         f"position {cache['pos']}; the scan cannot replay or skip"
                     )
+
+    def forward_batched(self, input_ids, meta, pool):
+        """Mixed prefill/decode step for the continuous-batching engine;
+        same contract as Qwen3.forward_batched (see that docstring for
+        the last-token-gather and validation rationale). `pool` is a
+        HybridStatePool: KV tensors on full layers, GDN S/conv state on
+        linear ones."""
+        self._validate_batched(meta, pool)
+        with self.attention_method.execution_context():
+            return self.forward_batched_impl(input_ids, meta, pool)
+
+    def forward_batched_impl(self, input_ids, meta, pool):
+        x = self.initial_embedding_layer(input_ids)
+
+        device = input_ids.device
+        mask = self.attention_method.build_batched_mask(meta, device)
+        num_new_dev = meta.num_new.to(device)
+        active_mask = (
+            torch.arange(meta.num_new_max, device=device)[None, :]
+            < num_new_dev[:, None]
+        )
+        real_row_idx = torch.nonzero(meta.num_new > 0).squeeze(-1)
+        step = _BatchedStep(
+            meta=meta,
+            pool=pool,
+            mask=mask,
+            active_mask=active_mask,
+            num_new_dev=num_new_dev,
+            real_row_idx=real_row_idx,
+            real_slots=meta.slots[real_row_idx],
+        )
+
+        for i, block in enumerate(self.transformer_blocks):
+            x = block.forward_batched(x, self.freqs_cis, step, i)
+
+        # Same per-row last-real-token gather as qwen3: filler rows wrap
+        # to -1, a pad column nobody samples.
+        row_idx = torch.arange(x.shape[0], device=x.device)
+        last_hidden = x[row_idx, num_new_dev - 1]
+        return self.output_layer(self.output_RMSNorm(last_hidden))
+
+    def _validate_batched(self, meta, pool):
+        """Host-side per-step validation, PLUS the GDN state bookkeeping:
+        `pool.begin_step` resets slots that start a sequence, enforces
+        monotone chunk order for the rest, and advances the per-slot
+        position counters. State advance lives here because this is the
+        single once-per-step host entry the engine contract guarantees
+        (the eager path calls it via forward_batched; a compiled path
+        would call it directly before the traced impl)."""
+        num_blocks = len(self.transformer_blocks)
+        if pool.num_layers != num_blocks:
+            raise ValueError(
+                f"pool has {pool.num_layers} layers but model has {num_blocks} blocks"
+            )
+        if any(n < 0 for _, _, n in meta.rows):
+            raise ValueError("num_new must be >= 0 (0 marks a filler row)")
+        derived_history = max((s + n for _, s, n in meta.rows), default=0)
+        if meta.max_history_len < derived_history:
+            raise ValueError(
+                f"meta.max_history_len={meta.max_history_len} but rows imply "
+                f"{derived_history}; the mask and KV gather would silently "
+                "truncate history"
+            )
+        if meta.max_history_len > pool.max_seq_len:
+            raise ValueError(
+                f"meta.max_history_len={meta.max_history_len} exceeds the "
+                f"slot capacity ({pool.max_seq_len}); the KV gather would "
+                "read out of bounds"
+            )
+        pool.begin_step(meta.rows)
 
     def forward(self, tokens, start_pos: int, kv_cache=None):
         self._validate_cache(start_pos, kv_cache)
