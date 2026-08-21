@@ -23,9 +23,6 @@ from cantollm.models.qwen38.gdn import (
     l2norm,
 )
 
-torch.manual_seed(0)
-
-
 def naive_scan_one(q, k, v, g, beta, s0):
     """Independent reference for ONE (batch, head): explicit matrix ops,
     mirroring the docstring formula literally. q, k: (S, Dk) raw
@@ -48,13 +45,20 @@ def naive_scan_one(q, k, v, g, beta, s0):
     return torch.stack(outs), s_mat
 
 
-def rand_inputs(batches=2, seq_len=5, heads=3, dk=4, dv=6):
-    q = torch.randn(batches, seq_len, heads, dk)
-    k = torch.randn(batches, seq_len, heads, dk)
-    v = torch.randn(batches, seq_len, heads, dv)
-    g = -torch.rand(batches, seq_len, heads)  # decay exponents, <= 0
-    beta = torch.rand(batches, seq_len, heads)
-    s0 = torch.randn(batches, heads, dk, dv)
+def rand_inputs(batches=2, seq_len=5, heads=3, dk=4, dv=6, seed=0):
+    # Seeded per call, not via module RNG state: these tests must not
+    # depend on suite execution order.
+    gen = torch.Generator().manual_seed(seed)
+
+    def rand(*shape):
+        return torch.randn(*shape, generator=gen)
+
+    q = rand(batches, seq_len, heads, dk)
+    k = rand(batches, seq_len, heads, dk)
+    v = rand(batches, seq_len, heads, dv)
+    g = -torch.rand(batches, seq_len, heads, generator=gen)  # decay exps, <= 0
+    beta = torch.rand(batches, seq_len, heads, generator=gen)
+    s0 = rand(batches, heads, dk, dv)
     return q, k, v, g, beta, s0
 
 
@@ -91,11 +95,14 @@ class TestScanAgainstNaiveReference:
 
     def test_query_scale_invariance(self):
         """q and k are l2-normalized inside the scan, so scaling the raw
-        inputs must not change the output."""
+        inputs must (approximately) not change the output. Approximately:
+        the l2norm eps (1e-6) is not scale-free, so shrinking a vector
+        shifts its normalization by O(eps / |x|^2); tolerance sized for
+        that, not for kernel noise."""
         q, k, v, g, beta, s0 = rand_inputs()
         out_a, _ = gdn_scan(q, k, v, g, beta, s0)
         out_b, _ = gdn_scan(q * 10, k * 0.1, v, g, beta, s0)
-        assert torch.allclose(out_a, out_b, atol=1e-4)
+        assert torch.allclose(out_a, out_b, atol=1e-3)
 
 
 class TestScanChunking:

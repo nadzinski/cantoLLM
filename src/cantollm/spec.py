@@ -115,6 +115,31 @@ class ModelSpec:
     dir — what the API process uses when the model itself lives in the
     engine process."""
     chat_template: str
+    cache_factory: Callable[[], Any] | None = None
+    """Optional: build this model's sequential cache. None = the default
+    KVCache over arch["num_transformers"] uniform layers; families whose
+    per-layer state differs (qwen38's hybrid GDN/KV) supply their own."""
+    kv_pool_factory: Callable[..., Any] | None = None
+    """Optional: build this model's CB pool as (config, device) -> KVPool,
+    including any family-specific guards (RoPE table bounds). None = the
+    default PaddedKVPool from the qwen3 arch keys."""
+
+
+def resolve_spec(model: str) -> ModelSpec:
+    """Family dispatch for the CLI's --model string: "qwen38-<size>"
+    routes to the qwen38 package (imported lazily; the qwen3 serve path
+    should not pay for it), everything else is a qwen3 size string
+    (including the "tiny" test hook)."""
+    if model.startswith("qwen38-"):
+        from cantollm.models.qwen38.spec import qwen38_spec
+
+        return qwen38_spec(model.removeprefix("qwen38-"))
+    return qwen3_spec(model)
+
+
+def known_models() -> list[str]:
+    """Every valid --model value, across families."""
+    return list(MODEL_CONFIGS) + ["qwen38-27B"]
 
 
 def qwen3_spec(size: str) -> ModelSpec:

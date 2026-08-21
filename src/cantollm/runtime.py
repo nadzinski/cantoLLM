@@ -50,6 +50,8 @@ class ModelRuntime:
         self._compile_strategy = "dynamic"
 
     def new_cache(self) -> KVCache:
+        if self.spec.cache_factory is not None:
+            return self.spec.cache_factory()
         return KVCache(self.spec.arch["num_transformers"])
 
     def new_kv_pool(self, config: BatchingConfig) -> KVPool:
@@ -62,6 +64,10 @@ class ModelRuntime:
         sized by `max_batch` x `max_seq_len`). Memory only either way — the
         allocator lives with the scheduler (decision 1).
         """
+        if self.spec.kv_pool_factory is not None:
+            # Family-specific pool (qwen38's hybrid KV/GDN state); the
+            # factory owns its own RoPE-table guard.
+            return self.spec.kv_pool_factory(config, self.device)
         if config.paged_kv:
             raise NotImplementedError(
                 "the paged KV pool lands in Phase 4 chunk 2 "

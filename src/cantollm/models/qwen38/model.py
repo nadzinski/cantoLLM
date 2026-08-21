@@ -23,6 +23,7 @@ The constructor keyword is `qwen3_config` because runtime._load_model
 passes it by that name for every model family; accepted PoC wart.
 """
 
+from contextlib import nullcontext
 from dataclasses import dataclass
 
 import torch
@@ -294,25 +295,36 @@ class Qwen38(nn.Module):
         self.layer_types = list(arch["layer_types"])
         assert len(self.layer_types) == arch["num_transformers"]
 
-        self.initial_embedding_layer = nn.Embedding(
-            arch["token_count"], arch["token_embedding_dim"], dtype=arch["dtype"]
-        )
-        self.transformer_blocks = nn.ModuleList(
-            [Qwen38Block(kind, arch, attention_method) for kind in self.layer_types]
-        )
-        self.output_RMSNorm = ZeroCenteredRMSNorm(
-            arch["token_embedding_dim"], dtype=arch["dtype"]
-        )
-        # Untied for the whole family (the 27B checkpoint ships lm_head).
-        self.output_layer = nn.Linear(
-            arch["token_embedding_dim"],
-            arch["token_count"],
-            bias=False,
-            dtype=arch["dtype"],
-        )
+        # arch["init_device"] = "meta" builds all parameters as shapes
+        # without storage, so a 27B never materializes random init on the
+        # host: the weight loader replaces each meta parameter with the
+        # checkpoint tensor one at a time (peak host RAM ~= checkpoint
+        # size). Any parameter still meta after loading is a missed
+        # mapping and fails loudly there.
+        init_device = arch.get("init_device")
+        init_ctx = torch.device(init_device) if init_device else nullcontext()
+        with init_ctx:
+            self.initial_embedding_layer = nn.Embedding(
+                arch["token_count"], arch["token_embedding_dim"], dtype=arch["dtype"]
+            )
+            self.transformer_blocks = nn.ModuleList(
+                [Qwen38Block(kind, arch, attention_method) for kind in self.layer_types]
+            )
+            self.output_RMSNorm = ZeroCenteredRMSNorm(
+                arch["token_embedding_dim"], dtype=arch["dtype"]
+            )
+            # Untied for the whole family (the checkpoint ships lm_head).
+            self.output_layer = nn.Linear(
+                arch["token_embedding_dim"],
+                arch["token_count"],
+                bias=False,
+                dtype=arch["dtype"],
+            )
 
         # Table over the rotated slice only; rope_theta is config.json's
-        # value (1e7 for Qwen 3.8, vs 1e6 for Qwen3).
+        # value (1e7 for Qwen 3.8, vs 1e6 for Qwen3). Built OUTSIDE the
+        # init-device context: the buffer must hold real values, it is
+        # computed rather than loaded.
         freqs_cis = precompute_partial_freqs_cis(
             arch["rotary_dim"], arch["max_seq_len"], theta=arch["rope_theta"]
         )

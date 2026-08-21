@@ -10,7 +10,7 @@ import torch
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from cantollm.spec import MODEL_CONFIGS, qwen3_spec
+from cantollm.spec import MODEL_CONFIGS, known_models, qwen3_spec, resolve_spec
 
 # Reconfigure stdout to use UTF-8 encoding for emoji support
 sys.stdout.reconfigure(encoding="utf-8")
@@ -103,11 +103,31 @@ def cmd_serve(args):
                 "(speculative decoding stays on the sequential engine; "
                 "batched speculation is out of scope)"
             )
-        spec = qwen3_spec(args.model)
+        spec = resolve_spec(args.model)
         # CUDA defaults are the measured winner (shape-buckets-results.md):
         # sdpa attention + bounded shape vocabulary + warm-up. Everywhere
         # else: padded, exact v1 geometry. Explicit flags override.
         on_cuda = device.type == "cuda"
+        if args.model.startswith("qwen38"):
+            # PoC serves eager, exact v1 geometry: the shape vocabulary,
+            # warm-up sweep, graph capture, and compiled forward are all
+            # typed against PaddedKVPool/uniform-KV assumptions the hybrid
+            # pool does not honor.
+            explicit = [
+                flag for flag, value in [
+                    ("--shape-buckets", args.shape_buckets),
+                    ("--warmup-shapes", args.warmup_shapes),
+                    ("--cuda-graphs", args.cuda_graphs),
+                    ("--torch-compile", args.torch_compile),
+                ] if value
+            ]
+            if explicit:
+                sys.exit(
+                    f"error: {', '.join(explicit)} not supported with qwen38 "
+                    "models (the PoC serves eager, exact v1 geometry)"
+                )
+            args.shape_buckets = args.warmup_shapes = False
+            args.cuda_graphs = args.torch_compile = False
         attention = args.attention or ("sdpa" if on_cuda else "padded")
         shape_buckets = (
             args.shape_buckets if args.shape_buckets is not None else on_cuda
@@ -224,6 +244,12 @@ def cmd_serve(args):
         )
     else:
         if args.speculative:
+            spec_models = (args.model, args.main_model or "", args.draft_model or "")
+            if any(m.startswith("qwen38") for m in spec_models):
+                sys.exit(
+                    "error: --speculative is not supported with qwen38 models "
+                    "(the hybrid cache cannot rewind rejected drafts)"
+                )
             main_spec = qwen3_spec(args.main_model or args.model)
             draft_spec = qwen3_spec(args.draft_model or "0.6B")
             model_name = f"qwen3-{main_spec.size}+{draft_spec.size}-speculative"
@@ -235,7 +261,7 @@ def cmd_serve(args):
 
             cap_spec = main_spec
         else:
-            spec = qwen3_spec(args.model)
+            spec = resolve_spec(args.model)
             model_name = spec.name
 
             def factory(spec=spec, device=device) -> BuiltEngine:
@@ -375,7 +401,7 @@ def _print_bench_summary(handle):
 # ── Argument parsing ────────────────────────────────────────────────
 
 def _model_choices() -> list[str]:
-    choices = list(MODEL_CONFIGS.keys())
+    choices = known_models()
     if os.environ.get("CANTOLLM_TEST_SPEC"):
         choices.append("tiny")  # chaos-suite hook; see spec.qwen3_spec
     return choices
