@@ -247,7 +247,11 @@ class TestGatedDeltaNetModule:
             outs.append(out_t)
         assert torch.allclose(out_full, torch.cat(outs, dim=1), atol=1e-5)
         assert torch.allclose(s_full, s, atol=1e-5)
-        assert torch.equal(conv_full, conv)
+        # allclose, not bitwise: the conv state is gathered from
+        # in_proj_qkv outputs, and the projection's reduction order
+        # differs between chunked and single-token shapes (bitwise-equal
+        # on one BLAS, ~2e-7 apart on another; seen on the 5090 box).
+        assert torch.allclose(conv_full, conv, atol=1e-5)
 
     def test_batched_num_new_matches_per_row(self):
         """Mixed rows (full chunk / short chunk / filler) against per-row
@@ -275,4 +279,6 @@ class TestGatedDeltaNetModule:
             )
             assert torch.allclose(out[b : b + 1, :n], out_ref, atol=1e-5), b
             assert torch.allclose(s_new[b : b + 1], s_ref, atol=1e-5), b
-            assert torch.equal(conv_new[b : b + 1], conv_ref), b
+            # allclose for the same reason as the incremental-replay test:
+            # projection reduction order varies with row width per BLAS.
+            assert torch.allclose(conv_new[b : b + 1], conv_ref, atol=1e-5), b
