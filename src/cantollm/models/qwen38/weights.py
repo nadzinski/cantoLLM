@@ -12,12 +12,32 @@ test loads its artifact through here, putting the naming and the
 zero-centered-norm semantics under test from the first green run.
 """
 
+from pathlib import Path
+
 import torch
+from huggingface_hub import hf_hub_download
 
 from cantollm.models.qwen38.model import FULL
 
+# The FP8 repo is the serving target (fits a 32GB card); it ships the
+# same tokenizer as the bf16 release.
+REPO_ID = "Qwen/Qwen3.8-27B-FP8"
+MODEL_DATA_DIR = Path(__file__).parent.parent / "model_data"
+
 PREFIX = "model.language_model."
 SKIP_PREFIXES = ("model.visual.",)
+
+
+def download_tokenizer() -> str:
+    """Download only the tokenizer file and return its local dir (the
+    API process needs a tokenizer but must not hold weights)."""
+    local_dir = MODEL_DATA_DIR / "Qwen3.8-27B-FP8"
+    hf_hub_download(
+        repo_id=REPO_ID,
+        filename="tokenizer.json",
+        local_dir=str(local_dir),
+    )
+    return str(local_dir)
 
 
 def _is_skipped(name: str) -> bool:
