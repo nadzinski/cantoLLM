@@ -452,4 +452,16 @@ phase start; Mac/CPU counts).
    chunk 7, where the CLI flag it guards first exists. One touch inside the
    hand-written scheduler (`step()`): the two-line `last_step_plan`
    addition, following the `last_forward_shape` precedent — flagged for
-   author review.
+   author review (accepted 2026-08-19, along with §2's decisions and §9's
+   recommendations as written).
+2. Paged pool + allocator contract (2026-08-19, prep half). `PagedKVPool`
+   landed: flat per-layer `((num_kv_blocks + 1) * block_size, G, D)`
+   tensors, scratch block at the tail, protocol-conformant, built by
+   `new_kv_pool`'s paged branch at `resolved_kv_blocks` (the RoPE guard
+   covers both layouts). `BlockAllocator` landed as an API stub
+   (allocate / free / incref / num_free / num_allocated, refcount-1
+   contract) with `tests/test_block_allocator.py` PRE-LANDED RED
+   (11 xfails: ordering, FIFO reuse, refcount round-trips, loud misuse,
+   scratch exclusion). Suite otherwise green (535 + 5 chaos). The chunk
+   completes with the author's hand-written session: fill the stub,
+   delete the module xfail marker, all 11 green.

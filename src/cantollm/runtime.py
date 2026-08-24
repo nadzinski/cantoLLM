@@ -17,7 +17,7 @@ import torch
 from cantollm.engine.backend import InferenceBackend
 from cantollm.engine.batching import BatchingConfig
 from cantollm.kv_cache import KVCache
-from cantollm.kv_pool import KVPool, PaddedKVPool
+from cantollm.kv_pool import KVPool, PaddedKVPool, PagedKVPool
 from cantollm.models.attention import (
     BatchMeta,
     EinsumAttentionMethod,
@@ -62,11 +62,6 @@ class ModelRuntime:
         sized by `max_batch` x `max_seq_len`). Memory only either way — the
         allocator lives with the scheduler (decision 1).
         """
-        if config.paged_kv:
-            raise NotImplementedError(
-                "the paged KV pool lands in Phase 4 chunk 2 "
-                "(paged-kv-plan.md §5)"
-            )
         # A step mixes a decode row near its slot end (position up to
         # max_seq_len - 1) with a prefill row up to max_tokens_per_step wide;
         # the batched RoPE gather indexes freqs_cis at the decode row's padded
@@ -81,6 +76,17 @@ class ModelRuntime:
                 f"({config.max_tokens_per_step}) exceeds the RoPE table length "
                 f"({rope_len}); a padded decode row could index freqs_cis out "
                 f"of range. Lower either, or raise the model's max_seq_len."
+            )
+        if config.paged_kv:
+            return PagedKVPool(
+                num_layers=self.spec.arch["num_transformers"],
+                num_kv_blocks=config.resolved_kv_blocks,
+                block_size=config.block_size,
+                max_seq_len=config.max_seq_len,
+                num_groups=self.spec.arch["num_groups"],
+                head_dim=self.spec.arch["head_dim"],
+                dtype=self.spec.dtype,
+                device=self.device,
             )
         return PaddedKVPool(
             num_layers=self.spec.arch["num_transformers"],

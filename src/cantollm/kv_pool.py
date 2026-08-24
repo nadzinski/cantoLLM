@@ -115,3 +115,75 @@ class PaddedKVPool:
     def stacked_v(self) -> torch.Tensor:
         """All layers' V stacked — a copy, same caveat as `stacked_k`."""
         return torch.stack(self.v_layers)
+
+
+class PagedKVPool:
+    """Block-indexed KV storage for the paged path (Phase 4,
+    paged-kv-plan.md §2.3/§2.4). Memory only, like `PaddedKVPool`: block
+    tables and the allocator live with the scheduler; a sequence carries a
+    block table the way it carries a slot index today.
+
+    Each layer's K and V is ONE FLAT tensor of shape
+    `((num_kv_blocks + 1) * block_size, num_groups, head_dim)`: block `b`
+    is the row span `[b * block_size, (b + 1) * block_size)`, and a token
+    at logical position `pos` of a request whose table maps
+    `pos // block_size -> b` lives at flat row
+    `b * block_size + pos % block_size`. Flat rather than
+    `(blocks, block_size, ...)` on purpose: the KV scatter must mutate the
+    layer tensor DIRECTLY — under torch.compile a write through a view of
+    the base regresses to pool-scale copy chains (the ab4f438 lesson the
+    padded pool's docstring records). Reads may view the flat tensor
+    however the attention method likes; only writes through views are
+    poison.
+
+    The extra block past the allocatable range is the SCRATCH BLOCK
+    (`scratch_block == num_kv_blocks`), the paged analog of `scratch_pos`:
+    filler-row and warm-up writes park there, and a filler row's table
+    points at it with one visible block so its softmax row stays finite
+    (a fully-masked row is NaN — paged-kv-plan.md §4). The allocator is
+    sized to `num_kv_blocks` and never hands it out.
+
+    Freed blocks are not zeroed: masking must hide a previous occupant's
+    stale K/V, exactly as freed padded slots rely on the causal mask (the
+    flex equivalence suite pins stale-block reuse).
+    """
+
+    def __init__(
+        self,
+        *,
+        num_layers: int,
+        num_kv_blocks: int,
+        block_size: int,
+        max_seq_len: int,
+        num_groups: int,
+        head_dim: int,
+        dtype: torch.dtype,
+        device: torch.device,
+    ):
+        shape = ((num_kv_blocks + 1) * block_size, num_groups, head_dim)
+        self.k_layers = [
+            torch.zeros(shape, dtype=dtype, device=device)
+            for _ in range(num_layers)
+        ]
+        self.v_layers = [
+            torch.zeros(shape, dtype=dtype, device=device)
+            for _ in range(num_layers)
+        ]
+        self.num_layers = num_layers
+        self.num_kv_blocks = num_kv_blocks
+        self.block_size = block_size
+        # Per-request LOGICAL capacity (admission cap, block-table length
+        # bound) — not memory, which is sized by num_kv_blocks. KVPool
+        # protocol semantics.
+        self.max_seq_len = max_seq_len
+        self.scratch_block = num_kv_blocks
+        # Resolved device, same rationale as PaddedKVPool.
+        self.device = torch.empty(0, device=device).device
+
+    def layer(self, i: int) -> tuple[torch.Tensor, torch.Tensor]:
+        """(k, v) storage for layer i, each
+        `((num_kv_blocks + 1) * block_size, num_groups, head_dim)` — the
+        actual flat storage; attention writes through it. The last
+        `block_size` rows are the scratch block: writes may land there,
+        no mask ever makes them visible."""
+        return self.k_layers[i], self.v_layers[i]

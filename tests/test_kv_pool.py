@@ -10,7 +10,7 @@ import pytest
 import torch
 
 from cantollm.engine.batching import BatchingConfig, SlotAllocator
-from cantollm.kv_pool import KVPool, PaddedKVPool
+from cantollm.kv_pool import KVPool, PaddedKVPool, PagedKVPool
 from cantollm.runtime import ModelRuntime
 from tests.tiny_model import TINY_ARCH, tiny_qwen3_spec
 
@@ -148,18 +148,42 @@ class TestRuntimeNewKVPool:
         config = BatchingConfig(max_batch=2, max_seq_len=121, max_tokens_per_step=8)
         assert runtime.new_kv_pool(config).max_seq_len == 121
 
-    def test_paged_layout_branch_is_chunk_2(self):
-        # Chunk-1 state (paged-kv-plan.md §5): the config accepts paged_kv,
-        # the layout branch refuses it until the paged pool exists.
+    def test_paged_branch_builds_at_parity_capacity(self):
+        # num_kv_blocks unset: parity capacity (max_batch * max_seq_len /
+        # block_size = 2 * 32 / 16 = 4 blocks) + the scratch block.
+        spec = tiny_qwen3_spec()
         runtime = ModelRuntime(
-            spec=tiny_qwen3_spec(), device=torch.device("cpu"),
+            spec=spec, device=torch.device("cpu"),
             model=None, tokenizer=None, backend=None,
         )
         config = BatchingConfig(
             max_batch=2, max_seq_len=32, max_tokens_per_step=8, paged_kv=True,
         )
-        with pytest.raises(NotImplementedError, match="chunk 2"):
-            runtime.new_kv_pool(config)
+        pool = runtime.new_kv_pool(config)
+        assert isinstance(pool, PagedKVPool)
+        assert pool.num_kv_blocks == 4 and pool.block_size == 16
+        assert pool.k_layers[0].shape == (
+            5 * 16, TINY_ARCH["num_groups"], TINY_ARCH["head_dim"],
+        )
+        assert pool.k_layers[0].dtype == spec.dtype
+
+    def test_paged_branch_honors_num_kv_blocks_and_rope_guard(self):
+        runtime = ModelRuntime(
+            spec=tiny_qwen3_spec(), device=torch.device("cpu"),
+            model=None, tokenizer=None, backend=None,
+        )
+        pool = runtime.new_kv_pool(BatchingConfig(
+            max_batch=2, max_seq_len=32, max_tokens_per_step=8,
+            paged_kv=True, num_kv_blocks=3,
+        ))
+        assert pool.num_kv_blocks == 3
+        # The RoPE guard predates the layout branch and covers both:
+        # 128 + 8 - 2 = 134 >= 128 must be rejected paged too.
+        with pytest.raises(ValueError, match="RoPE table"):
+            runtime.new_kv_pool(BatchingConfig(
+                max_batch=2, max_seq_len=128, max_tokens_per_step=8,
+                paged_kv=True,
+            ))
 
 
 class TestKVPoolProtocol:
@@ -170,6 +194,9 @@ class TestKVPoolProtocol:
     def test_padded_pool_satisfies_the_protocol(self):
         assert isinstance(make_pool(), KVPool)
 
+    def test_paged_pool_satisfies_the_protocol(self):
+        assert isinstance(make_paged_pool(), KVPool)
+
     def test_layerless_object_does_not(self):
         class NotAPool:
             num_layers = 1
@@ -177,3 +204,50 @@ class TestKVPoolProtocol:
             device = torch.device("cpu")
 
         assert not isinstance(NotAPool(), KVPool)
+
+
+def make_paged_pool(**overrides) -> PagedKVPool:
+    kwargs = dict(
+        num_layers=2, num_kv_blocks=4, block_size=4, max_seq_len=16,
+        num_groups=4, head_dim=8, dtype=torch.float32,
+        device=torch.device("cpu"),
+    )
+    kwargs.update(overrides)
+    return PagedKVPool(**kwargs)
+
+
+class TestPagedKVPool:
+    def test_flat_shapes_dtype_and_zero_init(self):
+        # (4 + 1) * 4 = 20 flat rows per layer: 16 allocatable + the
+        # 4-row scratch block at the tail.
+        pool = make_paged_pool()
+        assert len(pool.k_layers) == 2 and len(pool.v_layers) == 2
+        for k, v in zip(pool.k_layers, pool.v_layers):
+            assert k.shape == (20, 4, 8) and v.shape == (20, 4, 8)
+            assert k.dtype == torch.float32
+            assert torch.all(k == 0) and torch.all(v == 0)
+        assert pool.num_kv_blocks == 4 and pool.block_size == 4
+        assert pool.max_seq_len == 16
+        assert pool.scratch_block == 4
+        assert pool.device == pool.k_layers[0].device
+
+    def test_layer_returns_the_real_storage(self):
+        # Attention writes through layer(i); a copy would silently drop
+        # every KV write (the padded pin, ported).
+        pool = make_paged_pool()
+        k, v = pool.layer(1)
+        k[7, 2, 3] = 1.5
+        v[19, 0, 0] = -2.0          # scratch-block row: writable too
+        assert pool.k_layers[1][7, 2, 3] == 1.5
+        assert pool.v_layers[1][19, 0, 0] == -2.0
+
+    def test_block_row_span_arithmetic(self):
+        # Block b owns flat rows [b*bs, (b+1)*bs): the layout contract the
+        # write-map destination computation (chunk 4) builds on.
+        pool = make_paged_pool()
+        k, _ = pool.layer(0)
+        block, offset = 2, 3
+        k[block * pool.block_size + offset] = 7.0
+        flat = pool.k_layers[0]
+        assert torch.all(flat[2 * 4 + 3] == 7.0)
+        assert torch.all(flat[: 2 * 4] == 0) and torch.all(flat[2 * 4 + 4:] == 0)
