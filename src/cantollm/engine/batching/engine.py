@@ -102,6 +102,21 @@ def scheduler_from_runtime(
             "CUDA graphs on paged decode land in chunk 8 "
             "(paged-kv-plan.md §5); run paged with cuda_graphs off"
         )
+    from cantollm.models.attention.flex import FlexAttentionMethod
+
+    method = getattr(getattr(runtime, "model", None), "attention_method", None)
+    if config.paged_kv != isinstance(method, FlexAttentionMethod):
+        # The layout and the read path select each other: flex reads
+        # block tables the padded pool never has, and the padded/sdpa
+        # methods read slot geometry the paged pool never has. A mismatch
+        # would otherwise surface as a mid-traffic "no paged tables" (or
+        # shape) error; fail the build instead.
+        raise RuntimeError(
+            f"attention method {type(method).__name__} does not match "
+            f"paged_kv={config.paged_kv}: the paged pool requires flex "
+            "attention and vice versa (--attention flex implies the "
+            "paged stack)"
+        )
     pool = runtime.new_kv_pool(config)
     forward_fn = runtime.forward_batched
     block_allocator = None

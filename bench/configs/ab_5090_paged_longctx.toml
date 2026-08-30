@@ -1,0 +1,55 @@
+# The long-context half of the Phase-4 round-1 A/B (see ab_5090_paged.toml
+# for the framing). Split out for the same reason as every longctx sibling:
+# 8k-token prompts exceed 4096-token slots, so this half runs 4 slots x
+# 10240 with only the attention + KV layout flipping. 10240 is a multiple
+# of the 64-token block, so the paged admission cap lands on a block
+# boundary as config validation requires.
+#
+# Prediction on record (§6.1): flex within -8%..+2% of the padded
+# compile-no-graphs arm at c=1; Flex reaches cuDNN parity by KV 2048
+# (flex-spike-results.md), which is where long-context time actually
+# sits, and the paged gather adds index arithmetic, not extra reads.
+#
+# Gates (§7 round 1): flex >= -10% of the padded arm on every cell; no
+# NaN; recompiles after warm-up = 0; flex kernels on the profiler
+# timeline; greedy token equivalence; warm bill recorded.
+schema_version = 1
+name = "ab-5090-paged-longctx"
+
+[server]
+model = "0.6B"
+engine = "batched"
+device = "cuda"
+port = 8377
+health_timeout_s = 900
+max_batch = 4
+batch_max_seq_len = 10240
+max_tokens_per_step = 512
+shape_buckets = true
+warmup_shapes = true
+torch_compile = true
+cuda_graphs = false
+
+[server.matrix]
+attention = ["sdpa", "flex"]
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 4
+repeats = 3
+seed = 0
+
+[[points]]
+workload = "long_context"
+mode = "closed"
+concurrency = [1, 2, 4]
+requests_per_level = 16
+
+[[points]]
+workload = "long_context"
+mode = "closed"
+concurrency = [4]
+requests_per_level = 32

@@ -416,6 +416,75 @@ class TestCompiledPagedRuntime:
         assert warm <= 6, f"artifact explosion: {warm}"
 
 
+class TestFlexWiring:
+    """P4 chunk 7's CLI-facing plumbing: `--attention flex` selects the
+    paged stack, and the flex constructor's block_size comes from the
+    engine config (the wiring flex.py's __init__ comment deferred here)."""
+
+    def test_build_runtime_flex_requires_block_size(self):
+        from cantollm.runtime import build_runtime
+
+        with pytest.raises(ValueError, match="block_size"):
+            build_runtime(tiny_qwen3_spec(), CPU, attention="flex")
+
+    def test_build_runtime_block_size_is_flex_only(self):
+        from cantollm.runtime import build_runtime
+
+        with pytest.raises(ValueError, match="flex-attention knob"):
+            build_runtime(
+                tiny_qwen3_spec(), CPU, attention="padded", block_size=64
+            )
+
+    def test_build_runtime_flex_constructs_the_method(self):
+        from cantollm.runtime import build_runtime
+
+        runtime = build_runtime(
+            tiny_qwen3_spec(), CPU, attention="flex", block_size=BLOCK
+        )
+        method = runtime.model.attention_method
+        assert isinstance(method, FlexAttentionMethod)
+        assert method.block_size == BLOCK
+
+    def test_assembly_rejects_layout_method_mismatch(self):
+        # Both directions: flex needs the paged pool, padded/sdpa need
+        # the slot pool. A mismatch dies at build, not mid-traffic.
+        flex_runtime = make_runtime(make_flex_model())
+        padded_config = BatchingConfig(
+            max_batch=2, max_seq_len=MAX_SEQ, max_tokens_per_step=8
+        )
+        with pytest.raises(RuntimeError, match="does not match"):
+            scheduler_from_runtime(flex_runtime, padded_config)
+
+        torch.manual_seed(1234)
+        padded_model = Qwen3(
+            qwen3_config=TINY_ARCH, attention_method=PaddedAttentionMethod()
+        ).eval()
+        with pytest.raises(RuntimeError, match="does not match"):
+            scheduler_from_runtime(make_runtime(padded_model), paged_config())
+
+    def test_engine_factory_serves_flex_end_to_end(self, monkeypatch):
+        """The production factory path (`--engine batched --attention
+        flex` minus the process split): qwen3_spec's tiny hook ->
+        build_runtime with the config's block size ->
+        scheduler_from_runtime -> traffic."""
+        from cantollm.engine.batching.process import (
+            build_qwen3_batched_scheduler,
+        )
+
+        monkeypatch.setenv(
+            "CANTOLLM_TEST_SPEC", "tests.tiny_model:tiny_qwen3_spec"
+        )
+        scheduler = build_qwen3_batched_scheduler(
+            "tiny", "cpu", paged_config(warmup_shapes=True), attention="flex"
+        )
+        assert scheduler.paged_state is not None
+        assert scheduler.paged_state.masks, "warm-up built no family masks"
+        tokens, finishes = drive(
+            scheduler, {0: [make_request("r", PROMPT, max_tokens=4)]}
+        )
+        assert tokens["r"] and finishes["r"] == "max_tokens"
+
+
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
 class TestPagedCompiledCUDA:
     """The chunk-6 CUDA-skipif twin (validated on the 5090 in the chunk-7

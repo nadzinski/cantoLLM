@@ -21,6 +21,7 @@ from cantollm.kv_pool import KVPool, PaddedKVPool, PagedKVPool
 from cantollm.models.attention import (
     BatchMeta,
     EinsumAttentionMethod,
+    FlexAttentionMethod,
     PaddedAttentionMethod,
     PagedTables,
     SDPAAttentionMethod,
@@ -317,7 +318,8 @@ _ATTENTION_METHODS = {
 def _load_model(
     spec: ModelSpec,
     device: torch.device,
-    attention: Literal["einsum", "padded", "sdpa"] = "einsum",
+    attention: Literal["einsum", "padded", "sdpa", "flex"] = "einsum",
+    block_size: int | None = None,
 ) -> tuple[torch.nn.Module, str]:
     logger.info("Downloading %s model weights...", spec.size)
     progress.report("load", 0, 3, "downloading weights")
@@ -325,7 +327,25 @@ def _load_model(
 
     logger.info("Creating model...")
     progress.report("load", 1, 3, "creating model")
-    attention_method = _ATTENTION_METHODS[attention]()
+    if attention == "flex":
+        # The paged read path (Phase 4): the method needs the pool's page
+        # size for both index-translation sites, so the caller passes the
+        # engine config's block_size through (paged-kv-plan.md §2.13
+        # governs the served default; scheduler_from_runtime holds the
+        # CUDA floor guard).
+        if block_size is None:
+            raise ValueError(
+                "attention='flex' requires block_size (the paged pool's "
+                "page size, BatchingConfig.block_size)"
+            )
+        attention_method: Any = FlexAttentionMethod(block_size=block_size)
+    else:
+        if block_size is not None:
+            raise ValueError(
+                f"block_size is a flex-attention knob, but "
+                f"attention={attention!r}"
+            )
+        attention_method = _ATTENTION_METHODS[attention]()
     model = spec.model_cls(
         qwen3_config=spec.arch,
         attention_method=attention_method,
@@ -347,7 +367,8 @@ def build_runtime(
     device: torch.device,
     *,
     speculative: ModelSpec | None = None,
-    attention: Literal["einsum", "padded", "sdpa"] = "einsum",
+    attention: Literal["einsum", "padded", "sdpa", "flex"] = "einsum",
+    block_size: int | None = None,
 ) -> ModelRuntime:
     if speculative is not None and attention != "einsum":
         # Speculative decoding stays on the sequential engine (PLAN.md:
@@ -370,7 +391,7 @@ def build_runtime(
             tokenizer=tokenizer, backend=backend,
         )
 
-    model, local_dir = _load_model(spec, device, attention)
+    model, local_dir = _load_model(spec, device, attention, block_size)
     tokenizer = spec.tokenizer_factory(local_dir)
     backend = StandardBackend(model=model, device=device)
     return ModelRuntime(

@@ -109,6 +109,11 @@ def cmd_serve(args):
         # else: padded, exact v1 geometry. Explicit flags override.
         on_cuda = device.type == "cuda"
         attention = args.attention or ("sdpa" if on_cuda else "padded")
+        # flex is the paged stack (Phase 4, paged-kv-plan.md): the
+        # attention value selects the KV layout with it, since neither
+        # half runs without the other. Not the CUDA default until the
+        # phase's A/Bs settle the flip (chunk 13, the author's call).
+        paged_kv = attention == "flex"
         shape_buckets = (
             args.shape_buckets if args.shape_buckets is not None else on_cuda
         )
@@ -118,7 +123,7 @@ def cmd_serve(args):
         )
         cuda_graphs = (
             args.cuda_graphs if args.cuda_graphs is not None
-            else warmup_shapes and on_cuda
+            else warmup_shapes and on_cuda and not paged_kv
         )
         # Default-on for CUDA since the 2026-08-08/09 A/B cleared the
         # gates (+49.6% short_chat c=16, +64% longctx c=1, warm Ready
@@ -143,6 +148,22 @@ def cmd_serve(args):
             sys.exit("error: --torch-compile requires shape buckets and "
                      "warm-up (compiled artifacts are built by the sweep "
                      "behind readiness, never on a live request)")
+        if paged_kv and cuda_graphs:
+            sys.exit("error: --cuda-graphs with --attention flex lands in "
+                     "Phase 4 chunk 8 (paged-kv-plan.md §5); use "
+                     "--no-cuda-graphs")
+        if paged_kv and on_cuda and not torch_compile:
+            # The §2.8 rule at the serve surface (scheduler_from_runtime
+            # holds it defensively too): FlexAttention only performs
+            # compiled, so a paged CUDA server without compile would
+            # silently serve the slow eager kernel.
+            sys.exit("error: --attention flex on CUDA requires "
+                     "--torch-compile (FlexAttention only performs "
+                     "compiled; paged-kv-plan.md §2.8)")
+        if (args.block_size is not None or args.num_kv_blocks is not None) \
+                and not paged_kv:
+            sys.exit("error: --block-size/--num-kv-blocks are paged-KV "
+                     "knobs; they need --attention flex")
         if attention == "sdpa" and not shape_buckets:
             print("warning: sdpa without --shape-buckets recompiles a cuDNN "
                   "plan per step shape — expect stall tails "
@@ -158,11 +179,19 @@ def cmd_serve(args):
             bucket_kwargs["cuda_graphs"] = cuda_graphs
             bucket_kwargs["torch_compile"] = torch_compile
             bucket_kwargs["torch_compile_strategy"] = args.torch_compile_strategy
+        paged_kwargs = {}
+        if paged_kv:
+            paged_kwargs["paged_kv"] = True
+            if args.block_size is not None:
+                paged_kwargs["block_size"] = args.block_size
+            if args.num_kv_blocks is not None:
+                paged_kwargs["num_kv_blocks"] = args.num_kv_blocks
         config = BatchingConfig(
             max_batch=args.max_batch,
             max_seq_len=args.batch_max_seq_len,
             max_tokens_per_step=args.max_tokens_per_step,
             **bucket_kwargs,
+            **paged_kwargs,
         )
         # Factories, not built engines: the registry's supervisor task runs
         # them in the background so uvicorn binds immediately and /ready
@@ -172,7 +201,10 @@ def cmd_serve(args):
                         config=config) -> BuiltEngine:
                 # Weights + compile + sweep + capture all run in here, on
                 # the supervisor's worker thread.
-                runtime = build_runtime(spec, device, attention=attention)
+                runtime = build_runtime(
+                    spec, device, attention=attention,
+                    block_size=config.block_size if config.paged_kv else None,
+                )
                 engine = ContinuousBatchingEngine.from_runtime(runtime, config)
                 return BuiltEngine(engine=engine, runtime=runtime)
 
@@ -212,9 +244,13 @@ def cmd_serve(args):
             max_inflight=args.max_inflight or 4 * config.max_batch,
             admission_timeout_s=args.admission_timeout,
         )
+        kv_desc = (
+            f"paged {config.resolved_kv_blocks}x{config.block_size} tok"
+            if config.paged_kv else f"slot={config.max_seq_len} tok"
+        )
         engine_desc = (
             f"continuous batching, {where} (max_batch={config.max_batch}, "
-            f"slot={config.max_seq_len} tok, "
+            f"{kv_desc}, "
             f"budget={config.max_tokens_per_step} tok/step, "
             f"attention={attention}, shape_buckets={'on' if shape_buckets else 'off'}, "
             f"warmup={'on' if warmup_shapes else 'off'}, "
@@ -495,12 +531,25 @@ def parse_args(argv=None):
     serve_parser.add_argument("--max-tokens-per-step", type=int, default=256,
                               help="Batched engine: total new tokens per forward pass; "
                                    "bounds the prefill chunk width (default: 256)")
-    serve_parser.add_argument("--attention", choices=("padded", "sdpa"),
+    serve_parser.add_argument("--attention", choices=("padded", "sdpa", "flex"),
                               default=None,
                               help="Batched engine: attention method (default: sdpa "
                                    "on CUDA, padded einsum elsewhere; sdpa = "
-                                   "F.scaled_dot_product_attention via cuDNN). The "
-                                   "sequential engine always uses einsum")
+                                   "F.scaled_dot_product_attention via cuDNN; flex = "
+                                   "FlexAttention over the block-indexed paged KV "
+                                   "pool, Phase 4; implies the paged stack and, on "
+                                   "CUDA, requires --torch-compile). The sequential "
+                                   "engine always uses einsum")
+    serve_parser.add_argument("--block-size", type=int, default=None,
+                              help="Paged KV (--attention flex): tokens per KV "
+                                   "block (default: 64, the compiled Flex "
+                                   "kernels' mask floor; paged-kv-plan.md §2.13)")
+    serve_parser.add_argument("--num-kv-blocks", type=int, default=None,
+                              help="Paged KV (--attention flex): pool capacity in "
+                                   "blocks (default: parity with the padded pool, "
+                                   "max-batch x batch-max-seq-len / block-size, at "
+                                   "which exhaustion is impossible; benches "
+                                   "undercommit explicitly)")
     serve_parser.add_argument("--shape-buckets", default=None,
                               action=argparse.BooleanOptionalAction,
                               help="Batched engine: bound the step-shape vocabulary "

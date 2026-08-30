@@ -1,0 +1,71 @@
+# Phase-4 A/B, round 1 (paged-kv-plan.md §7): does the paged stack pay its
+# way before it earns its capacity story? Like-for-like pair: padded/sdpa
+# vs flex/paged, BOTH compile-no-graphs, because graphs do not exist for
+# flex until chunk 8 and attribution wants the one moving part to be the
+# attention + KV layout. The third §7 arm (padded FULL default, graphs on)
+# runs from its sibling ab_5090_paged_default.toml in the same session; the
+# bench schema has one matrix per file and the arms differ on two keys.
+#
+# The flex arm serves at parity capacity (num_kv_blocks unset = max_batch x
+# max_seq_len / block_size): exhaustion impossible, drop-in semantics
+# (§2.7). Capacity and undercommit cells are round 2's.
+#
+# Predictions on record (§6.1 reasoning, stated for this pair): flex within
+# -5%..+2% of the padded compile-no-graphs arm on short_chat c=16; the
+# spike bounds the attention delta at ~0.3 ms against a ~4 ms step. Warm
+# bill (§6.2): the paged sweep is 20 families x 2 forwards vs padded's 315
+# shapes; paged warm-up total under padded's at the same geometry, cold
+# compile under 2x padded's cold bill.
+#
+# Gates (§7 round 1): flex >= -10% of the padded arm on EVERY cell; no NaN
+# events; recompiles after warm-up = 0; Flex-kernel-ran counter > 0
+# (profiler timeline, the SDPA silent-fallback lesson); greedy token
+# equivalence vs the padded arm; warm bill recorded in the run notes.
+schema_version = 1
+name = "ab-5090-paged"
+
+[server]
+model = "0.6B"
+engine = "batched"
+device = "cuda"
+port = 8377
+health_timeout_s = 900
+max_batch = 16
+batch_max_seq_len = 4096
+max_tokens_per_step = 512
+shape_buckets = true
+warmup_shapes = true
+torch_compile = true
+# Graphs pinned off in BOTH arms: flex has no graphs until chunk 8, and
+# the padded arm must differ from it by exactly the attention + layout.
+cuda_graphs = false
+
+[server.matrix]
+attention = ["sdpa", "flex"]
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 4
+repeats = 3
+seed = 0
+
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [4, 16]
+requests_per_level = 32
+
+[[points]]
+workload = "code"
+mode = "closed"
+concurrency = [8]
+requests_per_level = 32
+
+[[points]]
+workload = "multi_turn"
+mode = "closed"
+concurrency = [8]
+requests_per_level = 32

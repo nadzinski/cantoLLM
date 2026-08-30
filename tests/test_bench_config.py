@@ -142,6 +142,19 @@ def test_serve_argv_torch_compile_flags():
     assert "--no-torch-compile" in argv
 
 
+def test_serve_argv_paged_keys():
+    # The paged stack's serve keys (P4 chunk 7): attention picks the
+    # stack; block_size / num_kv_blocks pin capacity for the round-2/3
+    # undercommit cells.
+    cfg = deep({"server": {
+        "attention": "flex", "block_size": 64, "num_kv_blocks": 256,
+    }})
+    joined = " ".join(serve_argv(parse_run_config(cfg).cells[0].server))
+    assert "--attention flex" in joined
+    assert "--block-size 64" in joined
+    assert "--num-kv-blocks 256" in joined
+
+
 def test_load_from_toml_file(tmp_path):
     p = tmp_path / "smoke.toml"
     p.write_text(

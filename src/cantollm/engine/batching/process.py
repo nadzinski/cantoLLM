@@ -106,7 +106,8 @@ def build_qwen3_batched_scheduler(
 ) -> SchedulerLike:
     """Production factory — runs inside the engine process: download/load
     weights onto `device` and compose the real scheduler. `attention` picks
-    the batched attention method ("padded" or "sdpa")."""
+    the batched attention method ("padded", "sdpa", or "flex" for the
+    paged stack; flex takes its page size from the config)."""
     # Imported here, not at module top: runtime.py imports this package for
     # BatchingConfig, so a module-level import would be circular.
     import torch
@@ -114,7 +115,10 @@ def build_qwen3_batched_scheduler(
     from cantollm.runtime import build_runtime
     from cantollm.spec import qwen3_spec
 
-    runtime = build_runtime(qwen3_spec(size), torch.device(device), attention=attention)
+    runtime = build_runtime(
+        qwen3_spec(size), torch.device(device), attention=attention,
+        block_size=config.block_size if attention == "flex" else None,
+    )
     return scheduler_from_runtime(runtime, config)
 
 
