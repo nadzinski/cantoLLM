@@ -449,6 +449,59 @@ failures only.
 
 Appended per round as they complete.
 
+### Round 1 (chunk 7): first run 2026-08-30, gate FAILED, cause found and fixed, rerun in flight
+
+Run on the 5090 at 2ac397f (box session; bench/history commit 9e20637:
+`ab-5090-paged`, `ab-5090-paged-longctx`, `ab-5090-paged-default`).
+Suite on the box 618 + 5 chaos green, both CUDA twins green, no NaN, no
+errors, zero recompiles after Ready on every boot.
+
+First-run A/B (median of 3; delta = flex vs same-cell padded
+compile-no-graphs): short_chat c=4 +5.4% PASS, c=16 -9.8% PASS; code
+c=8 -10.9% FAIL (marginal); multi_turn c=8 -17.8% FAIL; long_context
+c=1 -17.2%, c=2 -53.6%, c=4 -30.3%, all FAIL. Default-arm box sanity
+PASS (short_chat c=16 3581 vs the 3600-3700 record range).
+
+The box's key diagnostic: a decode step-time CLIFF at 1 -> 2 rows at
+long KV, then flat (flex step_p50 4.70 -> 18.65 -> ~21.6 ms across
+c=1/2/4 vs sdpa 4.17 -> 5.66 -> ~10.1). Attribution, proven on CPU by
+inspecting the traced graphs' placeholder example_values: chunk 6 left
+the batch dims unmarked under paged, automatic dynamic promoted
+input_ids to a SYMBOLIC batch on the second (batch, width) family, one
+symbolic artifact then served every B >= 2 (why 2 -> 4 rows barely
+grew), and Inductor's `_use_flex_decoding` gate requires a
+statically-known query batch to size its KV splits, so every multi-row
+decode silently fell back to the main flex template: a 128-wide Q tile
+for one real query row and no KV splitting. B = 1 always specializes
+(torch's 0/1 rule), which is why c=1 sat near sdpa, and the damage
+scaled with actual KV (short_chat -9.8%, multi_turn -17.8%, longctx
+worst). Fix cb1a04a: `_mark_compile_dims` pins the meta-side batch
+dims static per family (per-family artifacts are §2.6's vocabulary
+anyway) and `PagedStepState.fill` pins the cached mask's own
+kv_num_blocks/kv_indices, whose views are born inside the builder;
+the regression pin inspects traced-graph placeholders (a plain
+backend's example_inputs are real tensors and always look static) and
+was verified red on pre-fix code. 5090 rerun of the two pair configs
+dispatched; this section gets the confirmed numbers when it reports.
+
+Also on record from the first run:
+- Warm bills (0.6B, 16x4096 geometry): flex cold Ready 299 s (sweep
+  282.7 s, "20 families x 2 map lengths" confirmed in the log), warm
+  72 s (sweep 54.9); padded twin cold 232 s (315 shapes, sweep 216.6),
+  warm 104 s (sweep 89.6). Prediction 2's warm-up clauses: warm bill
+  under padded's TRUE, cold sweep under padded's FALSE (40 pricier
+  individual compiles vs 315 amortized shapes), cold under 2x padded
+  cold TRUE (299 < 464). Final §6 grading waits for the phase end.
+- Greedy cross-arm spot check (flex vs sdpa servers, 8 prompts, temp
+  0): 1/8 token-identical, 7/8 diverge as coherent alternates, no
+  derailments; the accepted cross-kernel tie-flip class (compile round
+  precedent was 5/7 within one arm), but a high rate worth keeping an
+  eye on.
+- Harness gap: the §7 "Flex-kernel-ran counter > 0" gate has no
+  counter in bench run.json; the suite's profiler test covers the
+  silent-fallback risk out-of-band. Candidate small bench addition,
+  the author's call.
+
 ### Chunk log
 
 Suite green at every step (530 tests + 5 chaos at chunk 1, from 521 at
