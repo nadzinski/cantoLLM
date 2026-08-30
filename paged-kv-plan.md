@@ -10,9 +10,11 @@ complete) the validated results with §6's predictions graded.
 `flex-spike-results.md` is this doc's gates annex: the kernel route was decided
 there, on the 5090, before any of this was designed.
 
-**Status: chunks 1–5 complete (chunk 5 closed 2026-08-30: block
-accounting and the paged-vs-padded engine oracle both green on CPU).
-Next: chunk 6, warm-up / vocabulary / compile.**
+**Status: chunks 1–6 complete (chunk 6 closed 2026-08-30: paged
+vocabulary, paged warm-up, per-family mask caching, whole-impl compile;
+recompile and mask-construction gates green on CPU, counts 315→20 /
+80→5 measured). Next: chunk 7, the 5090 round 1 (`--attention flex`
+wiring, tripwires, A/B).**
 
 ## 1. Goal
 
@@ -587,3 +589,54 @@ phase start; Mac/CPU counts).
    check, table seeding after shape_step, and the active-list rebuild
    (drop exactly the finished rows so starved rows survive). Suite 589
    + 5 chaos.
+6. Warm-up / vocabulary / compile (2026-08-30, delegated). The paged
+   vocabulary drops the kv axis: `shape_vocabulary()` yields one entry
+   per (batch, width) family under `paged_kv` (third element pinned to
+   the logical bound; `shapes_bounded` stops demanding the inert
+   `kv_bucket`, which stays validated when set). Measured at the
+   standard 5090 geometry and pinned in the gate suite: sweep shapes
+   315 -> 20, decode shapes (the future graph keys) 80 -> 5, the
+   structural half of §6 prediction 2. Warm-up's paged branch fills the
+   SAME `PagedStepState` buffers traffic mutates (the §4 device-path
+   rule) with all-filler steps pointing at the scratch block, swaps in
+   write maps parked on the scratch block's flat indices, and runs two
+   forwards per family (map lengths 1 and max(2, batch): both compile
+   populations, the old kv-sweep alternation collapsed to an inner
+   pair); the sweep also builds every family's `BlockMask` behind
+   Ready. Mask caching per §2.5's ownership: `PagedStepState` gains a
+   persistent `start_pos` buffer plus a per-family mask cache over an
+   injected builder; the hand-written construction moved intact into
+   `FlexAttentionMethod.build_family_mask` (mask_mod byte-identical,
+   now reading starts through its argument, the persistent buffer,
+   instead of the per-step `meta.start_pos`: a cached mask closing
+   over a step's own tensor is a stale-closure trap, which is why the
+   buffer exists); `PagedTables` gains an opaque `mask` field, seeded
+   by `fill(..., num_new_max)` and returned by `build_batched_mask`,
+   so `from_kv_blocks` never runs in the step loop, with hand-built
+   test tables (mask=None) falling back to per-step construction so
+   the chunk-4 suite is untouched. Compile integration:
+   `forward_batched_impl` now traces WHOLE with Flex (the wiring the
+   chunk-4 twin deferred here); `BatchMeta.paged_tables` became a
+   cached_property so a seeded read is a Dynamo-traceable cache hit
+   (the kv_write_map pattern; the plain property's dict.get body drove
+   Dynamo into recursive InternalTorchDynamoError); the compiled
+   hoists stop forcing the padded write map on paged metas;
+   `_mark_compile_dims` marks only the paged map's length dynamic.
+   One design finding, hers to veto: flex_attention compares the query
+   batch against the mask tensors' batch, so a mark_dynamic batch dim
+   against a fixed-batch cached mask specializes on the spot and torch
+   hard-errors on the broken promise; resolution is one artifact per
+   (batch, width) family under either compile strategy, which is
+   §2.6's vocabulary anyway. Engine assembly builds the paged trio
+   before the sweep, injects the method's mask builder, and refuses
+   cuda_graphs + paged loudly until chunk 8. Exit gates green on CPU
+   (tests/test_paged_compile.py): the recompile counter (warm three
+   families, then deeper histories, permuted tables, shifted starts:
+   zero new artifacts, zero new masks) and the §4 construction counter
+   at engine level (a warmed scheduler serves traffic with zero mask
+   constructions), plus compiled-vs-eager equality for the whole-impl
+   trace; a CUDA-skipif twin (real Inductor, error_on_recompile,
+   oracle equivalence at the chunk-4 floor geometry) rides to the box
+   with round 1. Touches flagged for review: flex.py (the relocation
+   above; index translation and numerics untouched) and scheduler.py
+   (the fill call gains `meta.num_new_max`). Suite 600 + 5 chaos.

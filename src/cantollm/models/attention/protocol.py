@@ -135,6 +135,14 @@ class PagedTables(NamedTuple):
 
     write_map: PagedKVWriteMap
 
+    mask: object | None = None
+    """This step's family mask, method-opaque (Flex: a ``BlockMask`` built
+    once per (batch, width) family over the persistent step-state buffers,
+    paged-kv-plan.md §2.5/§2.6, chunk 6). ``None`` means the attention
+    method constructs a fresh mask from the table tensors (the eager test
+    path); the serving path always seeds the cached one, so mask
+    construction never runs in the step loop."""
+
 
 @dataclass(frozen=True)
 class BatchMeta:
@@ -233,7 +241,10 @@ class BatchMeta:
                 "paged_tables is already seeded; seeding after first use "
                 "would leave stale tensors in flight"
             )
-        bt, knb, inv, wm = tables
+        bt, knb, inv, wm = (
+            tables.block_tables, tables.kv_num_blocks,
+            tables.inverse_tables, tables.write_map,
+        )
         if bt.dim() != 2 or knb.dim() != 1 or inv.dim() != 2:
             raise ValueError(
                 f"table tensors must be (B, T)/(B,)/(B, P), got dims "
@@ -262,19 +273,21 @@ class BatchMeta:
             )
         self.__dict__["paged_tables"] = tables
 
-    @property
+    @cached_property
     def paged_tables(self) -> PagedTables:
         """This step's seeded `PagedTables`. Raises when unseeded: only
         the paged path seeds tables, so reading them off a padded-path
-        meta is a wiring bug, not a derivable state."""
-        tables = self.__dict__.get("paged_tables")
-        if tables is None:
-            raise ValueError(
-                "this BatchMeta carries no paged tables; the paged "
-                "scheduler side seeds them per step (seed_paged_tables) — "
-                "there is no derived construction"
-            )
-        return tables
+        meta is a wiring bug, not a derivable state. A cached_property
+        rather than a plain property on purpose: seeding fills the same
+        instance-dict slot the descriptor reads, so a seeded access is a
+        cache HIT, which Dynamo traces cleanly inside the compiled
+        forward (the kv_write_map pattern); a plain property's dict.get
+        body does not trace. This raising body only ever runs unseeded."""
+        raise ValueError(
+            "this BatchMeta carries no paged tables; the paged "
+            "scheduler side seeds them per step (seed_paged_tables), "
+            "and there is no derived construction"
+        )
 
     @cached_property
     def kv_write_map(self) -> KVWriteMap:

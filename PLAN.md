@@ -628,7 +628,7 @@ unchanged (plausibly the new request path).
 memory management lesson — and overlap scheduling with execution so the CPU plans step
 N+1 while the GPU runs step N.
 
-**Status (2026-08-30):** Done: chunks 1–5 of `paged-kv-plan.md`'s 13
+**Status (2026-08-30):** Done: chunks 1–6 of `paged-kv-plan.md`'s 13
 (that doc's chunk log is the detailed record). The paged foundations are in:
 KVPool protocol + config knobs (chunk 1), flat `PagedKVPool` + the
 hand-written `BlockAllocator` (chunk 2), block tables / seeded `PagedTables`
@@ -647,7 +647,19 @@ trimming on shortage, frees on finish/abort, per-step seeded tables via
 `PagedStepState.fill`, the `kv_state` stats hook, and a loud deadlock error
 where only chunk 9's preemption can help), gated by a no-leak accounting
 suite and an engine-level paged-vs-padded CB oracle that is token-identical
-at parity and at undercommitted capacity. Kernel route stands as spiked
+at parity and at undercommitted capacity. Chunk 6 closed the same day:
+the paged shape vocabulary drops the kv axis (one entry per
+(batch, width) family; measured at the standard geometry, sweep shapes
+315 to 20 and decode shapes 80 to 5, prediction 2's structural half),
+warm-up fills the scheduler's own persistent buffers with scratch-parked
+all-filler steps and builds every family's FlexAttention BlockMask
+behind Ready, masks are cached once per family over those buffers (a
+persistent start_pos buffer keeps a reused mask reading current step
+values), and the whole batched forward now traces under torch.compile on
+the paged path, one artifact per family with the paged write-map length
+the only symbolic dim. Both chunk-6 gates green on CPU: kv-length
+changes recompile nothing, and served traffic constructs zero masks per
+step. Kernel route stands as spiked
 (`flex-spike-results.md`): FlexAttention over engine-owned tables;
 flash-attn deferred (no torch-2.10/sm_120 wheel, 256-token pages). Division
 of labor as planned: the author hand-wrote the allocator and the attend;
@@ -655,9 +667,9 @@ scaffolding, suites, the twin, and the scheduler paged mode delegated.
 Prior scope notes stand: the flash-proper restructure moved here from
 Phase 3; the 2026-07-19 review added overlap scheduling, preemption
 policies, per-request priority, and the goodput-under-joint-SLO metric.
-Open: chunks 6–13: warm-up/vocabulary/compile integration next, then the
-5090 rounds, CUDA graphs on paged decode, preemption/priority/goodput,
-overlap, H100 close-out.
+Open: chunks 7–13: the 5090 round 1 next (`--attention flex` wiring,
+tripwires, A/B; the chunk-6 CUDA twin rides along), then CUDA graphs on
+paged decode, preemption/priority/goodput, overlap, H100 close-out.
 
 - KV blocks of fixed size (16 tokens is the vLLM default) in a single preallocated pool.
 - Per-request block table mapping logical token positions → block IDs.

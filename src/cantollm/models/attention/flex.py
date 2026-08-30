@@ -45,9 +45,15 @@ The paged attention path preserves these constraints:
   KV pool.
 * Enable grouped-query attention when calling FlexAttention.
 
-The correctness-first implementation constructs a fresh ``BlockMask`` on each
-eager CPU step. Chunk 6 will cache masks over persistent table buffers, and
-Chunk 8 will reuse those buffers during CUDA graph capture.
+Mask construction happens once per (batch, width) family (chunk 6,
+paged-kv-plan.md §2.5/§2.6): the scheduler's ``PagedStepState`` calls
+:meth:`FlexAttentionMethod.build_family_mask` on a family's first
+occurrence, over its persistent buffers, and seeds the cached ``BlockMask``
+into ``PagedTables.mask``; :meth:`build_batched_mask` then just returns it,
+so ``BlockMask.from_kv_blocks`` never runs in the step loop. A meta with no
+seeded mask (the eager equivalence tests build tables by hand) falls back
+to constructing a fresh mask from its own tensors. Chunk 8 reuses the
+persistent buffers during CUDA graph capture.
 """
 
 from __future__ import annotations
@@ -57,7 +63,7 @@ from contextlib import nullcontext
 import torch
 from torch.nn.attention.flex_attention import BlockMask, flex_attention
 
-from cantollm.models.attention.protocol import BatchMeta
+from cantollm.models.attention.protocol import BatchMeta, PagedTables
 
 # Geometry floors of the compiled CUDA kernels on the probed build (5090,
 # torch 2.10.0+cu128 / sm_120, 2026-08-30). Eager Flex checks neither, so
@@ -87,6 +93,10 @@ class FlexAttentionMethod:
         # arguments. Chunk 7 will update that wiring so the selected batching
         # configuration can provide this block size.
         self.block_size = block_size
+        # Every from_kv_blocks call this method makes, counted for the
+        # §4 tripwire: after warm-up, steps must add zero (mask
+        # construction allocates, and graph capture bakes addresses).
+        self.mask_constructions = 0
 
     def execution_context(self):
         """Return the context used while running or compiling attention.
@@ -121,22 +131,48 @@ class FlexAttentionMethod:
     def build_batched_mask(
         self, meta: BatchMeta, device: torch.device
     ) -> BlockMask:
-        """Build this step's FlexAttention ``BlockMask``.
+        """Return this step's FlexAttention ``BlockMask``.
+
+        The serving path seeds the family's cached mask into
+        ``PagedTables.mask`` (built once by :meth:`build_family_mask` over
+        the scheduler's persistent buffers), so this is a plain read: no
+        construction in the step loop (paged-kv-plan.md §2.6). Without a
+        seeded mask (tables built by hand in the eager tests) a fresh mask
+        is constructed from the meta's own tensors.
+        """
+        tables = meta.paged_tables
+        if tables.mask is not None:
+            return tables.mask
+        return self.build_family_mask(tables, meta.start_pos, meta.num_new_max)
+
+    def build_family_mask(
+        self,
+        tables: PagedTables,
+        start_positions: torch.Tensor,
+        num_new_max: int,
+    ) -> BlockMask:
+        """Construct one (batch, width) family's ``BlockMask``.
 
         The mask must expose only the physical blocks assigned to the request
         in each batch row and must enforce causality using logical token
-        positions. All table tensors are supplied in ``meta.paged_tables``;
-        ``device`` is the device on which attention will run.
+        positions. Called by ``PagedStepState`` on a family's first
+        occurrence with views of its persistent buffers (warm-up covers
+        every family behind Ready), and by :meth:`build_batched_mask` as
+        the per-step fallback for hand-built tables. Everything the mask
+        reads later (``kv_num_blocks``, ``kv_indices``,
+        ``inverse_tables``, ``start_positions``) it reads through the
+        tensors captured here, so a cached mask tracks the buffers'
+        in-place per-step rewrites.
         """
+        self.mask_constructions += 1
         # from_kv_blocks' canonical ranks: (B, heads, q_blocks) and
         # (B, heads, q_blocks, N) with broadcast heads and one q block.
         # Eager Flex broadcasts squeezed shapes too, but the CUDA
         # templates derive kernel strides from the actual ndim and emit
         # broken code for them (5090 probe, 2026-08-30).
-        kv_num_blocks = meta.paged_tables.kv_num_blocks[:, None, None]
-        kv_indices = meta.paged_tables.block_tables[:, None, None, :]
-        inverse_tables = meta.paged_tables.inverse_tables
-        start_positions = meta.start_pos
+        kv_num_blocks = tables.kv_num_blocks[:, None, None]
+        kv_indices = tables.block_tables[:, None, None, :]
+        inverse_tables = tables.inverse_tables
 
         def mask_mod(
             batch_index: torch.Tensor,
@@ -147,7 +183,7 @@ class FlexAttentionMethod:
             """
             batch_index:       scalar index in [0, B)
             head_index:        scalar index in [0, number_of_query_heads)
-            query_index:       scalar index in [0, meta.num_new_max)
+            query_index:       scalar index in [0, num_new_max)
             physical_key_index: scalar index in [0, total_flat_pool_positions)
 
             This decides whether a specific key is visible to a query.
@@ -178,14 +214,14 @@ class FlexAttentionMethod:
         # width like 150 fails lowering, and eager never checks). The
         # wider block changes no semantics: per-position causality is
         # mask_mod's job either way.
-        q_block = -(-meta.num_new_max // Q_BLOCK_MULTIPLE) * Q_BLOCK_MULTIPLE
+        q_block = -(-num_new_max // Q_BLOCK_MULTIPLE) * Q_BLOCK_MULTIPLE
 
         return BlockMask.from_kv_blocks(
             kv_num_blocks=kv_num_blocks,
             kv_indices=kv_indices,
             BLOCK_SIZE=(q_block, self.block_size),
             mask_mod=mask_mod,
-            seq_lengths=(meta.num_new_max, total_flat_pool_positions),
+            seq_lengths=(num_new_max, total_flat_pool_positions),
             # Query-block metadata is only needed for the backward pass;
             # inference only runs the forward pass.
             compute_q_blocks=False,

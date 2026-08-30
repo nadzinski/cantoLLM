@@ -19,11 +19,20 @@ graphs.
 
 `PagedStepState.fill` (chunk 5) is the scheduler-facing operation that
 updates them for one step and hands back the `PagedTables` a `BatchMeta`
-seeds. Later chunks will reuse the same buffers when caching FlexAttention
-masks and capturing CUDA graphs.
+seeds. The state also owns the per-family FlexAttention `BlockMask`
+objects (chunk 6, paged-kv-plan.md §2.5/§2.6): one mask per
+(batch, width) family, built once over the persistent buffers by an
+injected `mask_builder` and reused for every later step of that family,
+so `BlockMask.from_kv_blocks` never runs in the step loop. Everything a
+cached mask reads per step (tables, inverse tables, and each row's
+logical start position) therefore lives in these buffers and is
+rewritten in place by `fill`. Chunk 8 reuses the same buffers when
+capturing CUDA graphs.
 """
 
 from __future__ import annotations
+
+from collections.abc import Callable
 
 import torch
 
@@ -117,6 +126,17 @@ class PagedStepState:
         inverse_tables: ``(max_rows, num_kv_blocks + 1)`` int32 tensor. For
             each batch row, maps a physical block back to its logical block
             number. The extra column represents the pool's scratch block.
+        start_pos: ``(max_rows,)`` int64 tensor. Each batch row's first new
+            token's logical position. Exists for the cached masks: the
+            Flex ``mask_mod`` needs per-row starts, and a mask reused
+            across steps must read them from a persistent buffer, not from
+            the step's own ``meta.start_pos`` (a fresh tensor every step).
+        mask_builder: Optional callable
+            ``(tables, start_positions, num_new_max) -> mask`` injected at
+            engine assembly (the attention method owns mask semantics; the
+            state owns only the cache). ``None`` skips mask caching and
+            `fill` returns ``mask=None`` (the eager test arrangement: the
+            method then builds a fresh mask per step).
     """
 
     def __init__(
@@ -126,15 +146,27 @@ class PagedStepState:
         max_blocks_per_seq: int,
         num_kv_blocks: int,
         device: torch.device,
+        mask_builder: Callable[[PagedTables, torch.Tensor, int], object]
+        | None = None,
     ):
         self.max_rows = max_rows
         self.max_blocks_per_seq = max_blocks_per_seq
         self.num_kv_blocks = num_kv_blocks
+        self.mask_builder = mask_builder
+        # One mask per (batch, num_new_max) family, built on first
+        # occurrence (warm-up covers every family behind Ready, so traffic
+        # never pays a construction) and reused forever: the mask's
+        # tensors are views of the buffers below, which fill() rewrites in
+        # place.
+        self.masks: dict[tuple[int, int], object] = {}
         self.block_tables = torch.zeros(
             (max_rows, max_blocks_per_seq), dtype=torch.int32, device=device
         )
         self.kv_num_blocks = torch.zeros(
             max_rows, dtype=torch.int32, device=device
+        )
+        self.start_pos = torch.zeros(
+            max_rows, dtype=torch.int64, device=device
         )
         # Most physical blocks do not belong to a given batch row. Initialize
         # every inverse-table entry to an invalid logical block number, then
@@ -154,6 +186,7 @@ class PagedStepState:
         step_rows: list[tuple[int, int, int]],
         block_tables: list[list[int]],
         block_size: int,
+        num_new_max: int | None = None,
     ) -> PagedTables:
         """Describe one step's batch in the persistent buffers.
 
@@ -167,12 +200,17 @@ class PagedStepState:
                 ``start_pos + num_new`` positions (the scheduler's block
                 reservation guarantees this before the row commits).
             block_size: Token positions per physical block.
+            num_new_max: The step's padded width, which names the mask
+                family together with the batch size. ``None`` (or a state
+                with no ``mask_builder``) skips the mask and the returned
+                tables carry ``mask=None``.
 
         Returns:
             A `PagedTables` whose table tensors are views of this state's
             buffers, sliced to the step's batch size (references, never
             copies; the seeded-buffer discipline compile and graph
-            capture rely on), plus the step's freshly built write map.
+            capture rely on), plus the step's freshly built write map and
+            the family's cached mask.
 
         A filler row (``num_new == 0``) points at the scratch block, mapped
         to logical block 0 with one visible block: its softmax row stays
@@ -199,6 +237,7 @@ class PagedStepState:
         self.inverse_tables[:batch].fill_(self.max_blocks_per_seq)
 
         for r, (_, start_pos, num_new) in enumerate(step_rows):
+            self.start_pos[r] = start_pos
             if r >= len(block_tables):
                 # Filler row: one visible block, the scratch block, mapped
                 # to logical 0 so position 0 is visible to every query.
@@ -219,7 +258,7 @@ class PagedStepState:
                 self.inverse_tables[r, physical] = logical
             self.kv_num_blocks[r] = visible
 
-        return PagedTables(
+        tables = PagedTables(
             block_tables=self.block_tables[:batch],
             kv_num_blocks=self.kv_num_blocks[:batch],
             inverse_tables=self.inverse_tables[:batch],
@@ -230,3 +269,17 @@ class PagedStepState:
                 device=self.block_tables.device,
             ),
         )
+        if self.mask_builder is not None and num_new_max is not None:
+            key = (batch, num_new_max)
+            mask = self.masks.get(key)
+            if mask is None:
+                # First occurrence of this family (warm-up, normally). The
+                # mask is built over views of the persistent buffers, so
+                # this step's in-place writes above, and every later
+                # step's, are what the reused mask reads.
+                mask = self.mask_builder(
+                    tables, self.start_pos[:batch], num_new_max
+                )
+                self.masks[key] = mask
+            tables = tables._replace(mask=mask)
+        return tables

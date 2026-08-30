@@ -23,13 +23,25 @@ logical pool stays untouched.
 
 Everything here is built as CPU tensors, exactly like the scheduler
 builds a traffic step, so the warm-up forwards enter the runtime front
-through the same device move traffic takes. That is deliberate and
-guard-load-bearing: the front's move runs under `inference_mode`, and
-Dynamo artifacts guard on the tensors' dispatch key set — warm-up tensors
-that skip the move (e.g. pre-built on device) carry ADInplaceOrView where
-traffic's moved tensors do not, and every artifact the sweep builds gets
-rejected and recompiled by the first live request (the §3 recompile
-tripwire caught exactly this on the 2026-08-08 A/B).
+through the same device move traffic takes. That is deliberate, and the
+compile guards depend on it: the front's move runs under
+`inference_mode`, and Dynamo artifacts guard on the tensors' dispatch key
+set: warm-up tensors that skip the move (e.g. pre-built on device) carry
+ADInplaceOrView where traffic's moved tensors do not, and every artifact
+the sweep builds gets rejected and recompiled by the first live request
+(the §3 recompile tripwire caught exactly this on the 2026-08-08 A/B).
+
+Paged sweeps (P4 chunk 6) follow the same rule by construction: the
+vocabulary is one entry per (batch, width) family (kv length is a value,
+paged-kv-plan.md §2.6), each warm meta's core stays CPU-built and moved,
+and its seeded `PagedTables` come from the SAME persistent
+`PagedStepState` buffers traffic mutates, filled all-filler so every row
+points at the scratch block, with the write map swapped for entries
+parked on the scratch block's flat indices. Filling through the state
+also builds each family's cached `BlockMask` behind Ready, so traffic
+never constructs one. Each family runs two forwards, one per write-map
+length population (see the loop comment): with no kv sweep to alternate
+along, the alternation becomes an inner pair.
 """
 
 from __future__ import annotations
@@ -41,9 +53,15 @@ import torch
 
 from cantollm import progress
 from cantollm.engine.batching.config import BatchingConfig
+from cantollm.engine.batching.paging import PagedStepState
 from cantollm.engine.batching.types import BatchedForwardFn
-from cantollm.kv_pool import PaddedKVPool
-from cantollm.models.attention.protocol import BatchMeta, KVWriteMap
+from cantollm.kv_pool import KVPool
+from cantollm.models.attention.protocol import (
+    BatchMeta,
+    KVWriteMap,
+    PagedKVWriteMap,
+    PagedTables,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -85,13 +103,52 @@ def scratch_write_map(
     )
 
 
+def paged_scratch_tables(
+    state: PagedStepState,
+    batch: int,
+    num_new_max: int,
+    length: int,
+    block_size: int,
+) -> PagedTables:
+    """Seeded tables for one paged warm-up forward: `state.fill` over an
+    all-filler batch (every row sees the scratch block only, and the
+    family's mask gets built into the state's cache), then the map swap.
+    Filling through the scheduler's own state is the §4 device-path rule:
+    warm-up must mutate the same persistent buffers traffic mutates, or
+    the artifacts guard on tensors traffic never presents. The empty
+    all-filler map is replaced by `length` entries parked on the scratch
+    block's flat indices, the paged analog of `scratch_write_map`: rows
+    cycle over the batch, offsets stay 0, duplicate destinations are fine
+    because no mask ever exposes scratch positions to a real row."""
+    tables = state.fill([(0, 0, 0)] * batch, [], block_size, num_new_max)
+    device = state.block_tables.device
+    scratch_start = state.num_kv_blocks * block_size
+    rows = torch.arange(length, dtype=torch.int64, device=device) % batch
+    return tables._replace(write_map=PagedKVWriteMap(
+        batch_row=rows,
+        token_offset=torch.zeros(length, dtype=torch.int64, device=device),
+        pool_index=torch.full(
+            (length,), scratch_start, dtype=torch.int64, device=device
+        ),
+    ))
+
+
 def warmup_shape_vocabulary(
-    forward_fn: BatchedForwardFn, pool: PaddedKVPool, config: BatchingConfig
+    forward_fn: BatchedForwardFn,
+    pool: KVPool,
+    config: BatchingConfig,
+    paged_state: PagedStepState | None = None,
 ) -> int:
-    """One dummy forward per (batch, width, kv_len) in the vocabulary.
-    Returns the number of shapes warmed. Logs progress and total time."""
+    """One dummy forward per (batch, width, kv_len) in the vocabulary
+    (paged: one FAMILY per entry, two forwards each; see the module
+    docstring). Returns the number of vocabulary entries warmed. Logs
+    progress and total time."""
     vocabulary = config.shape_vocabulary()
     device = pool.device
+    if paged_state is not None:
+        return _warmup_paged(
+            forward_fn, pool, config, paged_state, vocabulary, device
+        )
     logger.info(
         "warming %d shapes (batch buckets %s, widths {1} + %s, kv step %d)",
         len(vocabulary), config.batch_buckets, config.prefill_widths,
@@ -129,5 +186,45 @@ def warmup_shape_vocabulary(
     logger.info(
         "shape warm-up done: %d shapes in %.1f s",
         len(vocabulary), time.perf_counter() - t0,
+    )
+    return len(vocabulary)
+
+
+def _warmup_paged(
+    forward_fn: BatchedForwardFn,
+    pool: KVPool,
+    config: BatchingConfig,
+    paged_state: PagedStepState,
+    vocabulary: list[tuple[int, int, int]],
+    device: torch.device | None,
+) -> int:
+    """The paged sweep: two forwards per (batch, width) family, one per
+    write-map length population. Torch's 0/1 rule specializes a length-1
+    map (a step with one real new token), while any length >= 2 goes
+    symbolic and serves every other count; both artifacts must exist
+    behind Ready, and with the kv sweep gone there is no family-internal
+    axis to alternate along, so the pair runs back to back. The
+    vocabulary's kv element is the constant logical bound; it keys
+    nothing (paged-kv-plan.md §2.6)."""
+    logger.info(
+        "warming %d paged (batch, width) families x 2 map lengths "
+        "(batch buckets %s, widths {1} + %s; kv is a value, no sweep)",
+        len(vocabulary), config.batch_buckets, config.prefill_widths,
+    )
+    t0 = time.perf_counter()
+    for i, (batch, width, kv_len) in enumerate(vocabulary):
+        for length in (1, max(2, batch)):
+            input_ids = torch.zeros((batch, width), dtype=torch.int64)
+            meta = warmup_meta(batch, width, kv_len, device)
+            meta.seed_paged_tables(paged_scratch_tables(
+                paged_state, batch, width, length, config.block_size
+            ))
+            forward_fn(input_ids, meta, pool)
+        progress.report("sweep", i + 1, len(vocabulary))
+    if device is not None and device.type == "cuda":
+        torch.cuda.synchronize()
+    logger.info(
+        "paged shape warm-up done: %d families (%d masks cached) in %.1f s",
+        len(vocabulary), len(paged_state.masks), time.perf_counter() - t0,
     )
     return len(vocabulary)

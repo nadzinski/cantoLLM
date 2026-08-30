@@ -69,6 +69,12 @@ def move_batch_to(
                 type(seeded)(*(t.to(device) for t in seeded))
             )
         if paged is not None:
+            # The cached family mask rides along untouched: it is built
+            # over the scheduler's persistent device buffers, which the
+            # table `.to(device)` calls return unchanged (identity moves).
+            # A mask over tables that actually move would go stale, but
+            # only hand-built test tables live off-device, and those seed
+            # mask=None.
             meta.seed_paged_tables(PagedTables(
                 block_tables=paged.block_tables.to(device),
                 kv_num_blocks=paged.kv_num_blocks.to(device),
@@ -76,6 +82,7 @@ def move_batch_to(
                 write_map=type(paged.write_map)(
                     *(t.to(device) for t in paged.write_map)
                 ),
+                mask=paged.mask,
             ))
     return input_ids, meta
 
@@ -171,9 +178,12 @@ class ModelRuntime:
         # either one is poison: rows reads guard on per-step values and
         # recompile every step; the property's miss path takes a lock
         # Dynamo cannot trace. Force AFTER the device move: replace() drops
-        # the cache (the 40fbcf9 lesson).
+        # the cache (the 40fbcf9 lesson). A paged meta carries seeded
+        # tables instead of a derivable padded map; forcing kv_write_map
+        # there would derive a map nothing reads.
         self.model._validate_batched(meta, pool)
-        _ = meta.kv_write_map
+        if meta.__dict__.get("paged_tables") is None:
+            _ = meta.kv_write_map
         self._mark_compile_dims(input_ids, meta)
         # The attention method's dispatcher state (sdpa's cuDNN pin) is
         # entered here, around — never inside — the traced region: a
@@ -232,7 +242,26 @@ class ModelRuntime:
         in. The write-map length still varies with the real-row count
         inside a bucket (fillers are skipped by construction), so map
         columns are never pinned.
+
+        Paged metas (chunk 6): one artifact per (batch, width) family,
+        under either strategy. The family's cached BlockMask pins the
+        batch dim: flex_attention compares the query's batch size against
+        the mask tensors', so a symbolic query batch against a
+        fixed-batch mask specializes on the spot and breaks
+        mark_dynamic's promise (a hard error). That per-family
+        specialization is §2.6's design, not a concession: the vocabulary
+        IS (batch x width), bounded and warmed. Only the paged write
+        map's length stays symbolic within a family (it tracks the real
+        token count step to step); the kv axis needs no marking anywhere,
+        because kv length is table VALUES, never a tensor shape, which is
+        what the recompile-counter gate pins.
         """
+        paged = meta.__dict__.get("paged_tables")
+        if paged is not None:
+            for t in paged.write_map:
+                if t.shape[0] > 1:
+                    torch._dynamo.mark_dynamic(t, 0)
+            return
         m = meta.kv_write_map
         batch_dim = (input_ids, meta.positions, meta.slots,
                      meta.start_pos, meta.num_new)

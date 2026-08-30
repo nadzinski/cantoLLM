@@ -192,9 +192,9 @@ class BatchingConfig:
                 )
         if self.warmup_shapes and not self.shapes_bounded:
             raise ValueError(
-                "warmup_shapes requires prefill_widths, kv_bucket, and "
-                "batch_buckets to all be set — an unbounded vocabulary "
-                "cannot be enumerated"
+                "warmup_shapes requires prefill_widths and batch_buckets "
+                "(plus kv_bucket on the padded layout, where the kv span "
+                "is a shape): an unbounded vocabulary cannot be enumerated"
             )
         if self.cuda_graphs and not self.warmup_shapes:
             raise ValueError(
@@ -217,11 +217,14 @@ class BatchingConfig:
 
     @property
     def shapes_bounded(self) -> bool:
-        """True when every step shape comes from `shape_vocabulary()`."""
+        """True when every step shape comes from `shape_vocabulary()`.
+        Paged needs no kv_bucket: the kv axis is a value there, not a
+        shape (paged-kv-plan.md §2.6), so (batch, width) alone bounds the
+        vocabulary. A kv_bucket that IS set stays validated-but-inert."""
         return (
             self.prefill_widths is not None
-            and self.kv_bucket is not None
             and self.batch_buckets is not None
+            and (self.kv_bucket is not None or self.paged_kv)
         )
 
     def shape_vocabulary(self) -> list[tuple[int, int, int]]:
@@ -230,10 +233,23 @@ class BatchingConfig:
         Widths are {1} ∪ prefill_widths; kv spans are kv_bucket multiples
         capped at max_seq_len; a step's history always covers its own new
         tokens, so pairs with kv_len < width are unreachable and skipped.
+
+        Paged (paged-kv-plan.md §2.6): the kv axis leaves shape space
+        (length is table values over maximal tensors), so the vocabulary
+        collapses to one entry per (batch, width) family. The third
+        element stays for callers' benefit and carries `max_seq_len`, the
+        constant logical bound a warm-up meta can claim; traffic's actual
+        kv values never key anything.
         """
         if not self.shapes_bounded:
-            raise ValueError("shape_vocabulary requires all bucket knobs set")
+            raise ValueError("shape_vocabulary requires the bucket knobs set")
         widths = [1, *self.prefill_widths]
+        if self.paged_kv:
+            return [
+                (b, w, self.max_seq_len)
+                for b in self.batch_buckets
+                for w in widths
+            ]
         kv_spans = list(range(self.kv_bucket, self.max_seq_len, self.kv_bucket))
         kv_spans.append(self.max_seq_len)
         return [

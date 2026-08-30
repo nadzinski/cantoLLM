@@ -309,10 +309,13 @@ class ContinuousBatchingScheduler:
             # Project the host block tables into the step's device tensors
             # and hand the meta its references (paged-kv-plan.md §2.5);
             # filler rows appended by shape_step get the scratch block.
+            # The width names the mask family (chunk 6): fill returns the
+            # family's cached BlockMask with the tables.
             meta.seed_paged_tables(self.paged_state.fill(
                 meta.rows,
                 [row.sequence.block_table for row in rows],
                 self.config.block_size,
+                meta.num_new_max,
             ))
 
         # The forward's actual problem shape (post-bucketing), for the

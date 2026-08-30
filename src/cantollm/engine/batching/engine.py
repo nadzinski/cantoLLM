@@ -97,8 +97,37 @@ def scheduler_from_runtime(
                 f"{MIN_CUDA_KV_BLOCK}, got {config.block_size} "
                 "(paged-kv-plan.md §2.13)"
             )
+    if config.paged_kv and config.cuda_graphs:
+        raise RuntimeError(
+            "CUDA graphs on paged decode land in chunk 8 "
+            "(paged-kv-plan.md §5); run paged with cuda_graphs off"
+        )
     pool = runtime.new_kv_pool(config)
     forward_fn = runtime.forward_batched
+    block_allocator = None
+    paged_state = None
+    if config.paged_kv:
+        # The paged trio lives with the scheduler (paged-kv-plan.md §2.5):
+        # the allocator owns which blocks are in use, the step state owns
+        # the persistent device tables the per-step metas reference, plus
+        # the per-family mask cache. Built BEFORE the warm-up sweep, whose
+        # paged branch fills these same buffers (and populates the mask
+        # cache) so no artifact guards on tensors traffic never presents.
+        # The mask builder is the attention method's, injected here
+        # because only assembly sees both sides; a runtime without one
+        # (padded-attention tests) skips mask caching and the method
+        # falls back to per-step construction.
+        from cantollm.engine.batching.paging import PagedStepState
+
+        method = getattr(runtime.model, "attention_method", None)
+        block_allocator = BlockAllocator(config.resolved_kv_blocks)
+        paged_state = PagedStepState(
+            max_rows=config.max_batch,
+            max_blocks_per_seq=config.max_seq_len // config.block_size,
+            num_kv_blocks=config.resolved_kv_blocks,
+            device=runtime.device,
+            mask_builder=getattr(method, "build_family_mask", None),
+        )
     if config.torch_compile:
         # Before the warm-up sweep, so the sweep's per-shape forwards are
         # what build the compiled artifacts (and, with cuda_graphs on,
@@ -117,7 +146,9 @@ def scheduler_from_runtime(
         # request can reach a shape the kernel hasn't already seen.
         from cantollm.engine.batching.warmup import warmup_shape_vocabulary
 
-        warmup_shape_vocabulary(runtime.forward_batched, pool, config)
+        warmup_shape_vocabulary(
+            runtime.forward_batched, pool, config, paged_state=paged_state
+        )
     if config.cuda_graphs:
         # Strictly after the eager warm-up (config validation enforces the
         # pairing): capture must record warm kernel choices, not one-time
@@ -135,21 +166,6 @@ def scheduler_from_runtime(
             captured, _time.perf_counter() - t0,
         )
         forward_fn = graphed
-    block_allocator = None
-    paged_state = None
-    if config.paged_kv:
-        # The paged trio lives with the scheduler (paged-kv-plan.md §2.5):
-        # the allocator owns which blocks are in use, the step state owns
-        # the persistent device tables the per-step metas reference.
-        from cantollm.engine.batching.paging import PagedStepState
-
-        block_allocator = BlockAllocator(config.resolved_kv_blocks)
-        paged_state = PagedStepState(
-            max_rows=config.max_batch,
-            max_blocks_per_seq=config.max_seq_len // config.block_size,
-            num_kv_blocks=config.resolved_kv_blocks,
-            device=runtime.device,
-        )
     return ContinuousBatchingScheduler(
         forward_fn=forward_fn,
         pool=pool,
