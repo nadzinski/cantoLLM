@@ -13,8 +13,12 @@ there, on the 5090, before any of this was designed.
 **Status: chunks 1–6 complete (chunk 6 closed 2026-08-30: paged
 vocabulary, paged warm-up, per-family mask caching, whole-impl compile;
 recompile and mask-construction gates green on CPU, counts 315→20 /
-80→5 measured). Next: chunk 7, the 5090 round 1 (`--attention flex`
-wiring, tripwires, A/B).**
+80→5 measured). Chunk 7 underway 2026-08-30: `--attention flex` wired
+end-to-end (da0d76c; flex implies the paged stack, §2.8 guard at the
+serve surface, --block-size/--num-kv-blocks knobs, round-1 configs
+`ab_5090_paged{,_longctx,_default}.toml` with predictions and gates in
+their headers); the 5090 round is dispatched to the box session,
+results land in §10 when it reports.**
 
 ## 1. Goal
 
