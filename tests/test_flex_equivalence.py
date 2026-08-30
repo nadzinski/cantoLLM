@@ -67,25 +67,21 @@ def build_models() -> tuple[Qwen3, Qwen3]:
     return oracle, flex
 
 
-def make_padded_pool(
-    max_batch: int = 4, device: torch.device = torch.device("cpu")
-) -> PaddedKVPool:
+def make_padded_pool(max_batch: int = 4) -> PaddedKVPool:
     return PaddedKVPool(
         num_layers=TINY_ARCH["num_transformers"], max_batch=max_batch,
         max_seq_len=MAX_SEQ, num_groups=TINY_ARCH["num_groups"],
         head_dim=TINY_ARCH["head_dim"], dtype=torch.float32,
-        device=device,
+        device=torch.device("cpu"),
     )
 
 
-def make_paged_pool(
-    device: torch.device = torch.device("cpu"),
-) -> PagedKVPool:
+def make_paged_pool() -> PagedKVPool:
     return PagedKVPool(
         num_layers=TINY_ARCH["num_transformers"], num_kv_blocks=NUM_BLOCKS,
         block_size=BLOCK, max_seq_len=MAX_SEQ,
         num_groups=TINY_ARCH["num_groups"], head_dim=TINY_ARCH["head_dim"],
-        dtype=torch.float32, device=device,
+        dtype=torch.float32, device=torch.device("cpu"),
     )
 
 
@@ -107,31 +103,35 @@ def base_meta(row_specs: list[tuple[int, int, int]]) -> BatchMeta:
 
 
 def paged_meta(
-    row_specs: list[tuple[int, int]], tables: list[list[int]]
+    row_specs: list[tuple[int, int]], tables: list[list[int]],
+    block: int = BLOCK, max_blocks_per_seq: int = MAX_BLOCKS_PER_SEQ,
+    num_blocks: int = NUM_BLOCKS,
 ) -> BatchMeta:
     """A seeded paged meta. row_specs: [(start_pos, num_new)]; tables[r]
-    is row r's block table, covering at least its visible history."""
+    is row r's block table, covering at least its visible history. The
+    geometry defaults are the CPU suite's; `TestOnCUDA` passes its own
+    (the compiled lowering rejects the tiny CPU geometry)."""
     rows = [(0, start, num_new) for start, num_new in row_specs]
     meta = base_meta(rows)
     batch = len(rows)
     block_tables = torch.zeros(
-        (batch, MAX_BLOCKS_PER_SEQ), dtype=torch.int32
+        (batch, max_blocks_per_seq), dtype=torch.int32
     )
     kv_num_blocks = torch.zeros(batch, dtype=torch.int32)
     inverse = torch.full(
-        (batch, NUM_BLOCKS + 1), MAX_BLOCKS_PER_SEQ, dtype=torch.int32
+        (batch, num_blocks + 1), max_blocks_per_seq, dtype=torch.int32
     )
     for r, ((start, num_new), table) in enumerate(zip(row_specs, tables)):
         history = start + num_new
-        kv_num_blocks[r] = -(-history // BLOCK)
-        for j, block in enumerate(table):
-            block_tables[r, j] = block
-            inverse[r, block] = j
+        kv_num_blocks[r] = -(-history // block)
+        for j, blk in enumerate(table):
+            block_tables[r, j] = blk
+            inverse[r, blk] = j
     meta.seed_paged_tables(PagedTables(
         block_tables=block_tables,
         kv_num_blocks=kv_num_blocks,
         inverse_tables=inverse,
-        write_map=paged_write_map(rows, tables, BLOCK),
+        write_map=paged_write_map(rows, tables, block),
     ))
     return meta
 
@@ -321,7 +321,64 @@ class TestPoolState:
 
 # ---------------------------------------------------------------------------
 # The 5090 half: the compiled-CUDA twin (paged-kv-plan.md §4, §5.4).
+#
+# The compiled lowering constrains geometry in ways eager CPU never does
+# (probed on the 5090, 2026-08-30, torch 2.10.0+cu128 / sm_120):
+# head_dim must be >= 16 (a tl.dot constraint), and the BlockMask's KV
+# BLOCK_SIZE must be >= 64 on this build — below that every Triton
+# template choice is pruned away (NoValidChoicesError); Q BLOCK_SIZE and
+# q_len don't matter. Revalidate the 64 floor on torch upgrades: it is
+# Inductor template pruning, not a documented contract.
+#
+# So the twin runs the CPU scenarios at kernel-supported geometry:
+# 64-token blocks, multi-block prompts for the boundary crossings, and
+# head_dim >= 16. The method under test is untouched — it uses its
+# `block_size` for both index translation and mask granularity, which is
+# exactly why production's 16-token pages vs this 64 floor is a
+# chunk-5/6 design decision (paged-kv-plan.md chunk log), not this
+# gate's concern.
 # ---------------------------------------------------------------------------
+
+CUDA_BLOCK = 64        # the mask KV-block floor this build will lower
+CUDA_MAX_SEQ = 512
+CUDA_MAX_BLOCKS_PER_SEQ = CUDA_MAX_SEQ // CUDA_BLOCK   # 8 — the sentinel
+CUDA_NUM_BLOCKS = 12   # allocatable; scratch sits past
+
+# Multi-block prompts (3 and 2 blocks at CUDA_BLOCK), deterministic.
+CUDA_PROMPT_A = [(7 * i + 11) % 2048 for i in range(150)]
+CUDA_PROMPT_B = [(13 * i + 5) % 2048 for i in range(100)]
+
+# f32 toy arch at CUDA-lowerable head_dim; RoPE table sized for the
+# longer prompts.
+CUDA_ARCH = TINY_ARCH | {"head_dim": 16, "max_seq_len": CUDA_MAX_SEQ}
+
+
+def build_cuda_models(arch, oracle_method, device):
+    """(oracle, flex under-test) on `device`, identical weights."""
+    torch.manual_seed(1234)
+    oracle = Qwen3(qwen3_config=arch, attention_method=oracle_method)
+    flex = Qwen3(
+        qwen3_config=arch,
+        attention_method=FlexAttentionMethod(block_size=CUDA_BLOCK),
+    )
+    flex.load_state_dict(oracle.state_dict())
+    return oracle.eval().to(device), flex.eval().to(device)
+
+
+def cuda_pools(arch, dtype, device):
+    """(padded, paged) pools at the CUDA twin geometry."""
+    padded = PaddedKVPool(
+        num_layers=arch["num_transformers"], max_batch=4,
+        max_seq_len=CUDA_MAX_SEQ, num_groups=arch["num_groups"],
+        head_dim=arch["head_dim"], dtype=dtype, device=device,
+    )
+    paged = PagedKVPool(
+        num_layers=arch["num_transformers"], num_kv_blocks=CUDA_NUM_BLOCKS,
+        block_size=CUDA_BLOCK, max_seq_len=CUDA_MAX_SEQ,
+        num_groups=arch["num_groups"], head_dim=arch["head_dim"],
+        dtype=dtype, device=device,
+    )
+    return padded, paged
 
 
 @torch.inference_mode()
@@ -339,12 +396,15 @@ def padded_step_on(model, pool, rows, device):
 
 @torch.inference_mode()
 def flex_step_on(model, pool, rows, device):
-    """`flex_step` through `move_batch_to` — which must deliver the seeded
-    paged tables to the device intact (the 40fbcf9 hazard family; the CPU
-    suite can't see a drop because nothing actually moves there)."""
+    """`flex_step` at the CUDA twin geometry, through `move_batch_to` —
+    which must deliver the seeded paged tables to the device intact (the
+    40fbcf9 hazard family; the CPU suite can't see a drop because nothing
+    actually moves there)."""
     meta = paged_meta(
         [(start, len(toks)) for start, toks, _ in rows],
         [table for _, _, table in rows],
+        block=CUDA_BLOCK, max_blocks_per_seq=CUDA_MAX_BLOCKS_PER_SEQ,
+        num_blocks=CUDA_NUM_BLOCKS,
     )
     input_ids = torch.zeros(len(rows), meta.num_new_max, dtype=torch.int64)
     for i, (_, toks, _) in enumerate(rows):
@@ -390,88 +450,102 @@ class TestOnCUDA:
     compiled, on the device, where the flex-decoding kernel is a distinct
     code path — plus the kernel-actually-ran counter (the SDPA
     silent-fallback lesson, generalized) and a bf16 run at production
-    attention geometry (the f32 tiny model is the wrong probe for
-    dtype/shape-dependent kernel behavior; the sdpa suite's lesson)."""
+    attention geometry (kernel support surfaces are dtype/shape-dependent;
+    the sdpa suite's lesson)."""
 
     def test_scattered_chunked_prefill_then_decode_matches_padded(self):
-        # The suite's core scenario end-to-end on one pool: chunked
-        # prefill through a scattered table (widths 3 and 9, neither on a
-        # block boundary), then two q_len=1 steps — the flex-decoding
-        # path, with the decode crossing into a fourth block.
+        # The suite's core scenario at twin geometry: chunked prefill
+        # through a scattered table (chunks of 70 and 80, neither split
+        # on a 64-token block boundary), then two q_len=1 steps — the
+        # flex-decoding path.
         device = torch.device("cuda")
-        oracle, flex = build_models()
-        oracle, flex = oracle.to(device), flex.to(device)
-        padded_pool = make_padded_pool(device=device)
-        paged_pool = make_paged_pool(device=device)
-        table = [5, 2, 9, 12]
+        oracle, flex = build_cuda_models(
+            CUDA_ARCH, PaddedAttentionMethod(), device
+        )
+        padded_pool, paged_pool = cuda_pools(CUDA_ARCH, torch.float32, device)
+        table = [5, 2, 9]
         with compiled_flex_kernels():
-            padded_step_on(oracle, padded_pool, [(0, 0, PROMPT_A[:3])], device)
-            flex_step_on(flex, paged_pool, [(0, PROMPT_A[:3], table)], device)
-            expected = padded_step_on(
-                oracle, padded_pool, [(0, 3, PROMPT_A[3:])], device
+            padded_step_on(
+                oracle, padded_pool, [(0, 0, CUDA_PROMPT_A[:70])], device
             )
-            got = flex_step_on(flex, paged_pool, [(3, PROMPT_A[3:], table)], device)
+            flex_step_on(
+                flex, paged_pool, [(0, CUDA_PROMPT_A[:70], table)], device
+            )
+            expected = padded_step_on(
+                oracle, padded_pool, [(0, 70, CUDA_PROMPT_A[70:])], device
+            )
+            got = flex_step_on(
+                flex, paged_pool, [(70, CUDA_PROMPT_A[70:], table)], device
+            )
             torch.testing.assert_close(got, expected, atol=1e-4, rtol=1e-4)
             for step in range(2):
-                start = len(PROMPT_A) + step
+                start = len(CUDA_PROMPT_A) + step
                 expected = padded_step_on(
                     oracle, padded_pool, [(0, start, [DECODE_TOKEN])], device
                 )
                 got = flex_step_on(
                     flex, paged_pool, [(start, [DECODE_TOKEN], table)], device
                 )
-                torch.testing.assert_close(got, expected, atol=1e-4, rtol=1e-4)
+                torch.testing.assert_close(
+                    got, expected, atol=1e-4, rtol=1e-4
+                )
 
     def test_mixed_batch_matches_padded(self):
-        # The mixed decode + prefill-chunk step from the CPU suite, on
-        # device: one batch, two rows, two scattered tables.
+        # One batch, two rows, two scattered tables: row A decodes at
+        # position 150, row B finishes a split prefill (30 + 70).
         device = torch.device("cuda")
-        oracle, flex = build_models()
-        oracle, flex = oracle.to(device), flex.to(device)
-        padded_pool = make_padded_pool(device=device)
-        paged_pool = make_paged_pool(device=device)
-        table_a, table_b = [1, 2, 7, 5], [4, 0, 6]
-        prompt_b = [51, 52, 53, 54, 55, 56, 57, 58, 59]
+        oracle, flex = build_cuda_models(
+            CUDA_ARCH, PaddedAttentionMethod(), device
+        )
+        padded_pool, paged_pool = cuda_pools(CUDA_ARCH, torch.float32, device)
+        table_a, table_b = [5, 2, 9], [7, 0]
         with compiled_flex_kernels():
-            padded_step_on(oracle, padded_pool, [(0, 0, PROMPT_A)], device)
-            padded_step_on(oracle, padded_pool, [(1, 0, prompt_b[:3])], device)
-            flex_step_on(flex, paged_pool, [(0, PROMPT_A, table_a)], device)
-            flex_step_on(flex, paged_pool, [(0, prompt_b[:3], table_b)], device)
+            padded_step_on(oracle, padded_pool, [(0, 0, CUDA_PROMPT_A)], device)
+            padded_step_on(
+                oracle, padded_pool, [(1, 0, CUDA_PROMPT_B[:30])], device
+            )
+            flex_step_on(
+                flex, paged_pool, [(0, CUDA_PROMPT_A, table_a)], device
+            )
+            flex_step_on(
+                flex, paged_pool, [(0, CUDA_PROMPT_B[:30], table_b)], device
+            )
 
             expected = padded_step_on(oracle, padded_pool, [
-                (0, len(PROMPT_A), [DECODE_TOKEN]),
-                (1, 3, prompt_b[3:]),
+                (0, len(CUDA_PROMPT_A), [DECODE_TOKEN]),
+                (1, 30, CUDA_PROMPT_B[30:]),
             ], device)
             got = flex_step_on(flex, paged_pool, [
-                (len(PROMPT_A), [DECODE_TOKEN], table_a),
-                (3, prompt_b[3:], table_b),
+                (len(CUDA_PROMPT_A), [DECODE_TOKEN], table_a),
+                (30, CUDA_PROMPT_B[30:], table_b),
             ], device)
             torch.testing.assert_close(got, expected, atol=1e-4, rtol=1e-4)
 
     def test_flex_kernel_actually_ran(self):
         # Every output-level test above stays green if compilation quietly
         # falls back to eager Flex — profile a decode step and require an
-        # Inductor flex kernel on the GPU timeline. Caught twice on the
-        # sdpa side during 5090 bring-up; hence a standing counter here.
+        # Inductor flex kernel on the GPU timeline (this build names them
+        # triton_tem_fused_flex_attention_0 and friends). Caught twice on
+        # the sdpa side during 5090 bring-up; hence a standing counter.
         from torch.profiler import ProfilerActivity, profile
 
         device = torch.device("cuda")
-        _, flex = build_models()
-        flex = flex.to(device)
-        paged_pool = make_paged_pool(device=device)
-        table = [5, 2, 9, 12]
+        _, flex = build_cuda_models(CUDA_ARCH, PaddedAttentionMethod(), device)
+        _, paged_pool = cuda_pools(CUDA_ARCH, torch.float32, device)
+        table = [5, 2, 9]
         with compiled_flex_kernels():
-            flex_step_on(flex, paged_pool, [(0, PROMPT_A, table)], device)
+            flex_step_on(flex, paged_pool, [(0, CUDA_PROMPT_A, table)], device)
             # Warm the decode shape family so the profiled step replays a
             # compiled kernel instead of timing Dynamo.
             flex_step_on(
-                flex, paged_pool, [(len(PROMPT_A), [DECODE_TOKEN], table)], device
+                flex, paged_pool,
+                [(len(CUDA_PROMPT_A), [DECODE_TOKEN], table)], device,
             )
             torch.cuda.synchronize()
             with profile(activities=[ProfilerActivity.CUDA]) as prof:
                 flex_step_on(
                     flex, paged_pool,
-                    [(len(PROMPT_A) + 1, [DECODE_TOKEN], table)], device,
+                    [(len(CUDA_PROMPT_A) + 1, [DECODE_TOKEN], table)], device,
                 )
                 torch.cuda.synchronize()
         kernels = [
@@ -485,54 +559,35 @@ class TestOnCUDA:
     def test_bf16_production_geometry_close_to_sdpa(self):
         # Compiled Flex vs the served sdpa stack at the geometry the
         # engine actually runs: GQA 16 query / 8 KV heads, head_dim 128,
-        # bf16 (kernel support surfaces are dtype/shape-dependent; the f32
-        # tiny model never exercises them). Same tiny depth and embedding
-        # so it stays a fixture, not a checkpoint. Tolerance is the sdpa
-        # suite's bf16 pair; the first 5090 run calibrates it — if it
-        # fails, report the max-diff, don't loosen silently.
+        # bf16. Same tiny depth and embedding so it stays a fixture, not
+        # a checkpoint. Tolerance is the sdpa suite's bf16 pair; the
+        # first 5090 run calibrates it — if it fails, report the
+        # max-diff, don't loosen silently.
         device = torch.device("cuda")
         arch = TINY_ARCH | {
             "num_heads": 16, "num_groups": 8, "head_dim": 128,
-            "dtype": torch.bfloat16,
+            "max_seq_len": CUDA_MAX_SEQ, "dtype": torch.bfloat16,
         }
-        torch.manual_seed(1234)
-        sdpa_model = Qwen3(
-            qwen3_config=arch, attention_method=SDPAAttentionMethod()
+        sdpa_model, flex_model = build_cuda_models(
+            arch, SDPAAttentionMethod(), device
         )
-        flex_model = Qwen3(
-            qwen3_config=arch,
-            attention_method=FlexAttentionMethod(block_size=BLOCK),
-        )
-        flex_model.load_state_dict(sdpa_model.state_dict())
-        sdpa_model = sdpa_model.eval().to(device)
-        flex_model = flex_model.eval().to(device)
-        padded_pool = PaddedKVPool(
-            num_layers=arch["num_transformers"], max_batch=4,
-            max_seq_len=MAX_SEQ, num_groups=arch["num_groups"],
-            head_dim=arch["head_dim"], dtype=torch.bfloat16, device=device,
-        )
-        paged_pool = PagedKVPool(
-            num_layers=arch["num_transformers"], num_kv_blocks=NUM_BLOCKS,
-            block_size=BLOCK, max_seq_len=MAX_SEQ,
-            num_groups=arch["num_groups"], head_dim=arch["head_dim"],
-            dtype=torch.bfloat16, device=device,
-        )
-        table = [5, 2, 9, 12]
+        padded_pool, paged_pool = cuda_pools(arch, torch.bfloat16, device)
+        table = [5, 2, 9]
         with compiled_flex_kernels():
             expected = padded_step_on(
-                sdpa_model, padded_pool, [(0, 0, PROMPT_A)], device
+                sdpa_model, padded_pool, [(0, 0, CUDA_PROMPT_A)], device
             )
             got = flex_step_on(
-                flex_model, paged_pool, [(0, PROMPT_A, table)], device
+                flex_model, paged_pool, [(0, CUDA_PROMPT_A, table)], device
             )
             torch.testing.assert_close(got, expected, atol=3e-2, rtol=1e-2)
 
             expected = padded_step_on(
                 sdpa_model, padded_pool,
-                [(0, len(PROMPT_A), [DECODE_TOKEN])], device,
+                [(0, len(CUDA_PROMPT_A), [DECODE_TOKEN])], device,
             )
             got = flex_step_on(
                 flex_model, paged_pool,
-                [(len(PROMPT_A), [DECODE_TOKEN], table)], device,
+                [(len(CUDA_PROMPT_A), [DECODE_TOKEN], table)], device,
             )
             torch.testing.assert_close(got, expected, atol=3e-2, rtol=1e-2)
