@@ -57,22 +57,43 @@ class BlockAllocator:
     """
 
     def __init__(self, num_blocks: int):
-        raise NotImplementedError("author's chunk-2 session")
+        self.num_blocks = num_blocks
+        self._free_blocks: deque[int] = deque(range(num_blocks))
+        self._refcounts: dict[int, int] = {}
 
     def allocate(self) -> int | None:
         """The next free block at refcount 1, or None when exhausted."""
-        raise NotImplementedError("author's chunk-2 session")
+        if len(self._free_blocks) == 0:
+            return None
+        block = self._free_blocks.popleft()
+        self._refcounts[block] = 1
+        return block
 
     def free(self, block: int) -> None:
         """Drop one hold; at refcount 0 the block joins the FIFO's back."""
-        raise NotImplementedError("author's chunk-2 session")
+        self._check_range(block)
+        if block not in self._refcounts:
+            raise ValueError(f"double free of block {block}")
+        self._refcounts[block] -= 1
+        if self._refcounts[block] == 0:
+            del self._refcounts[block]
+            self._free_blocks.append(block)
 
     def incref(self, block: int) -> None:
         """One more holder of an allocated block (Phase 5 prefix sharing)."""
-        raise NotImplementedError("author's chunk-2 session")
+        self._check_range(block)
+        if block not in self._refcounts:
+            raise ValueError(f"incref of a free block {block}")
+        self._refcounts[block] += 1
+
+    def _check_range(self, block: int) -> None:
+        if not 0 <= block < self.num_blocks:
+            raise ValueError(
+                f"block {block} out of range [0, {self.num_blocks})"
+            )
 
     def num_free(self) -> int:
-        raise NotImplementedError("author's chunk-2 session")
+        return len(self._free_blocks)
 
     def num_allocated(self) -> int:
-        raise NotImplementedError("author's chunk-2 session")
+        return len(self._refcounts)

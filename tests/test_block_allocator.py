@@ -1,15 +1,12 @@
-"""BlockAllocator contract suite — PRE-LANDED RED (P4 chunk 2).
+"""BlockAllocator contract suite (P4 chunk 2).
 
-The implementation is the author's hand-written session (paged-kv-plan.md
-§8); this suite is the contract it goes red→green against, the step-5 /
-scheduler-port pattern from Phase 2. Delete the module xfail marker as the
-implementation lands — every test here must then pass unmarked.
+Pre-landed red for the author's hand-written session (paged-kv-plan.md §8),
+the step-5 / scheduler-port pattern from Phase 2; green since 2026-08-29.
 
-Contract summary (mirrors the stub's docstring): ascending-deque
-determinism, FIFO reuse, refcount-1 allocation, free-at-zero, loud misuse
-(double free, incref of a free block, out-of-range ids), and the scratch
-block never entering circulation because the allocator is simply sized
-without it.
+Contract: ascending-deque determinism, FIFO reuse, refcount-1 allocation,
+free-at-zero, loud misuse (double free, incref of a free block,
+out-of-range ids), and the scratch block never entering circulation
+because the allocator is simply sized without it.
 """
 
 import pytest
@@ -17,12 +14,6 @@ import torch
 
 from cantollm.engine.batching.allocator import BlockAllocator
 from cantollm.kv_pool import PagedKVPool
-
-pytestmark = pytest.mark.xfail(
-    raises=NotImplementedError,
-    reason="BlockAllocator body is the author's chunk-2 session "
-    "(paged-kv-plan.md §5.2); delete this marker as it goes green",
-)
 
 
 class TestAllocationOrder:

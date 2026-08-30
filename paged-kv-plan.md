@@ -465,3 +465,12 @@ phase start; Mac/CPU counts).
    scratch exclusion). Suite otherwise green (535 + 5 chaos). The chunk
    completes with the author's hand-written session: fill the stub,
    delete the module xfail marker, all 11 green.
+   Completed 2026-08-29: the author hand-wrote the deque + refcount core
+   (one red→green finding: `allocate()` popped and refcounted but never
+   returned the block — 7 of 9 failures from one missing return, and the
+   xfail marker's `raises=NotImplementedError` constraint is what made
+   the partial implementation loudly visible instead of quietly xfailed);
+   the loud-misuse guards (range check, double-free, incref-of-free, in
+   SlotAllocator's message style) were handed back to Claude as
+   bookkeeping. Marker deleted, all 11 pass unmarked; suite 546 + 5
+   chaos.
