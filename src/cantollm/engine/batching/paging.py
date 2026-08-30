@@ -280,6 +280,22 @@ class PagedStepState:
                 mask = self.mask_builder(
                     tables, self.start_pos[:batch], num_new_max
                 )
+                # Pin the mask's own tensors static: they enter the
+                # compiled graph as inputs whose batch dim differs per
+                # family, and automatic dynamic would promote them to
+                # symbolic on the second family. A symbolic batch
+                # anywhere near the flex call risks the same silent
+                # flex-decoding disqualification the 2026-08-30 round-1
+                # A/B measured as a 4x multi-row decode cliff
+                # (runtime._mark_compile_dims covers the meta-side
+                # tensors; these views are created inside the builder,
+                # out of its reach).
+                for t in (
+                    getattr(mask, "kv_num_blocks", None),
+                    getattr(mask, "kv_indices", None),
+                ):
+                    if isinstance(t, torch.Tensor):
+                        torch._dynamo.mark_static(t)
                 self.masks[key] = mask
             tables = tables._replace(mask=mask)
         return tables

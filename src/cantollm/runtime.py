@@ -245,20 +245,31 @@ class ModelRuntime:
         columns are never pinned.
 
         Paged metas (chunk 6): one artifact per (batch, width) family,
-        under either strategy. The family's cached BlockMask pins the
-        batch dim: flex_attention compares the query's batch size against
-        the mask tensors', so a symbolic query batch against a
+        under either strategy, with the batch dim pinned STATIC, not
+        merely left unmarked. Two reasons. The family's cached BlockMask
+        already fixes the batch (a symbolic query batch against a
         fixed-batch mask specializes on the spot and breaks
-        mark_dynamic's promise (a hard error). That per-family
-        specialization is §2.6's design, not a concession: the vocabulary
-        IS (batch x width), bounded and warmed. Only the paged write
-        map's length stays symbolic within a family (it tracks the real
-        token count step to step); the kv axis needs no marking anywhere,
-        because kv length is table VALUES, never a tensor shape, which is
-        what the recompile-counter gate pins.
+        mark_dynamic's promise, a hard error). And left unmarked,
+        automatic dynamic promotes the batch dim to symbolic on the
+        second family it sees, which silently disqualifies the
+        flex-decoding split-KV kernel: Inductor's `_use_flex_decoding`
+        requires a statically-known batch to size its KV splits, so every
+        multi-row decode fell back to the main flex template (a 128-wide
+        Q tile for one real query row, no KV splitting): the 4x decode
+        step cliff at 1 -> 2 rows the 2026-08-30 round-1 A/B measured at
+        long KV. Per-family static batch is §2.6's design anyway: the
+        vocabulary IS (batch x width), bounded and warmed. Only the paged
+        write map's length stays symbolic within a family (it tracks the
+        real token count step to step); the kv axis needs no marking
+        anywhere, because kv length is table VALUES, never a tensor
+        shape, which is what the recompile-counter gate pins.
         """
         paged = meta.__dict__.get("paged_tables")
         if paged is not None:
+            for t in ((input_ids, meta.positions, meta.slots,
+                       meta.start_pos, meta.num_new, paged.block_tables,
+                       paged.kv_num_blocks, paged.inverse_tables)):
+                torch._dynamo.mark_static(t, 0)
             for t in paged.write_map:
                 if t.shape[0] > 1:
                     torch._dynamo.mark_dynamic(t, 0)

@@ -367,6 +367,63 @@ class TestCompiledPagedRuntime:
             "meta; nothing reads it"
         )
 
+    def test_paged_batch_dims_stay_static_across_families(self):
+        """The round-1 regression pin (2026-08-30 A/B): with batch dims
+        left unmarked, automatic dynamic promoted them to symbolic on
+        the SECOND (batch, width) family (one artifact then served every
+        B >= 2), and a symbolic query batch disqualifies Inductor's
+        flex-decoding split-KV kernel (`_use_flex_decoding` requires a
+        static batch to size its splits), silently serving every
+        multi-row decode through the main flex template: the measured 4x
+        decode step-time cliff at long KV. The paged marking pins the
+        meta-side batch dims and the cached mask's own tensors static.
+
+        Checked on the traced graphs' placeholder example_values (fake
+        tensors carry SymInt dims; the example_inputs a plain backend
+        receives are real tensors and always look static): no 2-D-plus
+        placeholder may have a symbolic leading dim. The write map's 1-D
+        columns are the one deliberately symbolic input."""
+        model = make_flex_model()
+        runtime = make_runtime(model)
+        artifacts = []
+
+        def inspecting_backend(gm, example_inputs):
+            symbolic = []
+            for node in gm.graph.nodes:
+                if node.op != "placeholder":
+                    continue
+                ev = node.meta.get("example_value")
+                if isinstance(ev, torch.Tensor) and ev.dim() >= 2:
+                    if not isinstance(ev.shape[0], int):
+                        symbolic.append(
+                            (node.name, tuple(str(s) for s in ev.shape))
+                        )
+            artifacts.append(symbolic)
+            return gm.forward
+
+        runtime.enable_torch_compile(backend=inspecting_backend)
+        pool, state = make_paged_pool(), make_state(model)
+        # Several batch sizes through the same code object: exactly the
+        # sequence that makes automatic dynamic want to promote.
+        families = (
+            ([(2, 1)], [[5]]),
+            ([(3, 1), (5, 1)], [[0], [1, 2]]),
+            ([(4, 1), (6, 1), (2, 1), (9, 1)],
+             [[0, 8], [1, 2], [3], [4, 6, 7]]),
+        )
+        for row_specs, tables in families:
+            meta = paged_meta_via_state(state, row_specs, tables)
+            runtime.forward_batched(ids_for(meta), meta, pool)
+        offenders = [s for s in artifacts if s]
+        assert not offenders, (
+            f"batch dims went symbolic in the traced graphs {offenders}: "
+            "on CUDA this disqualifies the flex-decoding kernel "
+            "(static_batch) and multi-row decode runs the main template"
+        )
+        # And families never unified into one symbolic artifact: one
+        # compile per (batch, width) family, the §2.6 vocabulary.
+        assert len(artifacts) == len(families)
+
     def test_kv_length_changes_recompile_nothing(self):
         """THE chunk-6 exit gate. Warm a decode family, a lone-row decode
         family, and a prefill family; then run them at new kv lengths
