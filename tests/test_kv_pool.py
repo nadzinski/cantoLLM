@@ -158,6 +158,7 @@ class TestRuntimeNewKVPool:
         )
         config = BatchingConfig(
             max_batch=2, max_seq_len=32, max_tokens_per_step=8, paged_kv=True,
+            block_size=16,
         )
         pool = runtime.new_kv_pool(config)
         assert isinstance(pool, PagedKVPool)
@@ -174,7 +175,7 @@ class TestRuntimeNewKVPool:
         )
         pool = runtime.new_kv_pool(BatchingConfig(
             max_batch=2, max_seq_len=32, max_tokens_per_step=8,
-            paged_kv=True, num_kv_blocks=3,
+            paged_kv=True, block_size=16, num_kv_blocks=3,
         ))
         assert pool.num_kv_blocks == 3
         # The RoPE guard predates the layout branch and covers both:

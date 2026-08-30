@@ -84,6 +84,19 @@ def scheduler_from_runtime(
             "paged_kv on CUDA requires torch_compile "
             "(paged-kv-plan.md §2.8)"
         )
+    if config.paged_kv and runtime.device.type == "cuda":
+        from cantollm.models.attention.flex import MIN_CUDA_KV_BLOCK
+
+        if config.block_size < MIN_CUDA_KV_BLOCK:
+            # Same device-coupled shape as the compile guard above: the
+            # compiled Flex kernels prune every template below this KV
+            # block size (5090 probe, 2026-08-30), which otherwise
+            # surfaces as a cryptic NoValidChoicesError mid-warm-up.
+            raise RuntimeError(
+                f"paged_kv on CUDA requires block_size >= "
+                f"{MIN_CUDA_KV_BLOCK}, got {config.block_size} "
+                "(paged-kv-plan.md §2.13)"
+            )
     pool = runtime.new_kv_pool(config)
     forward_fn = runtime.forward_batched
     if config.torch_compile:

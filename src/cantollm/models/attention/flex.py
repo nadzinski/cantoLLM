@@ -59,12 +59,16 @@ from torch.nn.attention.flex_attention import BlockMask, flex_attention
 
 from cantollm.models.attention.protocol import BatchMeta
 
-# The CUDA Inductor prefill templates tile queries at BLOCK_M = 128 on the
-# probed build (5090, torch 2.10.0+cu128 / sm_120, 2026-08-30), and the
-# mask's Q BLOCK_SIZE must be a multiple of the tile. Eager Flex never
-# checks. Revalidate on torch upgrades alongside the KV-block floor
-# (paged-kv-plan.md chunk log, chunk 4).
+# Geometry floors of the compiled CUDA kernels on the probed build (5090,
+# torch 2.10.0+cu128 / sm_120, 2026-08-30). Eager Flex checks neither, so
+# CPU runs cannot catch a violation; revalidate both on torch upgrades
+# (paged-kv-plan.md chunk log, chunk 4). The prefill templates tile
+# queries at BLOCK_M = 128 and the mask's Q BLOCK_SIZE must be a multiple
+# of it; mask KV blocks below 64 prune every template choice
+# (NoValidChoicesError), which is what pins the served block_size default
+# (paged-kv-plan.md §2.13) — enforced at engine assembly.
 Q_BLOCK_MULTIPLE = 128
+MIN_CUDA_KV_BLOCK = 64
 
 
 class FlexAttentionMethod:

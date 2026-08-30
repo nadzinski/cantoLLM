@@ -84,10 +84,14 @@ class BatchingConfig:
     `torch_compile`: Flex only performs compiled (flex-spike-results.md
     §7) — enforced at engine assembly, where the device is known."""
 
-    block_size: int = 16
-    """Paged pool block size in tokens. 16 is the vLLM default; the
-    deferred flash-attn arm would need 256, which is why this stays a
-    knob (paged-kv-plan.md §2.1). Ignored without `paged_kv`."""
+    block_size: int = 64
+    """Paged pool block size in tokens. 64 because the compiled CUDA
+    Flex kernels refuse mask KV blocks below it on the probed build
+    (paged-kv-plan.md §2.13; enforced at engine assembly, where the
+    device is known). It stays a knob: 16 (the vLLM default) is fine on
+    CPU/eager and may return if a torch upgrade lowers the floor, and
+    the deferred flash-attn arm would need 256 (§2.1). Ignored without
+    `paged_kv`."""
 
     num_kv_blocks: int | None = None
     """Paged pool capacity in blocks. None = parity capacity
