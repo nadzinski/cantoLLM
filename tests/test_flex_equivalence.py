@@ -15,7 +15,7 @@ Trust model: the oracle is the PADDED stack (proven against the
 sequential einsum path by test_padded_equivalence.py), exercising none of
 the new paging machinery. atol=1e-5 for logits (a different attend sums
 in a different order), atol=1e-6 for pool-write pins (identical
-projection math up to the write). The CPU half is eager only — eager Flex
+projection math up to the write). The CPU half is eager only: eager Flex
 proves the index translation, not the flex-decoding kernel, which exists
 only compiled on CUDA. `TestOnCUDA` is the compiled twin: the chunk's
 5090 exit gate (paged-kv-plan.md §4, §5.4).
@@ -325,14 +325,14 @@ class TestPoolState:
 # The compiled lowering constrains geometry in ways eager CPU never does
 # (probed on the 5090, 2026-08-30, torch 2.10.0+cu128 / sm_120):
 # head_dim must be >= 16 (a tl.dot constraint), and the BlockMask's KV
-# BLOCK_SIZE must be >= 64 on this build — below that every Triton
+# BLOCK_SIZE must be >= 64 on this build; below that every Triton
 # template choice is pruned away (NoValidChoicesError); Q BLOCK_SIZE and
 # q_len don't matter. Revalidate the 64 floor on torch upgrades: it is
 # Inductor template pruning, not a documented contract.
 #
 # So the twin runs the CPU scenarios at kernel-supported geometry:
 # 64-token blocks, multi-block prompts for the boundary crossings, and
-# head_dim >= 16. The method under test is untouched — it uses its
+# head_dim >= 16. The method under test is untouched: it uses its
 # `block_size` for both index translation and mask granularity, which is
 # exactly why production's 16-token pages vs this 64 floor is a
 # chunk-5/6 design decision (paged-kv-plan.md chunk log), not this
@@ -341,7 +341,7 @@ class TestPoolState:
 
 CUDA_BLOCK = 64        # the mask KV-block floor this build will lower
 CUDA_MAX_SEQ = 512
-CUDA_MAX_BLOCKS_PER_SEQ = CUDA_MAX_SEQ // CUDA_BLOCK   # 8 — the sentinel
+CUDA_MAX_BLOCKS_PER_SEQ = CUDA_MAX_SEQ // CUDA_BLOCK   # 8, the sentinel
 CUDA_NUM_BLOCKS = 12   # allocatable; scratch sits past
 
 # Multi-block prompts (3 and 2 blocks at CUDA_BLOCK), deterministic.
@@ -396,7 +396,7 @@ def padded_step_on(model, pool, rows, device):
 
 @torch.inference_mode()
 def flex_step_on(model, pool, rows, device):
-    """`flex_step` at the CUDA twin geometry, through `move_batch_to` —
+    """`flex_step` at the CUDA twin geometry, through `move_batch_to`,
     which must deliver the seeded paged tables to the device intact (the
     40fbcf9 hazard family; the CPU suite can't see a drop because nothing
     actually moves there)."""
@@ -430,7 +430,7 @@ def _compiled_flex_attention():
 def compiled_flex_kernels():
     """Route FlexAttentionMethod's attention call through torch.compile.
 
-    Only the `flex_attention` call is compiled — the spike's exact route
+    Only the `flex_attention` call is compiled: the spike's exact route
     (flex-spike-results.md §3) and the narrowest change that makes the
     flex-decoding split-KV kernel exist. The model-level compile wiring
     (`forward_batched_impl` traced whole) is chunk 6's, not this gate's.
@@ -448,7 +448,7 @@ class TestOnCUDA:
     """The chunk-4 exit gate. The CPU half proves the index translation;
     these rerun the equivalence scenarios with the attention call
     compiled, on the device, where the flex-decoding kernel is a distinct
-    code path — plus the kernel-actually-ran counter (the SDPA
+    code path, plus the kernel-actually-ran counter (the SDPA
     silent-fallback lesson, generalized) and a bf16 run at production
     attention geometry (kernel support surfaces are dtype/shape-dependent;
     the sdpa suite's lesson)."""
@@ -456,7 +456,7 @@ class TestOnCUDA:
     def test_scattered_chunked_prefill_then_decode_matches_padded(self):
         # The suite's core scenario at twin geometry: chunked prefill
         # through a scattered table (chunks of 70 and 80, neither split
-        # on a 64-token block boundary), then two q_len=1 steps — the
+        # on a 64-token block boundary), then two q_len=1 steps: the
         # flex-decoding path.
         device = torch.device("cuda")
         oracle, flex = build_cuda_models(
@@ -523,7 +523,7 @@ class TestOnCUDA:
 
     def test_flex_kernel_actually_ran(self):
         # Every output-level test above stays green if compilation quietly
-        # falls back to eager Flex — profile a decode step and require an
+        # falls back to eager Flex: profile a decode step and require an
         # Inductor flex kernel on the GPU timeline (this build names them
         # triton_tem_fused_flex_attention_0 and friends). Caught twice on
         # the sdpa side during 5090 bring-up; hence a standing counter.
@@ -552,7 +552,7 @@ class TestOnCUDA:
             e.key for e in prof.key_averages() if e.self_device_time_total > 0
         ]
         assert any("flex" in k.lower() for k in kernels), (
-            f"no flex kernel on the GPU timeline — the compiled route fell "
+            f"no flex kernel on the GPU timeline: the compiled route fell "
             f"back to eager/unfused attention. Kernels seen: {sorted(kernels)}"
         )
 
@@ -561,7 +561,7 @@ class TestOnCUDA:
         # engine actually runs: GQA 16 query / 8 KV heads, head_dim 128,
         # bf16. Same tiny depth and embedding so it stays a fixture, not
         # a checkpoint. Tolerance is the sdpa suite's bf16 pair; the
-        # first 5090 run calibrates it — if it fails, report the
+        # first 5090 run calibrates it; if it fails, report the
         # max-diff, don't loosen silently.
         device = torch.device("cuda")
         arch = TINY_ARCH | {

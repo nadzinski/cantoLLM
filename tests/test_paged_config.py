@@ -87,7 +87,7 @@ class TestEngineAssemblyGuard:
         # every template below MIN_CUDA_KV_BLOCK (paged-kv-plan.md §2.13),
         # so a small block_size must die at assembly, not as a
         # NoValidChoicesError mid-warm-up. CPU stays free to run tiny
-        # blocks — the equivalence suite depends on it.
+        # blocks; the equivalence suite depends on it.
         import cantollm.engine  # noqa: F401  (engine must import before runtime)
         from cantollm.engine.batching.engine import scheduler_from_runtime
 

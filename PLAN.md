@@ -629,10 +629,10 @@ memory management lesson — and overlap scheduling with execution so the CPU pl
 N+1 while the GPU runs step N.
 
 **Status (2026-08-30):** Done: chunks 1–4 of `paged-kv-plan.md`'s 13
-(that doc's chunk log is the detailed record). The paged foundations are in —
+(that doc's chunk log is the detailed record). The paged foundations are in:
 KVPool protocol + config knobs (chunk 1), flat `PagedKVPool` + the
 hand-written `BlockAllocator` (chunk 2), block tables / seeded `PagedTables`
-on `BatchMeta` + pre-landed suites (chunk 3) — and chunk 4, the hand-written
+on `BatchMeta` + pre-landed suites (chunk 3), and chunk 4, the hand-written
 paged attend (`paged_write_map` + the Flex method, both index-translation
 sites), closed with both gates green: 11 CPU equivalence tests vs the padded
 oracle, and the compiled-CUDA twin 15/15 on the 5090 with flex kernels
@@ -648,7 +648,7 @@ author hand-wrote the allocator and the attend; scaffolding, suites, and the
 twin delegated. Prior scope notes stand: the flash-proper restructure moved
 here from Phase 3; the 2026-07-19 review added overlap scheduling, preemption
 policies, per-request priority, and the goodput-under-joint-SLO metric.
-Open: chunks 5–13 — scheduler paged mode next, then warm-up/compile
+Open: chunks 5–13: scheduler paged mode next, then warm-up/compile
 integration, the 5090 rounds, preemption/priority/goodput, overlap, H100
 close-out.
 

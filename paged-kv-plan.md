@@ -172,7 +172,7 @@ would run on a mid-phase engine).
 **2.13 (added 2026-08-30) The served `block_size` default is 64.** The chunk-4
 5090 probe found the compiled CUDA Flex lowering prunes every mask template
 below a 64-token KV block (`NoValidChoicesError`; Q block size and q_len
-irrelevant — the full grid is in the chunk log), so 16-token pages cannot be
+irrelevant; the full grid is in the chunk log), so 16-token pages cannot be
 the mask's KV blocks on the serving path. Decision (the author's): raise the
 default to 64 rather than decouple mask granularity from page size. The
 `kv_indices`-is-the-block-table identity survives, chunk 6's per-step mask
@@ -182,7 +182,7 @@ short_chat request, against the padded pool's ~4096). Enforced at engine
 assembly beside the §2.8 compile guard (`MIN_CUDA_KV_BLOCK` in flex.py);
 CPU/eager has no floor, so the equivalence suites keep tiny blocks for cheap
 boundary crossings. Rejected: 64-token mask blocks spanning four 16-token
-pages — `kv_indices` would need per-step derivation, partial mask blocks
+pages: `kv_indices` would need per-step derivation, partial mask blocks
 over-read up to 4x, and the complexity is permanent while the floor is
 Inductor template pruning a torch upgrade may move (revalidate it, and the
 Q-block tile multiple, on upgrades).
@@ -533,7 +533,7 @@ phase start; Mac/CPU counts).
    linux-box-5090 session; the box ran and probed, edited nothing).
    Round 1 (twin at CPU-suite geometry): all four CUDA tests died in
    Inductor lowering, and the probe grid isolated two floors eager Flex
-   never checks — head_dim >= 16 (tl.dot), and mask KV BLOCK_SIZE >= 64
+   never checks: head_dim >= 16 (tl.dot), and mask KV BLOCK_SIZE >= 64
    (below it every Triton template is pruned, `NoValidChoicesError`; Q
    block size and q_len irrelevant across the whole grid; KV 4/16/32
    fail, 64/128 pass). Twin reshaped to 64-token blocks, head_dim-16 toy
@@ -545,10 +545,10 @@ phase start; Mac/CPU counts).
    must be a multiple of the 128 prefill tile (a raw width like 150
    fails divisibility; widths <= 12 had routed to a laxer decode
    template, which is why the probe grid missed it). Fixed in flex.py
-   (3cb1284, Claude, flagged for author review — index translation and
+   (3cb1284, Claude, flagged for author review; index translation and
    `mask_mod` untouched, eager numerics bit-identical; the floors live
    there as `Q_BLOCK_MULTIPLE` / `MIN_CUDA_KV_BLOCK`, revalidate on
-   torch upgrades). Round 3: GATE GREEN — 15/15 in ~28 s including all
+   torch upgrades). Round 3: GATE GREEN, 15/15 in ~28 s including all
    Inductor compiles, flex kernels confirmed on the profiler timeline
    (`triton_tem_fused_flex_attention_*`), bf16-vs-sdpa max |diff| one
    bf16 ulp (0.0078 vs atol 3e-2, ~4x margin). Fallout the same day:

@@ -66,7 +66,7 @@ from cantollm.models.attention.protocol import BatchMeta
 # queries at BLOCK_M = 128 and the mask's Q BLOCK_SIZE must be a multiple
 # of it; mask KV blocks below 64 prune every template choice
 # (NoValidChoicesError), which is what pins the served block_size default
-# (paged-kv-plan.md §2.13) — enforced at engine assembly.
+# (paged-kv-plan.md §2.13), enforced at engine assembly.
 Q_BLOCK_MULTIPLE = 128
 MIN_CUDA_KV_BLOCK = 64
 
@@ -128,7 +128,7 @@ class FlexAttentionMethod:
         positions. All table tensors are supplied in ``meta.paged_tables``;
         ``device`` is the device on which attention will run.
         """
-        # from_kv_blocks' canonical ranks — (B, heads, q_blocks) and
+        # from_kv_blocks' canonical ranks: (B, heads, q_blocks) and
         # (B, heads, q_blocks, N) with broadcast heads and one q block.
         # Eager Flex broadcasts squeezed shapes too, but the CUDA
         # templates derive kernel strides from the actual ndim and emit
