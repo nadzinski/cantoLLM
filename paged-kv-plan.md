@@ -474,3 +474,26 @@ phase start; Mac/CPU counts).
    SlotAllocator's message style) were handed back to Claude as
    bookkeeping. Marker deleted, all 11 pass unmarked; suite 546 + 5
    chaos.
+3. Block tables + BatchMeta extension + pre-landed attend suites
+   (2026-08-29). `PagedKVWriteMap` (row, off, dst) and `PagedTables`
+   (block_tables, kv_num_blocks, inverse_tables, write_map — inverse
+   carries the past-any-bound sentinel `max_blocks_per_seq` for unowned
+   blocks, never 0/-1) land in protocol.py; `BatchMeta.seed_paged_tables`
+   mirrors the seed-once discipline with int32/int64 and B-alignment
+   validation, and `paged_tables` raises when unseeded (no derivation
+   exists). The runtime front's device move was extracted to a testable
+   `move_batch_to` and now carries BOTH seeded passengers, with an
+   MPS-gated survival test (on CPU the identity gate never opens). New
+   `engine/batching/paging.py`: `paged_write_map` as the hand-written
+   chunk-4 stub (contract in the docstring) and the `PagedStepState`
+   shell (allocation + sentinel convention; fill() lands chunk 5).
+   `models/attention/flex.py`: `FlexAttentionMethod` stub — nullcontext
+   execution_context (no cuDNN pin), batched-only raises, the two
+   hand-written methods red, spike wrinkles inventoried in the module
+   docstring. `tests/test_flex_equivalence.py` PRE-LANDED RED (11
+   strict xfails: 4 write-map pins incl. boundary crossings and filler
+   skipping, scattered-table/chunked/decode/mixed-batch equivalence vs
+   the padded oracle, stale-block-reuse fencing, pool-write positions);
+   `tests/test_paged_tables.py` green (8). Suite 554 + 5 chaos, 11
+   xfailed. The chunk-4 session is the author's: `paged_write_map` +
+   the Flex attend, red→green against this suite.

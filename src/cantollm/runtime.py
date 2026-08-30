@@ -22,6 +22,7 @@ from cantollm.models.attention import (
     BatchMeta,
     EinsumAttentionMethod,
     PaddedAttentionMethod,
+    PagedTables,
     SDPAAttentionMethod,
 )
 from cantollm import progress
@@ -30,6 +31,53 @@ from cantollm.speculative import SpeculativeBackend
 from cantollm.standard import StandardBackend
 
 logger = logging.getLogger(__name__)
+
+
+def move_batch_to(
+    input_ids: torch.Tensor, meta: BatchMeta, device: torch.device
+) -> tuple[torch.Tensor, BatchMeta]:
+    """The boundary where scheduler-built CPU tensors move to the model
+    device. Move-gate by `.to` identity, not device equality: a bare
+    "cuda" device compares unequal to a tensor's resolved "cuda:0", and
+    `replace` on an already-on-device meta would drop a seeded
+    kv_write_map (graph capture's static buffers) and rebuild it
+    mid-recording — the H2D copy invalidates the capture (40fbcf9).
+
+    Seeded passengers must survive the replace: `replace` builds a fresh
+    instance whose seeded slots are empty. For kv_write_map (warm-up's
+    scratch maps; capture metas never take this branch, their tensors are
+    already on-device), re-deriving would produce an EMPTY map for
+    all-filler rows — silently un-seeding the sweep. For paged_tables
+    there is no derivation at all: dropping them turns the first paged
+    forward into a "no paged tables" error, or worse, a stale-reference
+    split. Move the columns with the meta, both passengers.
+    """
+    input_ids = input_ids.to(device)
+    positions = meta.positions.to(device)
+    if positions is not meta.positions:
+        seeded = meta.__dict__.get("kv_write_map")
+        paged = meta.__dict__.get("paged_tables")
+        meta = replace(
+            meta,
+            slots=meta.slots.to(device),
+            start_pos=meta.start_pos.to(device),
+            num_new=meta.num_new.to(device),
+            positions=positions,
+        )
+        if seeded is not None:
+            meta.seed_kv_write_map(
+                type(seeded)(*(t.to(device) for t in seeded))
+            )
+        if paged is not None:
+            meta.seed_paged_tables(PagedTables(
+                block_tables=paged.block_tables.to(device),
+                kv_num_blocks=paged.kv_num_blocks.to(device),
+                inverse_tables=paged.inverse_tables.to(device),
+                write_map=type(paged.write_map)(
+                    *(t.to(device) for t in paged.write_map)
+                ),
+            ))
+    return input_ids, meta
 
 
 class ModelRuntime:
@@ -112,34 +160,9 @@ class ModelRuntime:
         last real token. The engine never imports a model class.
 
         The scheduler builds tensors on CPU; this is the boundary where
-        they move to the model's device.
+        they move to the model's device (`move_batch_to`).
         """
-        input_ids = input_ids.to(self.device)
-        # Move-gate by `.to` identity, not device equality: a bare "cuda"
-        # self.device compares unequal to a tensor's resolved "cuda:0", and
-        # `replace` on an already-on-device meta would drop a seeded
-        # kv_write_map (graph capture's static buffers) and rebuild it
-        # mid-recording — the H2D copy invalidates the capture.
-        positions = meta.positions.to(self.device)
-        if positions is not meta.positions:
-            # A seeded kv_write_map (warm-up's scratch maps; capture metas
-            # never take this branch, their tensors are already on-device)
-            # must survive the replace: `replace` builds a fresh instance
-            # whose cached_property slot is empty, and re-deriving would
-            # produce an EMPTY map for all-filler rows — silently
-            # un-seeding the sweep. Move the columns with the meta.
-            seeded = meta.__dict__.get("kv_write_map")
-            meta = replace(
-                meta,
-                slots=meta.slots.to(self.device),
-                start_pos=meta.start_pos.to(self.device),
-                num_new=meta.num_new.to(self.device),
-                positions=positions,
-            )
-            if seeded is not None:
-                meta.seed_kv_write_map(
-                    type(seeded)(*(t.to(self.device) for t in seeded))
-                )
+        input_ids, meta = move_batch_to(input_ids, meta, self.device)
         if self._compiled_batched is None:
             return self.model.forward_batched(input_ids, meta, pool)
         # The hoists (torch-compile-design.md §3.1): validation is host

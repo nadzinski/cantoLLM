@@ -43,6 +43,57 @@ class KVWriteMap(NamedTuple):
     """(total_new,) long — destination position within that slot."""
 
 
+class PagedKVWriteMap(NamedTuple):
+    """The paged step's ragged KV write: one entry per real new token,
+    destination flattened to a row of the paged layer tensor.
+
+    Entry k copies one token's (groups, head_dim) vector:
+    `keys[row[k], off[k]] → layer_k[dst[k]]` — a single 1-D index scatter
+    into the flat pool base (paged-kv-plan.md §2.3), where
+    `dst = table[pos // block_size] * block_size + pos % block_size` is
+    computed by `paged_write_map` (engine/batching/paging.py). Alignment
+    is by construction, as with `KVWriteMap`; the padded map keeps its own
+    type untouched.
+    """
+
+    row: torch.Tensor
+    """(total_new,) long — source row in the padded keys/values batch."""
+
+    off: torch.Tensor
+    """(total_new,) long — source offset along that row's num_new axis."""
+
+    dst: torch.Tensor
+    """(total_new,) long — destination row in the flat paged layer."""
+
+
+class PagedTables(NamedTuple):
+    """One paged step's table references (paged-kv-plan.md §2.5).
+
+    Engine-owned tensors — persistent, mutated in place per step by the
+    scheduler side — carried by `BatchMeta` the way a seeded
+    `kv_write_map` is: references, never copies. Table tensors are int32
+    per the `BlockMask.from_kv_blocks` contract; the write map's columns
+    stay int64 index tensors.
+    """
+
+    block_tables: torch.Tensor
+    """(B, max_blocks_per_seq) int32 — row b's logical block j lives in
+    physical block `block_tables[b, j]`; entries past the row's table are
+    never read (`kv_num_blocks` bounds the walk)."""
+
+    kv_num_blocks: torch.Tensor
+    """(B,) int32 — visible blocks per row: ceil(history / block_size)."""
+
+    inverse_tables: torch.Tensor
+    """(B, num_kv_blocks + 1) int32 — physical block → logical block index
+    for row b; the mask-side translation reads it. Entries for blocks a
+    row does not own hold a PAST-ANY-BOUND sentinel (>= the logical block
+    capacity), so their translated positions fail every causal bound —
+    never 0 or -1, which would alias a visible position."""
+
+    write_map: PagedKVWriteMap
+
+
 @dataclass(frozen=True)
 class BatchMeta:
     """Per-step batch geometry for the continuous-batching path.
@@ -124,6 +175,64 @@ class BatchMeta:
         # frozen dataclass's __setattr__ block does not cover — this is the
         # same slot the property itself writes.
         self.__dict__["kv_write_map"] = write_map
+
+    def seed_paged_tables(self, tables: PagedTables) -> None:
+        """Install this step's paged table references (paged-kv-plan.md
+        §2.5). Same discipline as `seed_kv_write_map`: seed-once (graph
+        capture bakes tensor addresses; replacing after first use would
+        split what kernels hold from what the meta reports), references
+        never copies, and the runtime front's device move must carry the
+        seeded tables with the meta (the 40fbcf9 family). Unlike
+        `kv_write_map` there is no derived fallback — the meta has no
+        block tables to derive from; the scheduler side owns them.
+        """
+        if "paged_tables" in self.__dict__:
+            raise ValueError(
+                "paged_tables is already seeded; seeding after first use "
+                "would leave stale tensors in flight"
+            )
+        bt, knb, inv, wm = tables
+        if bt.dim() != 2 or knb.dim() != 1 or inv.dim() != 2:
+            raise ValueError(
+                f"table tensors must be (B, T)/(B,)/(B, P), got dims "
+                f"{(bt.dim(), knb.dim(), inv.dim())}"
+            )
+        if not (bt.shape[0] == knb.shape[0] == inv.shape[0]):
+            raise ValueError(
+                f"table tensors disagree on B: "
+                f"{(bt.shape[0], knb.shape[0], inv.shape[0])}"
+            )
+        if any(t.dtype != torch.int32 for t in (bt, knb, inv)):
+            raise ValueError(
+                f"table tensors must be int32 (the BlockMask.from_kv_blocks "
+                f"contract), got {[t.dtype for t in (bt, knb, inv)]}"
+            )
+        lengths = {t.shape for t in wm}
+        if len(lengths) != 1 or wm.row.dim() != 1:
+            raise ValueError(
+                f"write map columns must be 1-D and aligned, got shapes "
+                f"{[tuple(t.shape) for t in wm]}"
+            )
+        if any(t.dtype != torch.long for t in wm):
+            raise ValueError(
+                f"write map columns must be int64 (index tensors), got "
+                f"{[t.dtype for t in wm]}"
+            )
+        self.__dict__["paged_tables"] = tables
+
+    @property
+    def paged_tables(self) -> PagedTables:
+        """This step's seeded `PagedTables`. Raises when unseeded: only
+        the paged path seeds tables, so reading them off a padded-path
+        meta is a wiring bug, not a derivable state."""
+        tables = self.__dict__.get("paged_tables")
+        if tables is None:
+            raise ValueError(
+                "this BatchMeta carries no paged tables; the paged "
+                "scheduler side seeds them per step (seed_paged_tables) — "
+                "there is no derived construction"
+            )
+        return tables
 
     @cached_property
     def kv_write_map(self) -> KVWriteMap:
