@@ -10,8 +10,9 @@ complete) the validated results with §6's predictions graded.
 `flex-spike-results.md` is this doc's gates annex: the kernel route was decided
 there, on the 5090, before any of this was designed.
 
-**Status: chunks 1–3 complete; chunk 4 CPU correctness complete on
-2026-08-30, with its compiled-CUDA 5090 exit gate still pending.**
+**Status: chunks 1–4 complete (chunk 4 closed 2026-08-30: CPU eager and
+compiled-CUDA 5090 gates both green, 15/15; §2.13 block-size decision
+recorded the same day). Next: chunk 5, scheduler paged mode.**
 
 ## 1. Goal
 
@@ -167,6 +168,24 @@ position decremented, any block allocated for the bonus token freed, no
 event emitted. Rejected: landing overlap before preemption (writes the
 eviction logic into a loop that is mid-restructure, and the overlap A/B
 would run on a mid-phase engine).
+
+**2.13 (added 2026-08-30) The served `block_size` default is 64.** The chunk-4
+5090 probe found the compiled CUDA Flex lowering prunes every mask template
+below a 64-token KV block (`NoValidChoicesError`; Q block size and q_len
+irrelevant — the full grid is in the chunk log), so 16-token pages cannot be
+the mask's KV blocks on the serving path. Decision (the author's): raise the
+default to 64 rather than decouple mask granularity from page size. The
+`kv_indices`-is-the-block-table identity survives, chunk 6's per-step mask
+work stays "write ints into preallocated tensors", and the fragmentation cost
+is ~32 tokens per request on average (~192 vs ~176 held for a ~170-token
+short_chat request, against the padded pool's ~4096). Enforced at engine
+assembly beside the §2.8 compile guard (`MIN_CUDA_KV_BLOCK` in flex.py);
+CPU/eager has no floor, so the equivalence suites keep tiny blocks for cheap
+boundary crossings. Rejected: 64-token mask blocks spanning four 16-token
+pages — `kv_indices` would need per-step derivation, partial mask blocks
+over-read up to 4x, and the complexity is permanent while the floor is
+Inductor template pruning a torch upgrade may move (revalidate it, and the
+Q-block tile multiple, on upgrades).
 
 ## 3. Architecture: the paged step
 
@@ -510,3 +529,28 @@ phase start; Mac/CPU counts).
    pool contents, and exact pool-write positions. Local suite: 561 passed, 15
    platform skips, with 5 chaos tests deselected. The compiled-CUDA
    equivalence twin on the 5090 remains the chunk's exit gate.
+   Gate closed 2026-08-30, via three 5090 rounds (runs through the
+   linux-box-5090 session; the box ran and probed, edited nothing).
+   Round 1 (twin at CPU-suite geometry): all four CUDA tests died in
+   Inductor lowering, and the probe grid isolated two floors eager Flex
+   never checks — head_dim >= 16 (tl.dot), and mask KV BLOCK_SIZE >= 64
+   (below it every Triton template is pruned, `NoValidChoicesError`; Q
+   block size and q_len irrelevant across the whole grid; KV 4/16/32
+   fail, 64/128 pass). Twin reshaped to 64-token blocks, head_dim-16 toy
+   arch, 150/100-token prompts (c6afbf3). Round 2 exposed two
+   conformance gaps in the attend itself, both isolated with standalone
+   repros: `from_kv_blocks` needs canonical `(B, 1, 1[, N])` table ranks
+   (eager broadcasts squeezed shapes; the CUDA template derives strides
+   from actual ndim and emits broken code), and the mask's Q BLOCK_SIZE
+   must be a multiple of the 128 prefill tile (a raw width like 150
+   fails divisibility; widths <= 12 had routed to a laxer decode
+   template, which is why the probe grid missed it). Fixed in flex.py
+   (3cb1284, Claude, flagged for author review — index translation and
+   `mask_mod` untouched, eager numerics bit-identical; the floors live
+   there as `Q_BLOCK_MULTIPLE` / `MIN_CUDA_KV_BLOCK`, revalidate on
+   torch upgrades). Round 3: GATE GREEN — 15/15 in ~28 s including all
+   Inductor compiles, flex kernels confirmed on the profiler timeline
+   (`triton_tem_fused_flex_attention_*`), bf16-vs-sdpa max |diff| one
+   bf16 ulp (0.0078 vs atol 3e-2, ~4x margin). Fallout the same day:
+   §2.13 (block_size default 64 + the assembly floor guard + its test).
+   Chunk 4 complete; suite 566 + 5 chaos.
