@@ -17,17 +17,17 @@ as reusable buffers. The buffers are allocated once and updated in place so
 their shapes and memory addresses stay stable for ``torch.compile`` and CUDA
 graphs.
 
-At the end of Chunk 3, `PagedStepState` only allocates and initializes those
-buffers. Chunk 5 will add the scheduler-facing operation that fills them for a
-step. Later chunks will reuse them when caching FlexAttention masks and
-capturing CUDA graphs.
+`PagedStepState.fill` (chunk 5) is the scheduler-facing operation that
+updates them for one step and hands back the `PagedTables` a `BatchMeta`
+seeds. Later chunks will reuse the same buffers when caching FlexAttention
+masks and capturing CUDA graphs.
 """
 
 from __future__ import annotations
 
 import torch
 
-from cantollm.models.attention.protocol import PagedKVWriteMap
+from cantollm.models.attention.protocol import PagedKVWriteMap, PagedTables
 
 
 def paged_write_map(
@@ -117,9 +117,6 @@ class PagedStepState:
         inverse_tables: ``(max_rows, num_kv_blocks + 1)`` int32 tensor. For
             each batch row, maps a physical block back to its logical block
             number. The extra column represents the pool's scratch block.
-
-    This Chunk 3 version only allocates the buffers and initializes the
-    inverse table. Chunk 5 will add the per-step fill operation.
     """
 
     def __init__(
@@ -150,4 +147,86 @@ class PagedStepState:
         self.inverse_tables = torch.full(
             (max_rows, num_kv_blocks + 1), max_blocks_per_seq,
             dtype=torch.int32, device=device,
+        )
+
+    def fill(
+        self,
+        step_rows: list[tuple[int, int, int]],
+        block_tables: list[list[int]],
+        block_size: int,
+    ) -> PagedTables:
+        """Describe one step's batch in the persistent buffers.
+
+        Args:
+            step_rows: The shaped batch's ``(slot, start_pos, num_new)``
+                specs, in batch-row order: ``meta.rows`` after
+                ``shape_step``, so filler rows appear at the tail.
+            block_tables: One block table per REAL row, aligned with the
+                head of ``step_rows``; rows past ``len(block_tables)`` are
+                fillers. Each table must cover its row's
+                ``start_pos + num_new`` positions (the scheduler's block
+                reservation guarantees this before the row commits).
+            block_size: Token positions per physical block.
+
+        Returns:
+            A `PagedTables` whose table tensors are views of this state's
+            buffers, sliced to the step's batch size (references, never
+            copies; the seeded-buffer discipline compile and graph
+            capture rely on), plus the step's freshly built write map.
+
+        A filler row (``num_new == 0``) points at the scratch block, mapped
+        to logical block 0 with one visible block: its softmax row stays
+        finite over garbage nobody reads, where an all-sentinel inverse
+        would mask the row completely and produce NaN
+        (paged-kv-plan.md §4). Real rows never see the scratch block; its
+        inverse entry stays the sentinel.
+        """
+        batch = len(step_rows)
+        if batch > self.max_rows:
+            raise ValueError(
+                f"step has {batch} rows but the buffers hold {self.max_rows}"
+            )
+        if len(block_tables) > batch:
+            raise ValueError(
+                f"{len(block_tables)} block tables for {batch} rows"
+            )
+        scratch_block = self.num_kv_blocks
+
+        # Reset only the rows this step uses: entries a previous step wrote
+        # for blocks a row no longer owns must not leak into its mask.
+        self.block_tables[:batch].zero_()
+        self.kv_num_blocks[:batch].zero_()
+        self.inverse_tables[:batch].fill_(self.max_blocks_per_seq)
+
+        for r, (_, start_pos, num_new) in enumerate(step_rows):
+            if r >= len(block_tables):
+                # Filler row: one visible block, the scratch block, mapped
+                # to logical 0 so position 0 is visible to every query.
+                self.block_tables[r, 0] = scratch_block
+                self.kv_num_blocks[r] = 1
+                self.inverse_tables[r, scratch_block] = 0
+                continue
+            table = block_tables[r]
+            history = start_pos + num_new
+            visible = -(-history // block_size)
+            if visible > len(table):
+                raise ValueError(
+                    f"row {r} reaches position {history} but its table "
+                    f"holds {len(table)} blocks of {block_size}"
+                )
+            for logical, physical in enumerate(table):
+                self.block_tables[r, logical] = physical
+                self.inverse_tables[r, physical] = logical
+            self.kv_num_blocks[r] = visible
+
+        return PagedTables(
+            block_tables=self.block_tables[:batch],
+            kv_num_blocks=self.kv_num_blocks[:batch],
+            inverse_tables=self.inverse_tables[:batch],
+            write_map=paged_write_map(
+                step_rows,
+                block_tables + [[]] * (batch - len(block_tables)),
+                block_size,
+                device=self.block_tables.device,
+            ),
         )

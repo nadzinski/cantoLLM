@@ -39,7 +39,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from cantollm import progress
-from cantollm.engine.batching.allocator import SlotAllocator
+from cantollm.engine.batching.allocator import BlockAllocator, SlotAllocator
 from cantollm.engine.batching.config import BatchingConfig
 from cantollm.engine.batching.mux import EventMultiplexer
 from cantollm.engine.batching.stats import StepStatsCollector, StepUpdate
@@ -135,11 +135,28 @@ def scheduler_from_runtime(
             captured, _time.perf_counter() - t0,
         )
         forward_fn = graphed
+    block_allocator = None
+    paged_state = None
+    if config.paged_kv:
+        # The paged trio lives with the scheduler (paged-kv-plan.md §2.5):
+        # the allocator owns which blocks are in use, the step state owns
+        # the persistent device tables the per-step metas reference.
+        from cantollm.engine.batching.paging import PagedStepState
+
+        block_allocator = BlockAllocator(config.resolved_kv_blocks)
+        paged_state = PagedStepState(
+            max_rows=config.max_batch,
+            max_blocks_per_seq=config.max_seq_len // config.block_size,
+            num_kv_blocks=config.resolved_kv_blocks,
+            device=runtime.device,
+        )
     return ContinuousBatchingScheduler(
         forward_fn=forward_fn,
         pool=pool,
         allocator=SlotAllocator(config.max_batch),
         config=config,
+        block_allocator=block_allocator,
+        paged_state=paged_state,
     )
 
 

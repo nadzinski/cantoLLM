@@ -10,9 +10,9 @@ complete) the validated results with §6's predictions graded.
 `flex-spike-results.md` is this doc's gates annex: the kernel route was decided
 there, on the 5090, before any of this was designed.
 
-**Status: chunks 1–4 complete (chunk 4 closed 2026-08-30: CPU eager and
-compiled-CUDA 5090 gates both green, 15/15; §2.13 block-size decision
-recorded the same day). Next: chunk 5, scheduler paged mode.**
+**Status: chunks 1–5 complete (chunk 5 closed 2026-08-30: block
+accounting and the paged-vs-padded engine oracle both green on CPU).
+Next: chunk 6, warm-up / vocabulary / compile.**
 
 ## 1. Goal
 
@@ -554,3 +554,36 @@ phase start; Mac/CPU counts).
    bf16 ulp (0.0078 vs atol 3e-2, ~4x margin). Fallout the same day:
    §2.13 (block_size default 64 + the assembly floor guard + its test).
    Chunk 4 complete; suite 566 + 5 chaos.
+5. Scheduler paged mode (2026-08-30, delegated). `CBSequence.block_table`
+   is the host truth; the scheduler takes a keyword-only paged pair
+   (block_allocator + paged_state, validated against config and pool) and
+   in paged mode: promotion takes each sequence's first block or stops
+   admitting (an admitted sequence always has somewhere to write);
+   `_plan_step` reserves blocks through each row's grant after water-fill
+   and quantization, trimming grants the pool cannot back (§4 atomicity);
+   a boundary-starved row sits the step out with its blocks kept (§9.6)
+   and stays active in place; finish and abort release through
+   `_release_kv` (slot plus every block); a fully starved active set
+   raises "paged KV deadlock" loudly instead of spinning (preemption is
+   chunk 9's answer). `PagedStepState.fill` lands: per-step in-place
+   rewrite of the persistent buffers with fillers routed to the scratch
+   block mapped to logical 0 (finite softmax), returning sliced views
+   plus the step's write map, seeded into the meta after `shape_step`;
+   shape_step's kv rounding is now skipped under paged (§2.6). `kv_state`
+   exposes (allocated, capacity) tokens and the chunk-1 collector hook
+   runs against the real property. Both exit gates green on CPU: the
+   block-accounting suite (fill unit pins incl. buffer address
+   stability; lifecycle, abort, admission-wait, trim, and starve
+   scenarios under a per-step no-leak invariant; the deadlock raise) and
+   the engine-level oracle (paged CB vs padded CB, weight-shared tiny
+   Qwen3, greedy, staggered arrivals): token-for-token at parity AND at
+   10 undercommitted blocks, where trims and starvation change the step
+   sequence but not one token. One wrinkle: the oracle arms must run
+   under inference_mode like the production front; eager Flex refuses
+   grad-enabled calls (its mask omits backward-only q-index metadata).
+   Touches inside the hand-written scheduler, flagged for author review:
+   ctor pair + validation, the promotion gate, reservation in
+   `_plan_step`, `_release_kv` at the three free sites, the deadlock
+   check, table seeding after shape_step, and the active-list rebuild
+   (drop exactly the finished rows so starved rows survive). Suite 589
+   + 5 chaos.

@@ -26,8 +26,9 @@ from dataclasses import dataclass
 
 import torch
 
-from cantollm.engine.batching.allocator import SlotAllocator
+from cantollm.engine.batching.allocator import BlockAllocator, SlotAllocator
 from cantollm.engine.batching.config import BatchingConfig
+from cantollm.engine.batching.paging import PagedStepState
 from cantollm.engine.batching.shaping import shape_step
 from cantollm.engine.batching.types import BatchedForwardFn, CBSequence
 from cantollm.engine import sampler
@@ -117,9 +118,12 @@ class ContinuousBatchingScheduler:
         pool: KVPool,
         allocator: SlotAllocator,
         config: BatchingConfig,
+        *,
+        block_allocator: BlockAllocator | None = None,
+        paged_state: PagedStepState | None = None,
     ):
         # Slot-count check is padded-layout-specific (the paged pool sizes
-        # memory in blocks, not slots); its capacity checks land with it.
+        # memory in blocks, not slots); its capacity checks live below.
         pool_slots = getattr(pool, "max_batch", None)
         if pool_slots is not None and pool_slots != config.max_batch:
             raise ValueError(
@@ -136,13 +140,48 @@ class ContinuousBatchingScheduler:
                 f"pool slots hold {pool.max_seq_len} tokens but "
                 f"config.max_seq_len is {config.max_seq_len}"
             )
+        if config.paged_kv != (block_allocator is not None) or (
+            config.paged_kv != (paged_state is not None)
+        ):
+            raise ValueError(
+                "paged_kv configs take a block_allocator and a paged_state; "
+                "padded configs take neither"
+            )
+        if block_allocator is not None:
+            if block_allocator.num_blocks != config.resolved_kv_blocks:
+                raise ValueError(
+                    f"block allocator manages {block_allocator.num_blocks} "
+                    f"blocks but the config resolves "
+                    f"{config.resolved_kv_blocks}"
+                )
+            pool_block_size = getattr(pool, "block_size", None)
+            if pool_block_size != config.block_size:
+                raise ValueError(
+                    f"pool block size {pool_block_size} does not match "
+                    f"config.block_size {config.block_size}"
+                )
         self.forward_fn = forward_fn
         self.pool = pool
         self.allocator = allocator
+        self.block_allocator = block_allocator
+        self.paged_state = paged_state
         self.config = config
         self.queued: deque[CBSequence] = deque()
         self.active: list[CBSequence] = []
         self.pending_events: list[TokenEvent] = []
+
+    @property
+    def kv_state(self) -> tuple[int, int] | None:
+        """(allocated, capacity) pool tokens for the stats collector, in
+        the paged pool's unit of reservation (whole blocks). None on the
+        padded path, where the collector derives slot-based numbers itself."""
+        if self.block_allocator is None:
+            return None
+        block_size = self.config.block_size
+        return (
+            self.block_allocator.num_allocated() * block_size,
+            self.block_allocator.num_blocks * block_size,
+        )
 
     def add_request(self, request: InferenceRequest) -> None:
         """Validate and enqueue `request`; never runs the model.
@@ -196,7 +235,7 @@ class ContinuousBatchingScheduler:
         seq = next((s for s in self.active if s.request_id == request_id), None)
         if seq is not None:
             self.active.remove(seq)
-            self.allocator.free(seq.slot_idx)
+            self._release_kv(seq)
         else:
             seq = next((s for s in self.queued if s.request_id == request_id), None)
             if seq is None:
@@ -205,6 +244,16 @@ class ContinuousBatchingScheduler:
         self.pending_events.append(
             TokenEvent(finish_reason="abort", request_id=request_id)
         )
+
+    def _release_kv(self, seq: CBSequence) -> None:
+        """Return everything an active sequence holds: its slot, and on
+        the paged path every block in its table. Queued sequences hold
+        neither (promotion is where both are acquired)."""
+        self.allocator.free(seq.slot_idx)
+        if self.block_allocator is not None:
+            for block in seq.block_table:
+                self.block_allocator.free(block)
+            seq.block_table.clear()
 
     def is_idle(self) -> bool:
         """Nothing queued, nothing active, nothing pending. (The shell
@@ -236,6 +285,16 @@ class ContinuousBatchingScheduler:
 
         rows = self._plan_step()
         if not rows:
+            if self.active:
+                # Every active row starved for blocks and nothing can free
+                # one: no row advances, so no future step differs from
+                # this one. Fail loudly rather than spin; eviction under
+                # shortage is chunk 9's (paged-kv-plan.md §4).
+                raise RuntimeError(
+                    "paged KV deadlock: every active row is waiting for a "
+                    "block and none can be freed (preemption lands in "
+                    "chunk 9)"
+                )
             # Only pending events to flush (abort acks, rejections) — no
             # active sequences means no forward pass this step.
             return events
@@ -246,6 +305,15 @@ class ContinuousBatchingScheduler:
         # exact no-op without the bucket knobs) — see shaping.py for why
         # kernels care about step shapes.
         input_ids, meta = shape_step(input_ids, meta, self.config)
+        if self.paged_state is not None:
+            # Project the host block tables into the step's device tensors
+            # and hand the meta its references (paged-kv-plan.md §2.5);
+            # filler rows appended by shape_step get the scratch block.
+            meta.seed_paged_tables(self.paged_state.fill(
+                meta.rows,
+                [row.sequence.block_table for row in rows],
+                self.config.block_size,
+            ))
 
         # The forward's actual problem shape (post-bucketing), for the
         # stats collector — StepStats.rows counts real sequences only.
@@ -298,7 +366,7 @@ class ContinuousBatchingScheduler:
                 events.append(
                     TokenEvent(finish_reason="end_turn", request_id=seq.request_id)
                 )
-                self.allocator.free(seq.slot_idx)
+                self._release_kv(seq)
                 continue
 
             seq.output_token_ids.append(token)
@@ -311,17 +379,35 @@ class ContinuousBatchingScheduler:
                 events.append(
                     TokenEvent(finish_reason="max_tokens", request_id=seq.request_id)
                 )
-                self.allocator.free(seq.slot_idx)
+                self._release_kv(seq)
                 continue
 
             still_active.append(seq)
 
-        self.active = still_active
+        # Drop exactly the sequences whose rows finished this step. A row
+        # that never made it into `rows` (paged block starvation trimmed
+        # its grant to zero) stays active, in its place, and retries next
+        # step. Padded rows always run, so this is the same assignment
+        # `still_active` used to be.
+        finished = (
+            {id(row.sequence) for row in rows}
+            - {id(seq) for seq in still_active}
+        )
+        self.active = [s for s in self.active if id(s) not in finished]
         return events
 
     def _promote_queued(self) -> None:
-        """Admit queued sequences while slots are free (FCFS)."""
+        """Admit queued sequences while slots are free (FCFS). Paged mode
+        also takes the sequence's first block at admission, or stops
+        promoting when the pool has none, leaving the queue intact
+        (paged-kv-plan.md §3): an admitted sequence always has somewhere
+        to write, and admission is what a full pool pushes back on."""
         while self.queued and self.allocator.num_free() > 0:
+            if self.block_allocator is not None:
+                first = self.block_allocator.allocate()
+                if first is None:
+                    return
+                self.queued[0].block_table.append(first)
             seq = self.queued.popleft()
             seq.slot_idx = self.allocator.allocate()
             self.active.append(seq)
@@ -329,7 +415,10 @@ class ContinuousBatchingScheduler:
     def _plan_step(self) -> list[Row]:
         """Water-fill the token budget: decode rows request 1, prefilling
         rows request their remaining prompt. With a `prefill_widths` menu,
-        mid-prompt chunks are then quantized down to menu widths."""
+        mid-prompt chunks are then quantized down to menu widths. Paged
+        mode then reserves each row's blocks, trimming grants the pool
+        cannot back; a row trimmed to nothing sits this step out but
+        stays active (see step())."""
         requested = [
             seq.remaining_prompt if seq.is_prefilling() else 1
             for seq in self.active
@@ -340,10 +429,38 @@ class ContinuousBatchingScheduler:
                 self._quantize_chunk(seq, n)
                 for seq, n in zip(self.active, allocated)
             ]
+        if self.block_allocator is not None:
+            allocated = [
+                self._reserve_blocks(seq, n)
+                for seq, n in zip(self.active, allocated)
+            ]
         return [
             Row(sequence=seq, num_new=n, start_pos=seq.position)
             for seq, n in zip(self.active, allocated)
+            if n >= 1
         ]
+
+    def _reserve_blocks(self, seq: CBSequence, num_new: int) -> int:
+        """Grow `seq.block_table` to cover `position + num_new`; return the
+        grant, trimmed to what reserved blocks can actually hold.
+
+        The plan/allocate atomicity rule (paged-kv-plan.md §4): a row
+        commits to the step only with every write destination reserved.
+        On exhaustion the grant shrinks to the covered span: a prefill
+        chunk gets shorter (possibly off the width menu; the step width
+        still pads up over it), a boundary-crossing decode row shrinks to
+        zero and sits the step out with its blocks kept (§9.6's
+        self-victimize call). Nothing is preempted here; eviction under
+        sustained shortage is chunk 9's."""
+        block_size = self.config.block_size
+        end = seq.position + num_new
+        while len(seq.block_table) * block_size < end:
+            block = self.block_allocator.allocate()
+            if block is None:
+                covered = len(seq.block_table) * block_size - seq.position
+                return max(0, covered)
+            seq.block_table.append(block)
+        return num_new
 
     def _quantize_chunk(self, seq: CBSequence, allocated: int) -> int:
         """Snap a mid-prompt chunk down to the largest menu width that fits.

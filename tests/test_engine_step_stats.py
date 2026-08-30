@@ -168,16 +168,20 @@ def test_kv_capacity_fields_padded():
 
 
 def test_kv_state_hook_wins_over_slot_derivation():
-    # The paged scheduler (chunk 5) exposes kv_state — blocks are its unit
-    # of reservation, slot geometry would be a lie — and the collector must
-    # prefer it.
-    sched = make_scheduler()
-    sched.kv_state = (48, 96)
+    # The paged scheduler exposes kv_state (blocks are its unit of
+    # reservation; slot geometry would be a lie) and the collector must
+    # prefer it. Real paged scheduler since chunk 5: a 2-token prompt
+    # reserves one 4-token block, where slot derivation would report a
+    # whole 32-token slot.
+    from tests.test_paged_scheduler import make_paged_scheduler
+
+    sched, _ = make_paged_scheduler()
+    capacity = sched.block_allocator.num_blocks * sched.config.block_size
     collector = StepStatsCollector.for_scheduler(sched)
     sched.add_request(request("r1", [1, 2]))
 
     _, s = stepped(sched, collector)
-    assert (s.kv_allocated_tokens, s.kv_capacity_tokens) == (48, 96)
+    assert (s.kv_allocated_tokens, s.kv_capacity_tokens) == (4, capacity)
 
 
 def test_snapshot_fallback_matches_plan_time_counts():

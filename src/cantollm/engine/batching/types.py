@@ -66,6 +66,12 @@ class CBSequence:
     slot_idx: int | None = None
     position: int = 0
     output_token_ids: list[int] = field(default_factory=list)
+    block_table: list[int] = field(default_factory=list)
+    """Physical KV blocks this sequence owns, in logical order: the host
+    truth of the paged mapping (paged-kv-plan.md §3); the device tensors
+    are per-step projections of it. Empty on the padded path. Grown by
+    the scheduler's block reservation; every block returns to the
+    allocator on finish or abort."""
 
     def is_prefilling(self) -> bool:
         return self.position < len(self.prompt_token_ids)

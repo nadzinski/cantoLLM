@@ -73,7 +73,10 @@ def shape_step(
     if config.prefill_widths is not None and width > 1:
         width = round_up_to(width, config.prefill_widths)
     kv_len = meta.max_history_len
-    if config.kv_bucket is not None:
+    if config.kv_bucket is not None and not config.paged_kv:
+        # Inert under paged on purpose (paged-kv-plan.md §2.6): kv length
+        # is a value there, not a shape, and rounding max_history_len up
+        # would only widen the validated logical span for nothing.
         rounded = -(-kv_len // config.kv_bucket) * config.kv_bucket
         kv_len = min(rounded, config.max_seq_len)
     if (pad_rows, width, kv_len) == (rows, meta.num_new_max, meta.max_history_len):
