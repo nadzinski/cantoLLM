@@ -125,9 +125,10 @@ class PagedKVPool:
 
     Each layer's K and V is ONE FLAT tensor of shape
     `((num_kv_blocks + 1) * block_size, num_groups, head_dim)`: block `b`
-    is the row span `[b * block_size, (b + 1) * block_size)`, and a token
-    at logical position `pos` of a request whose table maps
-    `pos // block_size -> b` lives at flat row
+    occupies first-dimension indices
+    `[b * block_size, (b + 1) * block_size)`. A token at logical position
+    `pos` of a request whose table maps `pos // block_size -> b` lives at
+    flat pool index
     `b * block_size + pos % block_size`. Flat rather than
     `(blocks, block_size, ...)` on purpose: the KV scatter must mutate the
     layer tensor DIRECTLY — under torch.compile a write through a view of
@@ -184,6 +185,6 @@ class PagedKVPool:
         """(k, v) storage for layer i, each
         `((num_kv_blocks + 1) * block_size, num_groups, head_dim)` — the
         actual flat storage; attention writes through it. The last
-        `block_size` rows are the scratch block: writes may land there,
-        no mask ever makes them visible."""
+        `block_size` first-dimension entries are the scratch block: writes
+        may land there, but no mask ever makes them visible."""
         return self.k_layers[i], self.v_layers[i]

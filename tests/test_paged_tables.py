@@ -41,9 +41,9 @@ def make_tables(
         kv_num_blocks=torch.ones(batch, dtype=torch.int32),
         inverse_tables=torch.full((batch, 5), SENTINEL, dtype=torch.int32),
         write_map=PagedKVWriteMap(
-            row=torch.zeros(total_new, dtype=torch.long),
-            off=torch.arange(total_new, dtype=torch.long),
-            dst=torch.arange(total_new, dtype=torch.long),
+            batch_row=torch.zeros(total_new, dtype=torch.long),
+            token_offset=torch.arange(total_new, dtype=torch.long),
+            pool_index=torch.arange(total_new, dtype=torch.long),
         ),
     )
     fields.update(overrides)
@@ -83,17 +83,17 @@ class TestSeeding:
         with pytest.raises(ValueError, match="int64"):
             meta.seed_paged_tables(make_tables(
                 write_map=PagedKVWriteMap(
-                    row=torch.zeros(3, dtype=torch.int32),
-                    off=torch.zeros(3, dtype=torch.int32),
-                    dst=torch.zeros(3, dtype=torch.int32),
+                    batch_row=torch.zeros(3, dtype=torch.int32),
+                    token_offset=torch.zeros(3, dtype=torch.int32),
+                    pool_index=torch.zeros(3, dtype=torch.int32),
                 ),
             ))
         with pytest.raises(ValueError, match="aligned"):
             meta.seed_paged_tables(make_tables(
                 write_map=PagedKVWriteMap(
-                    row=torch.zeros(3, dtype=torch.long),
-                    off=torch.zeros(3, dtype=torch.long),
-                    dst=torch.zeros(2, dtype=torch.long),
+                    batch_row=torch.zeros(3, dtype=torch.long),
+                    token_offset=torch.zeros(3, dtype=torch.long),
+                    pool_index=torch.zeros(2, dtype=torch.long),
                 ),
             ))
 
@@ -149,6 +149,6 @@ class TestMoveSurvival:
         assert tables.block_tables.device.type == "mps"
         assert tables.kv_num_blocks.device.type == "mps"
         assert tables.inverse_tables.device.type == "mps"
-        assert tables.write_map.dst.device.type == "mps"
+        assert tables.write_map.pool_index.device.type == "mps"
         # Values intact through the move.
         assert tables.inverse_tables.cpu().eq(SENTINEL).all()

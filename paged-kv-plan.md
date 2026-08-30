@@ -10,8 +10,8 @@ complete) the validated results with §6's predictions graded.
 `flex-spike-results.md` is this doc's gates annex: the kernel route was decided
 there, on the 5090, before any of this was designed.
 
-**Status: designed 2026-08-18. Implementation not started; next is chunk 1
-(§5).**
+**Status: chunks 1–3 complete; chunk 4 CPU correctness complete on
+2026-08-30, with its compiled-CUDA 5090 exit gate still pending.**
 
 ## 1. Goal
 
@@ -63,9 +63,10 @@ middle of the experiment is how you lose the control; revisit at close-out
 **2.3 The paged pool is flat per-layer tensors; the write map gains a flat
 destination column.** Each layer stores K and V as one tensor of shape
 `((num_kv_blocks + 1) * block_size, num_groups, head_dim)`: a block is a
-16-row span, and the KV scatter writes the base tensor directly through a new
-3-column `PagedKVWriteMap(row, off, dst)` with
-`dst = table[pos // block_size] * block_size + pos % block_size`. Rejected: a
+16-token span, and the KV scatter writes the base tensor directly through a new
+3-column `PagedKVWriteMap(batch_row, token_offset, pool_index)` with
+`pool_index = table[pos // block_size] * block_size + pos % block_size`.
+Rejected: a
 `(num_blocks, block_size, G, D)` blocked layout (the scatter would write
 through a view, which is the exact functionalization failure ab4f438 fixed;
 kv_pool.py's docstring is the standing warning), and reusing the padded
@@ -181,7 +182,7 @@ scheduler.step()                                (paged mode)
   PagedStepState.fill()    in-place int writes: block_tables, kv_num_blocks,
                            inverse table, PagedKVWriteMap (fillers → scratch)
   meta.seed_paged_tables() references, never copies
-  forward_fn(...)          scatter dst-flat → BlockMask (prebuilt) →
+  forward_fn(...)          scatter to flat pool indices → BlockMask (prebuilt) →
                            flex_attention(enable_gqa=True)   [compiled;
                            graphs replay it after chunk 8]
   sample / finalize        unchanged until overlap (chunk 12) defers it
@@ -475,7 +476,8 @@ phase start; Mac/CPU counts).
    bookkeeping. Marker deleted, all 11 pass unmarked; suite 546 + 5
    chaos.
 3. Block tables + BatchMeta extension + pre-landed attend suites
-   (2026-08-29). `PagedKVWriteMap` (row, off, dst) and `PagedTables`
+   (2026-08-29). `PagedKVWriteMap` (`batch_row`, `token_offset`,
+   `pool_index`) and `PagedTables`
    (block_tables, kv_num_blocks, inverse_tables, write_map — inverse
    carries the past-any-bound sentinel `max_blocks_per_seq` for unowned
    blocks, never 0/-1) land in protocol.py; `BatchMeta.seed_paged_tables`
@@ -497,3 +499,14 @@ phase start; Mac/CPU counts).
    `tests/test_paged_tables.py` green (8). Suite 554 + 5 chaos, 11
    xfailed. The chunk-4 session is the author's: `paged_write_map` +
    the Flex attend, red→green against this suite.
+4. Paged attend CPU correctness (2026-08-30). The author implemented both
+   index-translation sites: `paged_write_map` maps each new logical token to
+   its flat pool destination, while the FlexAttention mask translates
+   physical pool positions back to logical positions for causality. The
+   attention path scatters new K/V directly into the flat pool, runs grouped-
+   query FlexAttention over the shared pool, and restores the model's grouped
+   output shape. All 11 Flex equivalence tests now run unmarked and pass,
+   including scattered blocks, chunked prefill, decode, mixed batches, stale
+   pool contents, and exact pool-write positions. Local suite: 561 passed, 15
+   platform skips, with 5 chaos tests deselected. The compiled-CUDA
+   equivalence twin on the 5090 remains the chunk's exit gate.

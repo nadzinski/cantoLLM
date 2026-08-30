@@ -44,26 +44,64 @@ class KVWriteMap(NamedTuple):
 
 
 class PagedKVWriteMap(NamedTuple):
-    """The paged step's ragged KV write: one entry per real new token,
-    destination flattened to a row of the paged layer tensor.
+    """Indices for copying this step's new K/V vectors into the paged pool.
 
-    Entry k copies one token's (groups, head_dim) vector:
-    `keys[row[k], off[k]] → layer_k[dst[k]]` — a single 1-D index scatter
-    into the flat pool base (paged-kv-plan.md §2.3), where
-    `dst = table[pos // block_size] * block_size + pos % block_size` is
-    computed by `paged_write_map` (engine/batching/paging.py). Alignment
-    is by construction, as with `KVWriteMap`; the padded map keeps its own
-    type untouched.
+    Suppose the current batch contains ``N`` real new tokens in total. Each
+    field is a one-dimensional ``int64`` tensor of length ``N``. The three
+    values at index ``k`` describe one complete copy operation::
+
+        layer_k[pool_index[k]] = keys[batch_row[k], token_offset[k]]
+        layer_v[pool_index[k]] = values[batch_row[k], token_offset[k]]
+
+    ``batch_row`` and ``token_offset`` locate the source token in the
+    rectangular K/V tensors produced by the model for this step.
+    ``pool_index`` is the exact index in the first dimension of the flat
+    paged-pool tensor where that token belongs. The block-table lookup has
+    already been performed when ``pool_index`` is constructed; code that
+    consumes this map does not need to inspect a block table.
+
+    For example, if batch row 0 contributes two new tokens and batch row 1
+    contributes one, a map might contain::
+
+        batch_row =    [0, 0, 1]
+        token_offset = [0, 1, 0]
+        pool_index =   [22, 23, 8]
+
+    That means: copy batch row 0's first two new K/V vectors to flat pool
+    indices 22 and 23, then copy batch row 1's first new K/V vector to flat
+    pool index 8.
+
+    The fields must remain aligned: index ``k`` in one field is meaningful
+    only with index ``k`` in the other two. Padding and filler rows do not
+    appear in the map. The same map is reused for every transformer layer,
+    because the source and destination positions are identical across
+    layers even though the K/V values differ.
     """
 
-    row: torch.Tensor
-    """(total_new,) long — source row in the padded keys/values batch."""
+    batch_row: torch.Tensor
+    """Source batch-row index for each token.
 
-    off: torch.Tensor
-    """(total_new,) long — source offset along that row's num_new axis."""
+    ``batch_row[k]`` selects the first dimension of ``keys`` and ``values``.
+    It is the token's position in the current model batch, not a request ID,
+    cache slot, physical block number, or index in the KV pool.
+    """
 
-    dst: torch.Tensor
-    """(total_new,) long — destination row in the flat paged layer."""
+    token_offset: torch.Tensor
+    """Source token offset within each batch row.
+
+    ``token_offset[k]`` selects the second dimension of ``keys`` and
+    ``values``. Zero means the first token newly processed for that batch row
+    in this step. It is relative to the current input chunk, not the token's
+    absolute position in the request.
+    """
+
+    pool_index: torch.Tensor
+    """Destination index in one layer's flat paged KV tensor.
+
+    ``pool_index[k]`` already combines the token's physical block number with
+    its offset inside that block. It directly indexes the first dimension of
+    ``layer_k`` and ``layer_v``.
+    """
 
 
 class PagedTables(NamedTuple):
@@ -77,19 +115,23 @@ class PagedTables(NamedTuple):
     """
 
     block_tables: torch.Tensor
-    """(B, max_blocks_per_seq) int32 — row b's logical block j lives in
-    physical block `block_tables[b, j]`; entries past the row's table are
-    never read (`kv_num_blocks` bounds the walk)."""
+    """(B, max_blocks_per_seq) int32 — logical-to-physical mappings.
+
+    ``block_tables[batch_row, logical_block]`` is the physical block assigned
+    to that request. Entries beyond ``kv_num_blocks[batch_row]`` are unused.
+    """
 
     kv_num_blocks: torch.Tensor
-    """(B,) int32 — visible blocks per row: ceil(history / block_size)."""
+    """(B,) int32 — number of visible blocks for each batch row."""
 
     inverse_tables: torch.Tensor
-    """(B, num_kv_blocks + 1) int32 — physical block → logical block index
-    for row b; the mask-side translation reads it. Entries for blocks a
-    row does not own hold a PAST-ANY-BOUND sentinel (>= the logical block
-    capacity), so their translated positions fail every causal bound —
-    never 0 or -1, which would alias a visible position."""
+    """(B, num_kv_blocks + 1) int32 — physical-to-logical mappings.
+
+    ``inverse_tables[batch_row, physical_block]`` is that physical block's
+    logical position for the request in the batch row. Blocks the request
+    does not own contain an out-of-range sentinel, causing the causal mask to
+    reject them. The final column represents the scratch block.
+    """
 
     write_map: PagedKVWriteMap
 
@@ -208,7 +250,7 @@ class BatchMeta:
                 f"contract), got {[t.dtype for t in (bt, knb, inv)]}"
             )
         lengths = {t.shape for t in wm}
-        if len(lengths) != 1 or wm.row.dim() != 1:
+        if len(lengths) != 1 or wm.batch_row.dim() != 1:
             raise ValueError(
                 f"write map columns must be 1-D and aligned, got shapes "
                 f"{[tuple(t.shape) for t in wm]}"

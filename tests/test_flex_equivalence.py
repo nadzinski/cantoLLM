@@ -4,15 +4,12 @@ padded stack, on a weight-shared tiny Qwen3, float32, CPU eager, greedy.
 THIS FILE IS THE DEFINITION OF DONE FOR THE HAND-WRITTEN PAGED ATTEND
 (P4 chunk 4: `paged_write_map` in engine/batching/paging.py + the Flex
 method in models/attention/flex.py — both index-translation sites).
-Every test is @xfail(raises=NotImplementedError, strict=True): red until
-the translation exists. Work through them with
+The translation is complete and every test runs unmarked. Run the suite with
 
     pytest tests/test_flex_equivalence.py -x
 
-and DELETE each xfail marker as its test goes green — strict=True makes a
-passing-but-still-marked test fail loudly (XPASS), so the suite polices
-its own markers. The write-map tests depend only on `paged_write_map`;
-the model-level tests need the attend too.
+The write-map tests depend only on `paged_write_map`; the model-level tests
+exercise the complete paged attention path.
 
 Trust model: the oracle is the PADDED stack (proven against the
 sequential einsum path by test_padded_equivalence.py), exercising none of
@@ -23,7 +20,6 @@ index translation, not the flex-decoding kernel; the compiled-CUDA twin
 is the chunk's 5090 exit gate (paged-kv-plan.md §4, §5.4).
 """
 
-import pytest
 import torch
 
 from cantollm.engine.batching.paging import paged_write_map
@@ -36,12 +32,6 @@ from cantollm.models.attention import (
 )
 from cantollm.models.qwen3.model import Qwen3
 from tests.tiny_model import TINY_ARCH
-
-xfail_until_chunk4 = pytest.mark.xfail(
-    raises=NotImplementedError, strict=True,
-    reason="paged_write_map + the Flex attend are the author's chunk-4 "
-    "session (paged-kv-plan.md §8); delete each marker as it goes green",
-)
 
 MAX_SEQ = 32
 BLOCK = 4
@@ -134,6 +124,7 @@ def paged_meta(
     return meta
 
 
+@torch.inference_mode()
 def padded_step(model, pool, rows: list[tuple[int, int, list[int]]]):
     """rows: [(slot, start_pos, token_ids)] → (B, vocab) logits."""
     meta = base_meta([(s, st, len(t)) for s, st, t in rows])
@@ -143,6 +134,7 @@ def padded_step(model, pool, rows: list[tuple[int, int, list[int]]]):
     return model.forward_batched(input_ids, meta, pool)
 
 
+@torch.inference_mode()
 def flex_step(model, pool, rows: list[tuple[int, list[int], list[int]]]):
     """rows: [(start_pos, token_ids, block_table)] → (B, vocab) logits."""
     meta = paged_meta(
@@ -158,46 +150,46 @@ def flex_step(model, pool, rows: list[tuple[int, list[int], list[int]]]):
 class TestWriteMap:
     """Pins for `paged_write_map` alone — no attend involved."""
 
-    @xfail_until_chunk4
     def test_matches_naive_per_token_loop(self):
-        rows = [(0, 0, 5), (0, 6, 3), (0, 13, 1)]
-        tables = [[5, 2], [9, 1, 7], [0, 3, 8, 11]]
-        wm = paged_write_map(rows, tables, BLOCK)
+        batch_rows = [(0, 0, 5), (0, 6, 3), (0, 13, 1)]
+        block_tables = [[5, 2], [9, 1, 7], [0, 3, 8, 11]]
+        wm = paged_write_map(batch_rows, block_tables, BLOCK)
         expected = []
-        for r, (_, start, num_new) in enumerate(rows):
-            for off in range(num_new):
-                pos = start + off
-                dst = tables[r][pos // BLOCK] * BLOCK + pos % BLOCK
-                expected.append((r, off, dst))
-        got = list(zip(wm.row.tolist(), wm.off.tolist(), wm.dst.tolist()))
+        for batch_row_index, (_, start, num_new) in enumerate(batch_rows):
+            for token_offset in range(num_new):
+                pos = start + token_offset
+                physical_block = block_tables[batch_row_index][pos // BLOCK]
+                pool_index = physical_block * BLOCK + pos % BLOCK
+                expected.append((batch_row_index, token_offset, pool_index))
+        got = list(zip(
+            wm.batch_row.tolist(),
+            wm.token_offset.tolist(),
+            wm.pool_index.tolist(),
+        ))
         assert got == expected
 
-    @xfail_until_chunk4
     def test_skips_filler_rows(self):
         # A filler (num_new == 0) between real rows contributes nothing;
-        # the real rows keep their own batch indices.
+        # the real rows keep their own batch-row indices.
         rows = [(0, 0, 2), (0, 0, 0), (0, 4, 1)]
         tables = [[3], [], [6, 2]]
         wm = paged_write_map(rows, tables, BLOCK)
-        assert wm.row.tolist() == [0, 0, 2]
-        assert wm.off.tolist() == [0, 1, 0]
-        assert wm.dst.tolist() == [12, 13, 8]   # 3*4+0, 3*4+1, 2*4+0
+        assert wm.batch_row.tolist() == [0, 0, 2]
+        assert wm.token_offset.tolist() == [0, 1, 0]
+        assert wm.pool_index.tolist() == [12, 13, 8]  # 3*4+0, 3*4+1, 2*4+0
 
-    @xfail_until_chunk4
     def test_crosses_block_boundaries(self):
         # One chunk spanning three blocks: positions 2..8 through table
         # [5, 1, 9] land at 5*4+{2,3}, 1*4+{0..3}, 9*4+0.
         wm = paged_write_map([(0, 2, 7)], [[5, 1, 9]], BLOCK)
-        assert wm.dst.tolist() == [22, 23, 4, 5, 6, 7, 36]
+        assert wm.pool_index.tolist() == [22, 23, 4, 5, 6, 7, 36]
 
-    @xfail_until_chunk4
     def test_all_filler_step_yields_an_empty_map(self):
         wm = paged_write_map([(0, 0, 0), (0, 0, 0)], [[], []], BLOCK)
-        assert wm.row.numel() == 0 and wm.dst.numel() == 0
+        assert wm.batch_row.numel() == 0 and wm.pool_index.numel() == 0
 
 
 class TestSingleRow:
-    @xfail_until_chunk4
     def test_full_prefill_matches_padded(self):
         oracle, flex = build_models()
         expected = padded_step(
@@ -207,7 +199,6 @@ class TestSingleRow:
         logits = flex_step(flex, make_paged_pool(), [(0, PROMPT_A, table)])
         torch.testing.assert_close(logits, expected, atol=1e-5, rtol=0)
 
-    @xfail_until_chunk4
     def test_scattered_table_matches_padded(self):
         # THE paged pin: a permuted, non-contiguous table must be
         # invisible to the math.
@@ -219,7 +210,6 @@ class TestSingleRow:
         logits = flex_step(flex, make_paged_pool(), [(0, PROMPT_A, table)])
         torch.testing.assert_close(logits, expected, atol=1e-5, rtol=0)
 
-    @xfail_until_chunk4
     def test_chunked_prefill_across_block_boundaries(self):
         # Chunks of 3 then 9: neither lands on a block boundary, so the
         # second chunk both finishes block 0 and spans blocks 1-2.
@@ -232,7 +222,6 @@ class TestSingleRow:
         logits = flex_step(flex, paged_pool, [(3, PROMPT_A[3:], table)])
         torch.testing.assert_close(logits, expected, atol=1e-5, rtol=0)
 
-    @xfail_until_chunk4
     def test_prefill_then_decode_matches(self):
         oracle, flex = build_models()
         padded_pool, paged_pool = make_padded_pool(), make_paged_pool()
@@ -253,7 +242,6 @@ class TestSingleRow:
 
 
 class TestMixedBatch:
-    @xfail_until_chunk4
     def test_mixed_decode_and_prefill_chunk_matches(self):
         # Row A decodes (needs a boundary-crossing 4th block at history
         # 13); row B finishes a split prefill. Distinct scattered tables.
@@ -279,7 +267,6 @@ class TestMixedBatch:
 
 
 class TestPoolState:
-    @xfail_until_chunk4
     def test_stale_block_reuse_is_clean(self):
         # Garbage-fill the whole paged pool (a freed block is never
         # zeroed), then run a fresh full prefill through it: the causal
@@ -298,11 +285,10 @@ class TestPoolState:
         )
         torch.testing.assert_close(logits, expected, atol=1e-5, rtol=0)
 
-    @xfail_until_chunk4
     def test_pool_writes_land_at_table_positions(self):
         # The write side pinned independently of the attend: after one
-        # full prefill, every layer's paged rows at the table-translated
-        # destinations equal the padded pool's slot rows.
+        # full prefill, every layer's paged entries at the translated pool
+        # indices equal the corresponding positions in the padded slot.
         oracle, flex = build_models()
         padded_pool, paged_pool = make_padded_pool(), make_paged_pool()
         table = [5, 2, 9]
@@ -312,10 +298,10 @@ class TestPoolState:
             pk, pv = padded_pool.layer(i)
             fk, fv = paged_pool.layer(i)
             for pos in range(len(PROMPT_A)):
-                dst = table[pos // BLOCK] * BLOCK + pos % BLOCK
+                pool_index = table[pos // BLOCK] * BLOCK + pos % BLOCK
                 torch.testing.assert_close(
-                    fk[dst], pk[0, pos], atol=1e-6, rtol=0
+                    fk[pool_index], pk[0, pos], atol=1e-6, rtol=0
                 )
                 torch.testing.assert_close(
-                    fv[dst], pv[0, pos], atol=1e-6, rtol=0
+                    fv[pool_index], pv[0, pos], atol=1e-6, rtol=0
                 )
