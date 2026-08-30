@@ -59,6 +59,13 @@ from torch.nn.attention.flex_attention import BlockMask, flex_attention
 
 from cantollm.models.attention.protocol import BatchMeta
 
+# The CUDA Inductor prefill templates tile queries at BLOCK_M = 128 on the
+# probed build (5090, torch 2.10.0+cu128 / sm_120, 2026-08-30), and the
+# mask's Q BLOCK_SIZE must be a multiple of the tile. Eager Flex never
+# checks. Revalidate on torch upgrades alongside the KV-block floor
+# (paged-kv-plan.md chunk log, chunk 4).
+Q_BLOCK_MULTIPLE = 128
+
 
 class FlexAttentionMethod:
     """AttentionMethod implementation for the flat, paged KV layout.
@@ -117,8 +124,13 @@ class FlexAttentionMethod:
         positions. All table tensors are supplied in ``meta.paged_tables``;
         ``device`` is the device on which attention will run.
         """
-        kv_num_blocks = meta.paged_tables.kv_num_blocks[:, None]
-        kv_indices = meta.paged_tables.block_tables[:, None, :]
+        # from_kv_blocks' canonical ranks — (B, heads, q_blocks) and
+        # (B, heads, q_blocks, N) with broadcast heads and one q block.
+        # Eager Flex broadcasts squeezed shapes too, but the CUDA
+        # templates derive kernel strides from the actual ndim and emit
+        # broken code for them (5090 probe, 2026-08-30).
+        kv_num_blocks = meta.paged_tables.kv_num_blocks[:, None, None]
+        kv_indices = meta.paged_tables.block_tables[:, None, None, :]
         inverse_tables = meta.paged_tables.inverse_tables
         start_positions = meta.start_pos
 
@@ -156,10 +168,18 @@ class FlexAttentionMethod:
 
         total_flat_pool_positions = inverse_tables.shape[1] * self.block_size
 
+        # One q block spanning the step width, rounded up to the CUDA
+        # prefill template's tile (BLOCK_M = 128 on the probed build,
+        # which requires the mask's q block to be a multiple of it; a raw
+        # width like 150 fails lowering, and eager never checks). The
+        # wider block changes no semantics: per-position causality is
+        # mask_mod's job either way.
+        q_block = -(-meta.num_new_max // Q_BLOCK_MULTIPLE) * Q_BLOCK_MULTIPLE
+
         return BlockMask.from_kv_blocks(
             kv_num_blocks=kv_num_blocks,
             kv_indices=kv_indices,
-            BLOCK_SIZE=(meta.num_new_max, self.block_size),
+            BLOCK_SIZE=(q_block, self.block_size),
             mask_mod=mask_mod,
             seq_lengths=(meta.num_new_max, total_flat_pool_positions),
             # Query-block metadata is only needed for the backward pass;
