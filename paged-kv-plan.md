@@ -37,10 +37,12 @@ and round 4 passed its equivalence gate while FAILING prediction 6
 everywhere (overlap costs 0.5-2.6% at 5090 step times; DEFAULT OFF;
 one intermittent flex+overlap delivery collapse flagged, not
 chased). §6 graded, §10 complete, records/PLAN.md/viz/memory synced.
-Remaining, all the author's: the H100 day (deferred "another day";
-prediction 6's real test rides with it), the §9.8
-CUDA-default-attention decision (numbers ready), the Paged-KV viz
-tab ask, the longctx kernel gap, the collapse follow-up.**
+THE DEFAULT FLIPPED 2026-08-31 (§9.8 resolved -> §2.14, the author's
+call): flex + paged at parity capacity is the CUDA serve default;
+longctx-heavy serving pins sdpa; pre-flip configs pinned. Remaining:
+the H100 day (deferred "another day"; prediction 6's real test rides
+with it), the Paged-KV viz tab (the author builds it later), the
+longctx kernel gap, the chunk-12 collapse follow-up.**
 
 ## 1. Goal
 
@@ -214,6 +216,22 @@ pages: `kv_indices` would need per-step derivation, partial mask blocks
 over-read up to 4x, and the complexity is permanent while the floor is
 Inductor template pruning a torch upgrade may move (revalidate it, and the
 Q-block tile multiple, on upgrades).
+
+**2.14 (added 2026-08-31) The default flip: flex + paged is the CUDA serve
+default, at parity capacity.** The §9.8 call, made by the author on the
+round-2/3/4 numbers: flex full stack is at-or-ahead of the padded default
+on the standard cells (short_chat c=16 3612 vs 3581 tok/s), carries a
+smaller warm bill (20 families vs 315 shapes), and holds a 1.53x capacity
+ceiling when a deployment chooses to raise `max_batch` over the same KV
+budget. The default `num_kv_blocks` stays None = parity: exhaustion is
+structurally impossible, so the (now well-tested) eviction machinery never
+fires by surprise; undercommitting is an explicit ops choice. Documented
+exception: long-context-heavy serving pins `--attention sdpa` until the
+flex decode-kernel gap at B <= 2 closes (or a torch upgrade lands).
+Padded + sdpa remains the Mac/CPU default and the always-runnable control
+arm (§2.2). Pre-flip bench configs that leaned on the old default are
+pinned `attention = "sdpa"` so re-runs reproduce what they measured (the
+knee-config precedent). Overlap is not part of the default (§10 round 4).
 
 ## 3. Architecture: the paged step
 
@@ -466,6 +484,8 @@ failures only.
    tests only?
 8. **The default flip** (chunk 13, after the numbers): does flex + paged
    become the CUDA serve default, and at what `num_kv_blocks` policy?
+   RESOLVED 2026-08-31 (the author): YES, at parity capacity; decision
+   recorded as §2.14 and implemented in main.py's default resolution.
 
 ## 10. Results
 
@@ -1196,10 +1216,17 @@ phase start; Mac/CPU counts).
 13. Close-out (2026-08-30/31). §10 complete for the 5090 rounds; §6
     graded (5090 scope); PLAN.md Phase 4 Status synced;
     serve.example.toml carries the Phase-4 knobs; viz Roadmap card
-    synced (authorized 2026-08-31); memory updated. Deferred /
-    still open, all by the author's explicit word: the H100 day
-    ("another day"; §6.6's H100 half and the 32B scale check ride
-    with it), the §9.8 CUDA-default-attention decision (numbers
-    ready in §10, the author's call), the Paged-KV viz tab (open
-    ask, not authorized), the longctx B <= 2 flex kernel gap, and
-    the chunk-12 intermittent collapse follow-up.
+    synced (authorized 2026-08-31); memory updated. THE §9.8 CALL
+    LANDED 2026-08-31 (the author: "flex+paged as default"):
+    recorded as decision §2.14 and implemented, i.e. main.py's CUDA
+    attention default is now "flex" (parity capacity, so eviction
+    cannot fire by surprise), the §2.8 guard's error names the
+    default and the sdpa escape, help text + serve.example.toml
+    updated, and the six pre-flip compile/cudagraphs A/B configs
+    pinned attention = "sdpa" so re-runs reproduce what they
+    measured (the sequential baseline needs no pin: einsum always).
+    Deferred / still open, all by the author's explicit word: the
+    H100 day ("another day"; §6.6's H100 half and the 32B scale
+    check ride with it), the Paged-KV viz tab (the author builds it
+    later), the longctx B <= 2 flex kernel gap, and the chunk-12
+    intermittent collapse follow-up.

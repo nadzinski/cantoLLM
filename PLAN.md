@@ -737,12 +737,19 @@ at 4–6 ms steps because the graphs+compile stack leaves no CPU
 dispatch slack to hide, so overlap ships DEFAULT OFF; the prediction's
 H100 half (dispatch-bound 27.5 ms steps) is untested. §6 fully graded
 at 5090 scope and §10 complete in paged-kv-plan.md.
-Open, all by the author's word: the H100 day (deferred to another
-day; prediction 6's real test and the 32B scale check ride with it);
-the §9.8 CUDA-default-attention decision (numbers ready); the
-Paged-KV viz tab ask; the longctx B <= 2 flex decode-kernel tuning;
-and an intermittent flex+overlap delivery collapse under bench load
-(flagged with diagnosis in §10, correctness unaffected).
+The §9.8 default decision landed 2026-08-31 (the author's call,
+recorded as paged-kv-plan.md §2.14 and implemented): flex + paged at
+parity capacity is now the CUDA serve default (at-or-ahead of padded
+on the standard cells, smaller warm bill, eviction structurally
+impossible at parity), with long-context-heavy serving documented to
+pin `--attention sdpa` until the flex decode-kernel gap closes;
+pre-flip bench configs pinned sdpa so re-runs reproduce what they
+measured; padded stays the Mac/CPU default and the control arm.
+Open: the H100 day (deferred to another day; prediction 6's real test
+and the 32B scale check ride with it); the Paged-KV viz tab (the
+author builds it later); the longctx B <= 2 flex decode-kernel
+tuning; and an intermittent flex+overlap delivery collapse under
+bench load (flagged with diagnosis in §10, correctness unaffected).
 
 - KV blocks of fixed size (16 tokens is the vLLM default) in a single preallocated pool.
 - Per-request block table mapping logical token positions → block IDs.

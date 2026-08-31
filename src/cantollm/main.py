@@ -104,15 +104,21 @@ def cmd_serve(args):
                 "batched speculation is out of scope)"
             )
         spec = qwen3_spec(args.model)
-        # CUDA defaults are the measured winner (shape-buckets-results.md):
-        # sdpa attention + bounded shape vocabulary + warm-up. Everywhere
-        # else: padded, exact v1 geometry. Explicit flags override.
+        # CUDA defaults are the measured winners (shape-buckets-results.md
+        # for the Phase-3 pieces; paged-kv-plan.md §10 for the Phase-4
+        # flip): flex + paged KV at parity capacity, over the bounded
+        # shape vocabulary + warm-up + graphs + compile. Everywhere else:
+        # padded, exact v1 geometry. Explicit flags override.
         on_cuda = device.type == "cuda"
-        attention = args.attention or ("sdpa" if on_cuda else "padded")
+        attention = args.attention or ("flex" if on_cuda else "padded")
         # flex is the paged stack (Phase 4, paged-kv-plan.md): the
         # attention value selects the KV layout with it, since neither
-        # half runs without the other. Not the CUDA default until the
-        # phase's A/Bs settle the flip (chunk 13, the author's call).
+        # half runs without the other. The CUDA default since the
+        # phase's A/Bs settled the flip (§9.8, the author's call,
+        # 2026-08-31): at-or-ahead of padded on the standard cells, a
+        # smaller warm bill, and parity capacity means eviction cannot
+        # fire by surprise. Long-context-heavy serving pins
+        # --attention sdpa until the flex decode-kernel gap closes.
         paged_kv = attention == "flex"
         shape_buckets = (
             args.shape_buckets if args.shape_buckets is not None else on_cuda
@@ -153,9 +159,10 @@ def cmd_serve(args):
             # holds it defensively too): FlexAttention only performs
             # compiled, so a paged CUDA server without compile would
             # silently serve the slow eager kernel.
-            sys.exit("error: --attention flex on CUDA requires "
-                     "--torch-compile (FlexAttention only performs "
-                     "compiled; paged-kv-plan.md §2.8)")
+            sys.exit("error: --attention flex on CUDA (the default) "
+                     "requires --torch-compile (FlexAttention only "
+                     "performs compiled; paged-kv-plan.md §2.8). To "
+                     "serve uncompiled on CUDA, pin --attention sdpa")
         if (args.block_size is not None or args.num_kv_blocks is not None) \
                 and not paged_kv:
             sys.exit("error: --block-size/--num-kv-blocks are paged-KV "
@@ -535,13 +542,15 @@ def parse_args(argv=None):
                                    "bounds the prefill chunk width (default: 256)")
     serve_parser.add_argument("--attention", choices=("padded", "sdpa", "flex"),
                               default=None,
-                              help="Batched engine: attention method (default: sdpa "
-                                   "on CUDA, padded einsum elsewhere; sdpa = "
-                                   "F.scaled_dot_product_attention via cuDNN; flex = "
-                                   "FlexAttention over the block-indexed paged KV "
-                                   "pool, Phase 4; implies the paged stack and, on "
-                                   "CUDA, requires --torch-compile). The sequential "
-                                   "engine always uses einsum")
+                              help="Batched engine: attention method (default: flex "
+                                   "on CUDA since the Phase-4 flip, padded einsum "
+                                   "elsewhere; flex = FlexAttention over the "
+                                   "block-indexed paged KV pool, implies the paged "
+                                   "stack and, on CUDA, requires --torch-compile; "
+                                   "sdpa = F.scaled_dot_product_attention via cuDNN, "
+                                   "the recommended pin for long-context-heavy "
+                                   "serving). The sequential engine always uses "
+                                   "einsum")
     serve_parser.add_argument("--block-size", type=int, default=None,
                               help="Paged KV (--attention flex): tokens per KV "
                                    "block (default: 64, the compiled Flex "

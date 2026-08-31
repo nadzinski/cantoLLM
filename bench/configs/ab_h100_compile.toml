@@ -15,6 +15,10 @@ name = "ab-h100-compile"
 [server]
 model = "0.6B"
 engine = "batched"
+# Pinned 2026-08-31: the CUDA serve default flipped to flex+paged
+# (paged-kv-plan.md §9.8); this config predates the flip and re-runs
+# must reproduce what it measured.
+attention = "sdpa"
 device = "cuda"
 port = 8378
 # 1800 not 900: the p5 host compiles ~3x slower than the 5090's Ryzen;

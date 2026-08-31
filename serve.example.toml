@@ -17,7 +17,9 @@ device = "auto"
 max_batch = 8
 batch_max_seq_len = 4096
 max_tokens_per_step = 256
-# attention = "sdpa"            # default: sdpa on CUDA, padded elsewhere
+# attention = "flex"            # default: flex+paged on CUDA (Phase-4 flip),
+                                # padded elsewhere; pin "sdpa" for
+                                # long-context-heavy serving
 # shape_buckets = true
 # warmup_shapes = true
 # cuda_graphs = true
