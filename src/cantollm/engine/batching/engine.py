@@ -97,11 +97,6 @@ def scheduler_from_runtime(
                 f"{MIN_CUDA_KV_BLOCK}, got {config.block_size} "
                 "(paged-kv-plan.md §2.13)"
             )
-    if config.paged_kv and config.cuda_graphs:
-        raise RuntimeError(
-            "CUDA graphs on paged decode land in chunk 8 "
-            "(paged-kv-plan.md §5); run paged with cuda_graphs off"
-        )
     from cantollm.models.attention.flex import FlexAttentionMethod
 
     method = getattr(getattr(runtime, "model", None), "attention_method", None)
@@ -173,7 +168,9 @@ def scheduler_from_runtime(
 
         from cantollm.engine.batching.graphs import GraphedBatchedForward
 
-        graphed = GraphedBatchedForward(runtime.forward_batched, config)
+        graphed = GraphedBatchedForward(
+            runtime.forward_batched, config, paged_state=paged_state
+        )
         t0 = _time.perf_counter()
         captured = graphed.capture_decode_shapes(pool)
         logger.info(

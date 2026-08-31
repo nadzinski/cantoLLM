@@ -1,0 +1,52 @@
+# Phase-4 round 2, the capacity headline (paged-kv-plan.md §7,
+# §6 prediction 3): the paged pool's whole point. num_kv_blocks = 1024
+# is EXACTLY what the padded pool's 16 slots reserve (16 x 4096 / 64),
+# but the paged server runs max_batch = 64: same KV memory, 4x the
+# concurrency ceiling, because capacity and concurrency decouple
+# (§2.7). Decode is per-step-overhead-bound at 0.6B (the Phase 2 knee
+# lesson), so more rows per step should amortize it.
+#
+# Prediction 3's gates: sustains >= 48 concurrent short_chat requests
+# with zero preemptions (no preemption exists yet; the operative check
+# is no paged-KV deadlock and every request completes); saturated
+# aggregate >= 1.5x the padded default's saturated short_chat
+# (2026-08-30 default-arm record: 3581 tok/s at c=16, its slot
+# ceiling => target >= ~5400); kv_fill_mean on the true block
+# denominator >= 60% vs padded's ~4% effective slot fill. Grade every
+# clause honestly against §6 as written, misses included.
+#
+# Standing gates: no NaN, zero recompiles after warm-up, decode replay
+# rate ~100%, no deadlock errors in the server log.
+schema_version = 1
+name = "capacity-5090-paged"
+
+[server]
+model = "0.6B"
+engine = "batched"
+device = "cuda"
+port = 8377
+health_timeout_s = 900
+max_batch = 64
+batch_max_seq_len = 4096
+max_tokens_per_step = 512
+attention = "flex"
+num_kv_blocks = 1024
+shape_buckets = true
+warmup_shapes = true
+torch_compile = true
+cuda_graphs = true
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 8
+repeats = 3
+seed = 0
+
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [16, 32, 48, 64]
+requests_per_level = 96

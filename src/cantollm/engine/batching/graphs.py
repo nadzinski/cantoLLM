@@ -33,6 +33,20 @@ an all-real dummy meta per shape (each row writing the last position of its
 own slot). The garbage it writes into the pool during capture is harmless:
 capture runs behind Ready, before any request exists, and stale pool data
 behind the causal mask is already the pool's normal state.
+
+Paged mode (P4 chunk 8, paged-kv-plan.md §2.6/§3): kv length is a VALUE
+on the paged path, so graphs key on `(batch, 1)` alone and the capture
+set collapses from |B| x |KV| shapes to the |B| batch buckets. The
+static buffers ARE the step tables: the scheduler's `PagedStepState`
+buffers (tables, inverse, start_pos, the padded decode write map) are
+persistent and rewritten in place by `fill()` each step, so a recording
+that baked their addresses reads every later step's values with NO
+marshal on the table side — `fill()` is the marshal. This wrapper only
+copies the meta-side tensors (input_ids, positions, slots, start_pos,
+num_new) into its own static buffers per replay. `_replayable` verifies
+by address that a step's seeded tables and write map really are the
+state's buffers; a meta carrying any other tensors falls through to
+eager.
 """
 
 from __future__ import annotations
@@ -43,8 +57,9 @@ import torch
 
 from cantollm import progress
 from cantollm.engine.batching.config import BatchingConfig
+from cantollm.engine.batching.paging import PagedStepState
 from cantollm.engine.batching.types import BatchedForwardFn
-from cantollm.kv_pool import PaddedKVPool
+from cantollm.kv_pool import KVPool, PaddedKVPool
 from cantollm.models.attention.protocol import BatchMeta, KVWriteMap
 
 _WARM_ITERS = 3
@@ -79,6 +94,23 @@ class _CapturedShape:
     out: torch.Tensor | None = None
 
 
+@dataclass
+class _PagedCapturedShape:
+    """One (batch, 1) paged decode family's recording and meta-side
+    static buffers. The table-side state (block tables, inverse,
+    start_pos, decode write map, the family BlockMask) lives in the
+    scheduler's `PagedStepState` and needs no buffers here: `fill()`
+    rewrites those addresses in place every step."""
+
+    input_ids: torch.Tensor      # (B, 1) int64
+    slots: torch.Tensor          # (B,) long
+    start_pos: torch.Tensor      # (B,) long
+    num_new: torch.Tensor        # (B,) long
+    positions: torch.Tensor      # (B, 1) long
+    graph: torch.cuda.CUDAGraph | None = None
+    out: torch.Tensor | None = None
+
+
 class GraphedBatchedForward:
     """Dispatch decode steps to captured CUDA graphs; everything else eager.
 
@@ -93,7 +125,12 @@ class GraphedBatchedForward:
     back silently needs a counter that proves it actually ran.
     """
 
-    def __init__(self, inner: BatchedForwardFn, config: BatchingConfig):
+    def __init__(
+        self,
+        inner: BatchedForwardFn,
+        config: BatchingConfig,
+        paged_state: PagedStepState | None = None,
+    ):
         if not config.shapes_bounded:
             raise ValueError(
                 "GraphedBatchedForward requires the bounded shape vocabulary "
@@ -101,11 +138,18 @@ class GraphedBatchedForward:
                 "captured per decode shape, and an unbounded vocabulary "
                 "cannot be enumerated"
             )
+        if config.paged_kv != (paged_state is not None):
+            raise ValueError(
+                "paged configs take the scheduler's PagedStepState (the "
+                "recordings bake its buffer addresses); padded configs "
+                "take none"
+            )
         self.inner = inner
         self.config = config
+        self.paged_state = paged_state
         self.hits = 0
         self.misses = 0
-        self._table: dict[tuple[int, int, int], _CapturedShape] = {}
+        self._table: dict[tuple, _CapturedShape | _PagedCapturedShape] = {}
         self._mem_handle = None  # shared graph memory pool, created lazily
 
     # ---------------- serving path ----------------
@@ -114,19 +158,27 @@ class GraphedBatchedForward:
         self,
         input_ids: torch.Tensor,
         meta: BatchMeta,
-        pool: PaddedKVPool,
+        pool: KVPool,
     ) -> torch.Tensor:
-        key = (len(meta.rows), meta.num_new_max, meta.max_history_len)
+        if self.paged_state is not None:
+            # kv length is a value under paged (§2.6): the family alone
+            # keys the recording.
+            key = (len(meta.rows), meta.num_new_max)
+        else:
+            key = (len(meta.rows), meta.num_new_max, meta.max_history_len)
         entry = self._table.get(key)
         if entry is None or entry.graph is None or not self._replayable(meta, pool):
             self.misses += 1
             return self.inner(input_ids, meta, pool)
         self.hits += 1
-        self._marshal(entry, input_ids, meta, pool)
+        if self.paged_state is not None:
+            self._marshal_paged(entry, input_ids, meta)
+        else:
+            self._marshal(entry, input_ids, meta, pool)
         entry.graph.replay()
         return entry.out
 
-    def _replayable(self, meta: BatchMeta, pool: PaddedKVPool) -> bool:
+    def _replayable(self, meta: BatchMeta, pool: KVPool) -> bool:
         """Host-side guard for the replay path, from `meta.rows` only —
         touching the device tensors here would cost the sync the graph
         exists to remove.
@@ -147,7 +199,24 @@ class GraphedBatchedForward:
                 continue
             if num_new != 1 or start + num_new > capacity:
                 return False
-        return True
+        if self.paged_state is None:
+            return True
+        # Paged bounds checks, by ADDRESS (§5 chunk 8): the recording
+        # baked the step state's buffers, so a meta whose seeded tables
+        # or write map are any other tensors (a hand-built test meta, a
+        # fresh-tensor map from a future refactor) must fall through to
+        # eager rather than replay against memory the graph never reads.
+        tables = meta.__dict__.get("paged_tables")
+        if tables is None:
+            return False
+        state = self.paged_state
+        return (
+            tables.block_tables.data_ptr() == state.block_tables.data_ptr()
+            and tables.inverse_tables.data_ptr()
+            == state.inverse_tables.data_ptr()
+            and tables.write_map.pool_index.data_ptr()
+            == state.map_pool_index.data_ptr()
+        )
 
     @torch.inference_mode()
     def _marshal(
@@ -187,16 +256,36 @@ class GraphedBatchedForward:
             )
         )
 
+    @torch.inference_mode()
+    def _marshal_paged(
+        self,
+        entry: _PagedCapturedShape,
+        input_ids: torch.Tensor,
+        meta: BatchMeta,
+    ) -> None:
+        """The paged replay prologue: meta-side copies only. The table
+        side (block tables, inverse, start_pos, the decode write map's
+        pool_index) already sits in the recording's addresses, written
+        there by `PagedStepState.fill` before this call, and the family
+        BlockMask reads those same buffers."""
+        entry.input_ids.copy_(input_ids)
+        entry.slots.copy_(meta.slots)
+        entry.start_pos.copy_(meta.start_pos)
+        entry.num_new.copy_(meta.num_new)
+        entry.positions.copy_(meta.positions)
+
     # ---------------- capture (behind Ready) ----------------
 
     def decode_shapes(self) -> list[tuple[int, int]]:
         """The capture set: every (batch, kv_len) with width 1 in the
-        vocabulary (design note §3, decision 2)."""
+        vocabulary (design note §3, decision 2). Paged: the kv element
+        is the constant logical bound and one graph per batch bucket is
+        captured, keyed (batch, 1)."""
         return [
             (b, kv) for b, w, kv in self.config.shape_vocabulary() if w == 1
         ]
 
-    def capture_decode_shapes(self, pool: PaddedKVPool) -> int:
+    def capture_decode_shapes(self, pool: KVPool) -> int:
         """Capture one graph per decode shape into a shared memory pool.
 
         Runs once at engine build, behind the process split's Ready, after
@@ -213,11 +302,80 @@ class GraphedBatchedForward:
             )
         if self._mem_handle is None:
             self._mem_handle = torch.cuda.graph_pool_handle()
+        if self.paged_state is not None:
+            batches = sorted(
+                {b for b, _ in self.decode_shapes()}, reverse=True
+            )
+            for i, batch in enumerate(batches):
+                self._capture_one_paged(batch, pool, device)
+                progress.report("capture", i + 1, len(batches))
+            return len(batches)
         shapes = sorted(self.decode_shapes(), reverse=True)
         for i, (batch, kv_len) in enumerate(shapes):
             self._capture_one(batch, kv_len, pool, device)
             progress.report("capture", i + 1, len(shapes))
         return len(shapes)
+
+    @torch.inference_mode()
+    def _paged_capture_setup(
+        self, batch: int, device: torch.device
+    ) -> tuple[_PagedCapturedShape, BatchMeta]:
+        """Meta-side static buffers plus a capture meta for one paged
+        decode family, with the table side set up through the step
+        state's own `fill` so the recording bakes exactly the buffers
+        traffic rewrites (and the family's cached BlockMask rides in).
+
+        Dummy geometry: every row decodes position 0 through a one-block
+        table pointing at physical block 0. Rows sharing a physical
+        block is legal (each row's inverse is its own), and the racing
+        capture-time writes to one pool index are garbage behind Ready.
+        Allocated under `inference_mode` for the same dispatch-key
+        consistency as the padded entries."""
+        long = dict(dtype=torch.int64, device=device)
+        entry = _PagedCapturedShape(
+            input_ids=torch.zeros((batch, 1), **long),
+            slots=torch.arange(batch, **long),
+            start_pos=torch.zeros((batch,), **long),
+            num_new=torch.ones((batch,), **long),
+            positions=torch.zeros((batch, 1), **long),
+        )
+        rows = [(r, 0, 1) for r in range(batch)]
+        meta = BatchMeta(
+            rows=rows,
+            slots=entry.slots,
+            start_pos=entry.start_pos,
+            num_new=entry.num_new,
+            positions=entry.positions,
+            num_new_max=1,
+            max_history_len=1,
+            device=device,
+        )
+        meta.seed_paged_tables(self.paged_state.fill(
+            rows, [[0]] * batch, self.config.block_size, 1
+        ))
+        return entry, meta
+
+    def _capture_one_paged(
+        self, batch: int, pool: KVPool, device: torch.device
+    ) -> None:
+        """Warm, capture, and register one paged decode family, keyed
+        (batch, 1). Same discipline as `_capture_one`: side-stream warm
+        first, entry registered only after capture succeeds."""
+        entry, meta = self._paged_capture_setup(batch, device)
+
+        side = torch.cuda.Stream()
+        side.wait_stream(torch.cuda.current_stream())
+        with torch.cuda.stream(side):
+            for _ in range(_WARM_ITERS):
+                self.inner(entry.input_ids, meta, pool)
+        torch.cuda.current_stream().wait_stream(side)
+
+        graph = torch.cuda.CUDAGraph()
+        with torch.cuda.graph(graph, pool=self._mem_handle):
+            out = self.inner(entry.input_ids, meta, pool)
+        entry.graph = graph
+        entry.out = out
+        self._table[(batch, 1)] = entry
 
     @torch.inference_mode()
     def _alloc_entry(

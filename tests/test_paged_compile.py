@@ -372,15 +372,15 @@ class TestPagedWarmup:
             "was not warmed behind Ready"
         )
 
-    def test_cuda_graphs_with_paged_refused_until_chunk_8(self):
+    def test_cuda_graphs_with_paged_wired_but_cuda_only(self):
+        # Chunk 8 opened the paged graphs path: assembly now reaches
+        # capture (which refuses a non-CUDA pool) instead of a
+        # not-yet-implemented refusal.
         model = make_flex_model()
         runtime = make_runtime(model)
-        with pytest.raises(RuntimeError, match="chunk 8"):
+        with pytest.raises(RuntimeError, match="CUDA graphs need a CUDA"):
             scheduler_from_runtime(
-                runtime,
-                paged_config(
-                    warmup_shapes=True, cuda_graphs=True, torch_compile=True
-                ),
+                runtime, paged_config(warmup_shapes=True, cuda_graphs=True)
             )
 
 

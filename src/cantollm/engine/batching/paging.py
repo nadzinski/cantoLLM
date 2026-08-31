@@ -168,6 +168,35 @@ class PagedStepState:
         self.start_pos = torch.zeros(
             max_rows, dtype=torch.int64, device=device
         )
+        # Decode-step write map, persistent like the tables (chunk 8):
+        # graph capture bakes these addresses, and the round-1 probe
+        # measured fill's former per-element device writes as the
+        # dominant flex-side host cost. batch_row/token_offset are
+        # constants of the decode convention (row k writes its own
+        # offset 0); pool_index is rewritten per step.
+        self.map_batch_row = torch.arange(
+            max_rows, dtype=torch.int64, device=device
+        )
+        self.map_token_offset = torch.zeros(
+            max_rows, dtype=torch.int64, device=device
+        )
+        self.map_pool_index = torch.zeros(
+            max_rows, dtype=torch.int64, device=device
+        )
+        # CPU staging twins: fill() assembles a step host-side, then
+        # lands it in the device buffers with one bulk copy_ per buffer
+        # (addresses stable; the copies replace hundreds of tiny H2D
+        # writes per step at long KV).
+        self._stage_block_tables = torch.zeros(
+            (max_rows, max_blocks_per_seq), dtype=torch.int32
+        )
+        self._stage_kv_num_blocks = torch.zeros(max_rows, dtype=torch.int32)
+        self._stage_inverse = torch.full(
+            (max_rows, num_kv_blocks + 1), max_blocks_per_seq,
+            dtype=torch.int32,
+        )
+        self._stage_start_pos = torch.zeros(max_rows, dtype=torch.int64)
+        self._stage_map_pool_index = torch.zeros(max_rows, dtype=torch.int64)
         # Most physical blocks do not belong to a given batch row. Initialize
         # every inverse-table entry to an invalid logical block number, then
         # let the per-step fill operation replace entries for blocks the batch
@@ -218,6 +247,20 @@ class PagedStepState:
         would mask the row completely and produce NaN
         (paged-kv-plan.md §4). Real rows never see the scratch block; its
         inverse entry stays the sentinel.
+
+        Decode-shaped steps (every row ``num_new <= 1``, at least one
+        real row) get their write map from the PERSISTENT map buffers,
+        padded to the batch: one entry per row, fillers writing their
+        garbage to the scratch block's first position (the padded
+        graph path's convention, §3's map spec). Graph capture bakes
+        those addresses, so replay needs no map marshal at all: this
+        method IS the marshal. Prefill-shaped steps keep the exact
+        one-entry-per-real-token map, built fresh.
+
+        The step is assembled in CPU staging buffers and landed with one
+        bulk ``copy_`` per device buffer: same addresses, but a handful
+        of H2D copies instead of hundreds of per-element writes (the
+        round-1 probe's flex-side host gap).
         """
         batch = len(step_rows)
         if batch > self.max_rows:
@@ -229,21 +272,31 @@ class PagedStepState:
                 f"{len(block_tables)} block tables for {batch} rows"
             )
         scratch_block = self.num_kv_blocks
+        decode_shaped = (
+            all(n <= 1 for _, _, n in step_rows)
+            and any(n == 1 for _, _, n in step_rows)
+        )
 
         # Reset only the rows this step uses: entries a previous step wrote
         # for blocks a row no longer owns must not leak into its mask.
-        self.block_tables[:batch].zero_()
-        self.kv_num_blocks[:batch].zero_()
-        self.inverse_tables[:batch].fill_(self.max_blocks_per_seq)
+        stage_bt = self._stage_block_tables[:batch]
+        stage_kn = self._stage_kv_num_blocks[:batch]
+        stage_inv = self._stage_inverse[:batch]
+        stage_sp = self._stage_start_pos[:batch]
+        stage_bt.zero_()
+        stage_kn.zero_()
+        stage_inv.fill_(self.max_blocks_per_seq)
 
         for r, (_, start_pos, num_new) in enumerate(step_rows):
-            self.start_pos[r] = start_pos
+            stage_sp[r] = start_pos
             if r >= len(block_tables):
                 # Filler row: one visible block, the scratch block, mapped
                 # to logical 0 so position 0 is visible to every query.
-                self.block_tables[r, 0] = scratch_block
-                self.kv_num_blocks[r] = 1
-                self.inverse_tables[r, scratch_block] = 0
+                stage_bt[r, 0] = scratch_block
+                stage_kn[r] = 1
+                stage_inv[r, scratch_block] = 0
+                if decode_shaped:
+                    self._stage_map_pool_index[r] = scratch_block * block_size
                 continue
             table = block_tables[r]
             history = start_pos + num_new
@@ -253,21 +306,44 @@ class PagedStepState:
                     f"row {r} reaches position {history} but its table "
                     f"holds {len(table)} blocks of {block_size}"
                 )
-            for logical, physical in enumerate(table):
-                self.block_tables[r, logical] = physical
-                self.inverse_tables[r, physical] = logical
-            self.kv_num_blocks[r] = visible
+            physical = torch.tensor(table, dtype=torch.int32)
+            stage_bt[r, : len(table)] = physical
+            stage_inv[r, physical.long()] = torch.arange(
+                len(table), dtype=torch.int32
+            )
+            stage_kn[r] = visible
+            if decode_shaped and num_new == 1:
+                self._stage_map_pool_index[r] = (
+                    table[start_pos // block_size] * block_size
+                    + start_pos % block_size
+                )
+
+        self.block_tables[:batch].copy_(stage_bt)
+        self.kv_num_blocks[:batch].copy_(stage_kn)
+        self.inverse_tables[:batch].copy_(stage_inv)
+        self.start_pos[:batch].copy_(stage_sp)
+        if decode_shaped:
+            self.map_pool_index[:batch].copy_(
+                self._stage_map_pool_index[:batch]
+            )
+            write_map = PagedKVWriteMap(
+                batch_row=self.map_batch_row[:batch],
+                token_offset=self.map_token_offset[:batch],
+                pool_index=self.map_pool_index[:batch],
+            )
+        else:
+            write_map = paged_write_map(
+                step_rows,
+                block_tables + [[]] * (batch - len(block_tables)),
+                block_size,
+                device=self.block_tables.device,
+            )
 
         tables = PagedTables(
             block_tables=self.block_tables[:batch],
             kv_num_blocks=self.kv_num_blocks[:batch],
             inverse_tables=self.inverse_tables[:batch],
-            write_map=paged_write_map(
-                step_rows,
-                block_tables + [[]] * (batch - len(block_tables)),
-                block_size,
-                device=self.block_tables.device,
-            ),
+            write_map=write_map,
         )
         if self.mask_builder is not None and num_new_max is not None:
             key = (batch, num_new_max)

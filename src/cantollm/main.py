@@ -123,7 +123,7 @@ def cmd_serve(args):
         )
         cuda_graphs = (
             args.cuda_graphs if args.cuda_graphs is not None
-            else warmup_shapes and on_cuda and not paged_kv
+            else warmup_shapes and on_cuda
         )
         # Default-on for CUDA since the 2026-08-08/09 A/B cleared the
         # gates (+49.6% short_chat c=16, +64% longctx c=1, warm Ready
@@ -148,10 +148,6 @@ def cmd_serve(args):
             sys.exit("error: --torch-compile requires shape buckets and "
                      "warm-up (compiled artifacts are built by the sweep "
                      "behind readiness, never on a live request)")
-        if paged_kv and cuda_graphs:
-            sys.exit("error: --cuda-graphs with --attention flex lands in "
-                     "Phase 4 chunk 8 (paged-kv-plan.md §5); use "
-                     "--no-cuda-graphs")
         if paged_kv and on_cuda and not torch_compile:
             # The §2.8 rule at the serve surface (scheduler_from_runtime
             # holds it defensively too): FlexAttention only performs

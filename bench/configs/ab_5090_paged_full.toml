@@ -1,0 +1,64 @@
+# Phase-4 A/B, round 2, short half (paged-kv-plan.md §7): FULL stacks
+# head-to-head. Both arms carry the complete pipeline (buckets + warm-up
+# + compile + CUDA graphs); the matrix flips attention + KV layout, so
+# this measures the paged stack as it would actually serve, including
+# chunk 8's paged decode graphs (keyed (batch, 1), ~5 recordings vs the
+# padded arm's ~80).
+#
+# Gate (§6 prediction 1): flex within -5%..+2% of padded on short_chat
+# c=16. KNOWN CAVEAT on record: round 1 attributed a kernel-side
+# flex-vs-cuDNN decode gap (B=1 entirely kernel time; the flex template
+# ~4x cuDNN's attention cost at long KV) and the author accepted the
+# miss, deferring kernel tuning. Graphs absorb the host/launch share
+# only, so multi_turn may still sit outside its range; grade honestly,
+# do not tune the config to pass.
+#
+# Standing gates: no NaN, zero recompiles after warm-up, decode replay
+# rate ~100% (StepStats graph_replayed), greedy token streams coherent
+# vs the sibling arm, warm bill recorded.
+schema_version = 1
+name = "ab-5090-paged-full"
+
+[server]
+model = "0.6B"
+engine = "batched"
+device = "cuda"
+port = 8377
+health_timeout_s = 900
+max_batch = 16
+batch_max_seq_len = 4096
+max_tokens_per_step = 512
+shape_buckets = true
+warmup_shapes = true
+torch_compile = true
+cuda_graphs = true
+
+[server.matrix]
+attention = ["sdpa", "flex"]
+
+[defaults]
+dialect = "openai"
+max_tokens = 128
+ignore_eos = true
+temperature = 0.0
+warmup_requests = 4
+repeats = 3
+seed = 0
+
+[[points]]
+workload = "short_chat"
+mode = "closed"
+concurrency = [4, 16]
+requests_per_level = 32
+
+[[points]]
+workload = "code"
+mode = "closed"
+concurrency = [8]
+requests_per_level = 32
+
+[[points]]
+workload = "multi_turn"
+mode = "closed"
+concurrency = [8]
+requests_per_level = 32
