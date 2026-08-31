@@ -49,9 +49,14 @@ def summarize_repeat(
     max_batch: int | None = None,
     max_seq_len: int | None = None,
     expect_fixed_length: bool = False,
+    slo_ttft_s: float | None = None,
+    slo_itl_p99_s: float | None = None,
 ) -> RepeatSummary:
     """One repeat's aggregates. `records` are the measured (non-excluded)
-    requests of the repeat; engine data is the scraped window for it."""
+    requests of the repeat; engine data is the scraped window for it.
+    With both SLO thresholds set (paged-kv-plan.md §2.11) the summary
+    carries goodput: the fraction of measured requests jointly meeting
+    the client-experienced TTFT and per-request ITL-p99 SLOs."""
     measured = [r for r in records if not r.excluded]
     ok = [r for r in measured if r.ok]
     errors = [r for r in measured if r.error is not None]
@@ -96,6 +101,19 @@ def summarize_repeat(
         if lags:
             s.dispatch_lag_p99 = percentile(lags, 0.99)
 
+    if slo_ttft_s is not None and slo_itl_p99_s is not None and measured:
+        # Denominator = every measured request: an errored or unfinished
+        # request misses its SLO by definition. The ITL clause is vacuous
+        # for a request too short to have gaps (single-chunk output).
+        met = sum(
+            1
+            for r in ok
+            if r.ttft_s is not None
+            and r.ttft_s <= slo_ttft_s
+            and (r.client_itl_p99_s is None or r.client_itl_p99_s <= slo_itl_p99_s)
+        )
+        s.goodput = met / len(measured)
+
     for r in measured:
         if r.finish_reason:
             s.finish_reasons[r.finish_reason] = s.finish_reasons.get(r.finish_reason, 0) + 1
@@ -120,6 +138,18 @@ def summarize_repeat(
         if fills:
             s.kv_fill_mean = statistics.fmean(fills)
         s.queue_depth_max = max(st["queue_depth"] for st in engine_steps)
+        # Eviction totals (stats schema v3). None (not 0) when the window
+        # predates the counters, so old history replays stay silent.
+        preempts = [
+            st["preemptions"]
+            for st in engine_steps
+            if st.get("preemptions") is not None
+        ]
+        if preempts:
+            s.preemptions_total = sum(preempts)
+            s.preempted_tokens_total = sum(
+                st.get("preempted_tokens") or 0 for st in engine_steps
+            )
     if engine_itl:
         gaps = [g["gap_s"] for g in engine_itl]
         s.engine_itl_p50 = percentile(gaps, 0.50)
@@ -157,6 +187,7 @@ def median_across_repeats(summaries: list[RepeatSummary]) -> dict:
         "engine_itl_p50", "engine_itl_p99",
         "step_dur_p50", "step_dur_p99",
         "occupancy_mean", "kv_fill_mean", "wall_s",
+        "goodput", "preemptions_total", "preempted_tokens_total",
     ]
     out: dict = {"n_repeats": len(summaries)}
     for name in numeric:

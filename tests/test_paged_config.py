@@ -55,6 +55,21 @@ class TestPagedKnobValidation:
         with pytest.raises(ValueError, match="paged_kv-only"):
             config(num_kv_blocks=8)
 
+    def test_preemption_policy_values(self):
+        for policy in ("lifo", "priority", "cost"):
+            c = config(paged_kv=True, block_size=16,
+                       preemption_policy=policy)
+            assert c.preemption_policy == policy
+        with pytest.raises(ValueError, match="preemption_policy"):
+            config(paged_kv=True, block_size=16, preemption_policy="fifo")
+
+    def test_preemption_policy_requires_paged(self):
+        # "lifo" is the default and inert without paging; anything else
+        # on the padded layout is a config lie (eviction cannot fire).
+        assert config().preemption_policy == "lifo"
+        with pytest.raises(ValueError, match="paged_kv-only"):
+            config(preemption_policy="priority")
+
     def test_pool_must_hold_one_max_length_request(self):
         # 32 tokens / 16-token blocks = 2 blocks minimum: an admitted
         # max-size request must be completable alone.

@@ -830,3 +830,56 @@ def test_ignore_eos_with_stop_sequences_is_400():
 
     _run(run())
     assert engine.last_request is None
+
+
+# ── priority (paged-kv-plan.md §2.10) ────────────────────────────────
+
+
+def test_priority_reaches_the_engine_request():
+    tokenizer = _tokenizer_for("abc")
+    engine = FakeEngine(script=_script_from_text("abc"))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            body = _messages_body(max_tokens=3, stream=False)
+            body["priority"] = 1
+            r = await client.post("/v1/messages", json=body)
+            assert r.status_code == 200
+
+    _run(run())
+    assert engine.last_request.priority == 1
+
+
+def test_priority_defaults_to_zero():
+    tokenizer = _tokenizer_for("abc")
+    engine = FakeEngine(script=_script_from_text("abc"))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            body = _messages_body(max_tokens=3, stream=False)
+            r = await client.post("/v1/messages", json=body)
+            assert r.status_code == 200
+
+    _run(run())
+    assert engine.last_request.priority == 0
+
+
+def test_out_of_range_priority_rejected():
+    # Bounded -2..2 (§9.2's straw bounds): out-of-range dies at validation
+    # with the Anthropic 400 envelope, like the sampling params.
+    tokenizer = _tokenizer_for("a")
+    engine = FakeEngine(script=_script_from_text("a"))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            statuses = []
+            for value in (3, -3):
+                body = _messages_body(max_tokens=1, stream=False)
+                body["priority"] = value
+                r = await client.post("/v1/messages", json=body)
+                statuses.append(r.status_code)
+                assert r.json()["error"]["type"] == "invalid_request_error"
+            return statuses
+
+    assert _run(run()) == [400, 400]
+    assert engine.last_request is None

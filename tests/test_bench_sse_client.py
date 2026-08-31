@@ -129,3 +129,54 @@ def test_anthropic_dialect_taxonomy():
     assert record.output_tokens == 3
     assert record.finish_reason == "max_tokens"
     assert text == "hey"
+
+
+# ── per-chunk timestamps + priority (paged-kv-plan.md §2.10/§2.11) ───
+
+
+def test_openai_per_chunk_timestamps():
+    engine = FakeEngine(script=_script("hello"))
+    record, _ = run_send(
+        engine,
+        SendOptions(model="test-model", max_tokens=5, ignore_eos=True),
+    )
+    assert record.ok
+    assert len(record.t_chunks) == 5
+    assert record.t_chunks[0] == record.t_first_token
+    assert record.t_chunks == sorted(record.t_chunks)
+    assert record.client_itl_p99_s is not None
+
+
+def test_anthropic_per_chunk_timestamps():
+    engine = FakeEngine(script=_script("hey"))
+    record, _ = run_send(
+        engine,
+        SendOptions(model="test-model", dialect="anthropic", max_tokens=3,
+                    ignore_eos=True),
+    )
+    assert record.ok
+    assert len(record.t_chunks) == 3
+    assert record.t_chunks[0] == record.t_first_token
+    assert record.client_itl_p99_s is not None
+
+
+def test_priority_rides_the_body_when_nonzero():
+    # Against the real app, so the dialect models must accept the key.
+    for dialect in ("openai", "anthropic"):
+        engine = FakeEngine(script=_script("ok"))
+        record, _ = run_send(
+            engine,
+            SendOptions(model="test-model", dialect=dialect, max_tokens=2,
+                        ignore_eos=True, priority=1),
+        )
+        assert record.ok, (dialect, record.error)
+        assert engine.last_request.priority == 1
+
+        engine = FakeEngine(script=_script("ok"))
+        record, _ = run_send(
+            engine,
+            SendOptions(model="test-model", dialect=dialect, max_tokens=2,
+                        ignore_eos=True),
+        )
+        assert record.ok
+        assert engine.last_request.priority == 0

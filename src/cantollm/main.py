@@ -160,6 +160,9 @@ def cmd_serve(args):
                 and not paged_kv:
             sys.exit("error: --block-size/--num-kv-blocks are paged-KV "
                      "knobs; they need --attention flex")
+        if args.preemption_policy is not None and not paged_kv:
+            sys.exit("error: --preemption-policy is a paged-KV knob; it "
+                     "needs --attention flex")
         if attention == "sdpa" and not shape_buckets:
             print("warning: sdpa without --shape-buckets recompiles a cuDNN "
                   "plan per step shape — expect stall tails "
@@ -182,6 +185,8 @@ def cmd_serve(args):
                 paged_kwargs["block_size"] = args.block_size
             if args.num_kv_blocks is not None:
                 paged_kwargs["num_kv_blocks"] = args.num_kv_blocks
+            if args.preemption_policy is not None:
+                paged_kwargs["preemption_policy"] = args.preemption_policy
         config = BatchingConfig(
             max_batch=args.max_batch,
             max_seq_len=args.batch_max_seq_len,
@@ -546,6 +551,12 @@ def parse_args(argv=None):
                                    "max-batch x batch-max-seq-len / block-size, at "
                                    "which exhaustion is impossible; benches "
                                    "undercommit explicitly)")
+    serve_parser.add_argument("--preemption-policy", default=None,
+                              choices=("lifo", "priority", "cost"),
+                              help="Paged KV (--attention flex): victim "
+                                   "selection under block exhaustion "
+                                   "(default: lifo, the newest-admitted "
+                                   "sequence; paged-kv-plan.md §2.10)")
     serve_parser.add_argument("--shape-buckets", default=None,
                               action=argparse.BooleanOptionalAction,
                               help="Batched engine: bound the step-shape vocabulary "

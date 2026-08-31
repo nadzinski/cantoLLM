@@ -16,11 +16,17 @@ slot freed, requeue at the queue front with the prompt+emitted replay
 prefix, eviction emits nothing) and updated the chunk-5 deadlock pin
 deliberately in the same commit; all 6 pre-landed preemption tests
 went green including the §2.9 greedy-token-identical oracle, strict
-xfail removed, suite 624). Next: chunk 10. Claude: priority through
-both dialects and IPC, priority-sorted promotion, per-chunk client
-timestamps, the goodput metric + SLO config keys, paged bench fields,
-and the pre-landed policy-comparison suite; the author: `priority` and
-`cost` victim policies red→green.**
+xfail removed, suite 624). Chunk 10's delegated half landed the same
+day: `priority` through both dialects (bounded -2..2, the §9.2 straw;
+beta header still open) and the IPC pickle, stable priority-sorted
+promotion (FCFS within a class, victim front-of-class preserved), the
+`preemption_policy` knob end to end (config/CLI/serve.toml/bench),
+preemption counters through stats schema v3, per-chunk client
+timestamps + `client_itl_p99_s` (results schema v2), goodput +
+SLO point keys, and tests/test_victim_policies.py with its policy
+classes PRE-LANDED RED (4 strict xfails via the selector stubs'
+NotImplementedError). Next: the author's session, `priority` and
+`cost` victim policies red→green; then chunk 11, round 3.**
 
 ## 1. Goal
 
@@ -917,3 +923,45 @@ phase start; Mac/CPU counts).
    coherence, and the §2.9 bar: greedy streams token-identical between
    the unconstrained arm and the 4-block arm forced to evict. Suite
    624 + 5 chaos.
+10. Priority + policies + goodput, delegated half (2026-08-30). The
+    `priority` field (§2.10): `Field(ge=-2, le=2, default=0)` on both
+    request models (the §9.2 straw bounds; the Anthropic beta-header
+    alternative stays open), threaded through
+    tokenize_and_build_request into `InferenceRequest.priority`
+    (crosses the IPC pickle for free; the wire test pins it) and onto
+    `CBSequence.priority`. Promotion: `_promote_queued` stable-sorts
+    the queue by priority alone before admitting, so deque order keeps
+    supplying arrival order; equal priorities are byte-for-byte
+    today's FCFS (the sort is skipped entirely when every queued
+    priority is 0), and the chunk-9 `appendleft` becomes front-of-class
+    exactly as §3 words it. Victim dispatch: `step()` now calls
+    `_preempt_one` (the one-line touch to the hand-written machine,
+    flagged for review), which routes "lifo" to the chunk-9 selector
+    and counts every eviction plus its replay-prefix cost into
+    `preemptions_total` / `preempted_tokens_total`;
+    `_select_victim_priority` / `_select_victim_cost` are contract
+    stubs raising NotImplementedError, the chunk-2 pattern.
+    `BatchingConfig.preemption_policy` ("lifo"/"priority"/"cost",
+    paged-only for non-default values) rides --preemption-policy,
+    serve.toml (parser-derived), and the bench `_SERVE_FLAG_KEYS`.
+    Stats schema v3 (additive): per-step `preemptions` /
+    `preempted_tokens` diffed from the monotonic totals the way graph
+    hits are; the debug-endpoint pin consciously bumped. Bench:
+    results schema v2 adds `t_chunks` per-chunk arrival timestamps in
+    both SSE clients and the derived per-request `client_itl_p99_s`;
+    point keys `priority` (sent in bodies only when nonzero, default
+    cells byte-identical) and the joint `slo_ttft_s`/`slo_itl_p99_s`
+    pair (half a pair is a ConfigError); `summarize_repeat` computes
+    goodput per §2.11 (errors in the denominator, single-chunk ITL
+    vacuous) plus `preemptions_total`/`preempted_tokens_total`, all
+    three in the median roll-up; bench-spec.md §3/§4 amended, incl.
+    the deliberate carve-out from the "no client gap distributions"
+    rule (goodput's ITL clause is client-experienced BY DESIGN).
+    tests/test_victim_policies.py lands with the green half (sorted
+    promotion incl. overtake/front-of-class, counters, collector
+    diffs) and the policy classes PRE-LANDED RED: 4 strict xfails
+    (raises=NotImplementedError so partial work fails loudly),
+    verified red via the stubs. Suite 649 + 4 xfail + 5 chaos. The
+    chunk completes with the author's session: `priority` (lowest
+    priority, LIFO tiebreak) and `cost` (fewest KV tokens lost)
+    selectors red→green, class markers off.

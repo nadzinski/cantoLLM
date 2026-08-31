@@ -59,6 +59,10 @@ class InferenceRequest:
     # engine-side spans join the API root span's trace; None when tracing
     # is off.
     trace_context: dict[str, str] | None = None
+    # Scheduling priority (paged-kv-plan.md §2.10): bounded by the API
+    # models, default 0, higher wins. Promotion is a stable sort by
+    # priority, so equal priorities keep FCFS exactly.
+    priority: int = 0
 
 
 @dataclass

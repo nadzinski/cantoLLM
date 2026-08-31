@@ -67,6 +67,15 @@ _POINT_DEFAULTS = {
     "repeats": 3,
     "seed": 0,
     "prompt_limit": None,   # cap prompts drawn from the workload (None = all)
+    # Request priority sent with every request of the point (paged-kv-plan.md
+    # §2.10; 0 keeps today's bodies byte-identical). Mixed-priority workloads
+    # are separate points sharing one open-loop window (round 3, chunk 11).
+    "priority": 0,
+    # Joint client-experienced SLO pair (§2.11). Set both or neither; with
+    # both set, summaries carry goodput. Straw defaults for 0.6B are
+    # TTFT <= 0.5 s and per-request ITL p99 <= 0.1 s (§9.3, hers to call).
+    "slo_ttft_s": None,
+    "slo_itl_p99_s": None,
 }
 
 _SERVER_DEFAULTS = {
@@ -83,7 +92,7 @@ _SERVER_DEFAULTS = {
 _SERVE_FLAG_KEYS = (
     "model", "engine", "device", "max_batch", "batch_max_seq_len",
     "max_tokens_per_step", "attention", "torch_compile_strategy",
-    "block_size", "num_kv_blocks",
+    "block_size", "num_kv_blocks", "preemption_policy",
 )
 
 
@@ -279,6 +288,13 @@ def _expand_point(
     unknown = set(options) - set(_POINT_DEFAULTS)
     if unknown:
         raise ConfigError(f"points[{point_idx}] unknown keys: {sorted(unknown)}")
+    if (options["slo_ttft_s"] is None) != (options["slo_itl_p99_s"] is None):
+        # Goodput is a JOINT SLO (paged-kv-plan.md §2.11): half a pair
+        # would silently judge only one clause.
+        raise ConfigError(
+            f"points[{point_idx}] sets one of slo_ttft_s/slo_itl_p99_s "
+            "without the other; goodput needs the pair"
+        )
 
     cells = []
     for level in levels:

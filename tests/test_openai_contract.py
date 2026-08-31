@@ -569,3 +569,60 @@ def test_ignore_eos_with_stop_is_400():
     _run(run())
     # Rejected at the door: the engine never saw a request.
     assert engine.last_request is None
+
+
+# ── priority (paged-kv-plan.md §2.10) ────────────────────────────────
+
+
+def test_priority_reaches_the_engine_request():
+    text = "abc"
+    tokenizer = _tokenizer_for(text)
+    engine = FakeEngine(script=_script_from_text(text))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            r = await client.post(
+                "/v1/chat/completions",
+                json={**_chat_body(stream=False, max_tokens=3), "priority": 2},
+            )
+            assert r.status_code == 200
+
+    _run(run())
+    assert engine.last_request.priority == 2
+
+
+def test_priority_defaults_to_zero():
+    text = "abc"
+    tokenizer = _tokenizer_for(text)
+    engine = FakeEngine(script=_script_from_text(text))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            r = await client.post(
+                "/v1/chat/completions",
+                json=_chat_body(stream=False, max_tokens=3),
+            )
+            assert r.status_code == 200
+
+    _run(run())
+    assert engine.last_request.priority == 0
+
+
+def test_out_of_range_priority_rejected():
+    # Bounded -2..2 (§9.2's straw bounds): out-of-range dies at validation
+    # with the dialect's 400 envelope, like the sampling params.
+    tokenizer = _tokenizer_for("a")
+    engine = FakeEngine(script=_script_from_text("a"))
+
+    async def run():
+        async with _client(engine, tokenizer) as client:
+            return [
+                (await client.post(
+                    "/v1/chat/completions",
+                    json={**_chat_body(stream=False, max_tokens=1), **o},
+                )).status_code
+                for o in ({"priority": 3}, {"priority": -3})
+            ]
+
+    assert _run(run()) == [400, 400]
+    assert engine.last_request is None

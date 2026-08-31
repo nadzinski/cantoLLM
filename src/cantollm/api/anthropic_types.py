@@ -28,7 +28,7 @@ class MessagesRequest(BaseModel):
     messages: list[Message] = Field(min_length=1)
     system: str | None = None
     # Anthropic's documented ranges. Values inside them are safe: near-zero
-    # temperature maps to greedy at the engine seam (see
+    # temperature maps to greedy at the engine boundary (see
     # SamplingParams.from_temperature_top_p) instead of dividing logits.
     temperature: float = Field(default=0.7, ge=0.0, le=1.0)
     top_p: float = Field(default=0.9, ge=0.0, le=1.0)
@@ -41,6 +41,11 @@ class MessagesRequest(BaseModel):
     # output makes perf numbers comparable across engines and phases.
     # Mutually exclusive with `stop_sequences` (400 in the router).
     ignore_eos: bool = False
+    # Scheduling priority, higher wins: a documented extension on this
+    # dialect (paged-kv-plan.md §2.10; a beta-header alternative stays an
+    # open §9.2 question). Equal priorities keep FCFS, so the default
+    # changes nothing.
+    priority: int = Field(default=0, ge=-2, le=2)
     # Reject unknown fields rather than silently dropping behavior-changing
     # ones (tools, tool_choice, top_k, thinking, metadata) or typos
     # (stop_sequence for stop_sequences). Matches the OpenAI schema and the

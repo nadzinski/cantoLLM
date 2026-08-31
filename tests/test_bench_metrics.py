@@ -119,3 +119,89 @@ def test_median_across_repeats_and_cv_flag():
     assert out["aggregate_tok_s"] == pytest.approx(summaries[1].aggregate_tok_s)
     assert any("CV" in w for w in out["warnings"])
     assert out["finish_reasons"] == {"length": 12}
+
+
+# ── goodput + per-chunk ITL tail (paged-kv-plan.md §2.11, chunk 10) ──
+
+
+def rec_chunks(i: int, *, ttft: float, gaps: list[float],
+               error: str | None = None) -> RequestRecord:
+    """A record whose chunk arrivals are t_send + ttft, then + each gap."""
+    t0 = 0.0
+    chunks: list[float] = []
+    if error is None:
+        t = t0 + ttft
+        chunks = [t]
+        for g in gaps:
+            t += g
+            chunks.append(t)
+    r = RequestRecord(
+        cell_id="c", repeat=0, request_index=i, prompt_id=f"p{i}",
+        dialect="openai", t_scheduled=None, t_send=t0, t_headers=t0 + 0.01,
+        t_first_token=chunks[0] if chunks else None,
+        t_done=chunks[-1] + 0.01 if chunks else None,
+        t_chunks=chunks,
+        output_tokens=len(chunks),
+        finish_reason=None if error else "length",
+        error=error,
+    )
+    return r.finalize()
+
+
+def test_finalize_derives_client_itl_p99():
+    r = rec_chunks(0, ttft=0.4, gaps=[0.05, 0.05, 0.2, 0.05])
+    assert r.client_itl_p99_s == pytest.approx(
+        percentile([0.05, 0.05, 0.2, 0.05], 0.99)
+    )
+    # A single-chunk stream has no gaps: no ITL tail to speak of.
+    assert rec_chunks(1, ttft=0.4, gaps=[]).client_itl_p99_s is None
+
+
+def test_goodput_joint_slo():
+    records = [
+        rec_chunks(0, ttft=0.4, gaps=[0.05, 0.05]),          # meets both
+        rec_chunks(1, ttft=0.6, gaps=[0.05, 0.05]),          # TTFT miss
+        rec_chunks(2, ttft=0.4, gaps=[0.05, 0.5, 0.05]),     # ITL-tail miss
+        rec_chunks(3, ttft=0.4, gaps=[], error="boom"),      # error: denominator
+        rec_chunks(4, ttft=0.4, gaps=[]),                    # vacuous ITL: meets
+    ]
+    s = summarize_repeat(0, records, slo_ttft_s=0.5, slo_itl_p99_s=0.1)
+    assert s.goodput == pytest.approx(2 / 5)
+    # No SLO pair configured: the metric stays absent, not 1.0.
+    assert summarize_repeat(0, records).goodput is None
+
+
+def test_preemption_totals_from_engine_steps():
+    records = [rec(i) for i in range(2)]
+    steps_v3 = [
+        {"dur_s": 0.1, "occupied_slots": 1, "kv_tokens": 8, "queue_depth": 0,
+         "preemptions": 0, "preempted_tokens": 0},
+        {"dur_s": 0.1, "occupied_slots": 1, "kv_tokens": 8, "queue_depth": 1,
+         "preemptions": 1, "preempted_tokens": 12},
+        {"dur_s": 0.1, "occupied_slots": 1, "kv_tokens": 8, "queue_depth": 0,
+         "preemptions": 1, "preempted_tokens": 9},
+    ]
+    s = summarize_repeat(0, records, engine_steps=steps_v3, max_batch=2)
+    assert s.preemptions_total == 2
+    assert s.preempted_tokens_total == 21
+
+    # Pre-v3 history (no counter fields): silent None, never a fake 0.
+    steps_v2 = [{"dur_s": 0.1, "occupied_slots": 1, "kv_tokens": 8,
+                 "queue_depth": 0}]
+    s = summarize_repeat(0, records, engine_steps=steps_v2, max_batch=2)
+    assert s.preemptions_total is None
+    assert s.preempted_tokens_total is None
+
+
+def test_median_rolls_up_goodput_and_preemptions():
+    a = summarize_repeat(
+        0, [rec_chunks(0, ttft=0.4, gaps=[0.05])],
+        slo_ttft_s=0.5, slo_itl_p99_s=0.1,
+    )
+    b = summarize_repeat(
+        1, [rec_chunks(0, ttft=0.6, gaps=[0.05])],
+        slo_ttft_s=0.5, slo_itl_p99_s=0.1,
+    )
+    out = median_across_repeats([a, b])
+    assert out["goodput"] == pytest.approx(0.5)
+    assert out["preemptions_total"] is None

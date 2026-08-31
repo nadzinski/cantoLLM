@@ -158,11 +158,13 @@ class TestWireFormat:
             sampling=SamplingParams.from_temperature_top_p(0.7, 0.9),
             stop={5, 6},
         )
+        req.priority = 2
         clone = pickle.loads(pickle.dumps(AddRequest(req))).request
         assert clone.request_id == req.request_id
         assert clone.prompt_token_ids == req.prompt_token_ids
         assert clone.stop_token_ids == req.stop_token_ids
         assert clone.max_tokens == req.max_tokens
+        assert clone.priority == 2
         assert [type(p) for p in clone.sampling_params.processors] == [
             TemperatureProcessor, TopPProcessor,
         ]

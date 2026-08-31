@@ -63,6 +63,7 @@ def build_anthropic_router(
                     tokenizer=tokenizer,
                     executor=tokenizer_executor,
                     ignore_eos=body.ignore_eos,
+                    priority=body.priority,
                     parent_span=span,
                 )
                 check_admission(req, entry.max_request_tokens)

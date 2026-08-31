@@ -166,3 +166,35 @@ def test_load_from_toml_file(tmp_path):
     run = load_run_config(p)
     assert run.name == "smoke"                 # falls back to file stem
     assert run.cells[0].requests == 4
+
+
+def test_priority_and_slo_point_keys():
+    # Chunk 10 (paged-kv-plan.md §2.10/§2.11): per-point priority and the
+    # joint SLO pair ride cell.options into the sender and the summary.
+    cfg = deep({"points": [
+        {"workload": "w", "mode": "open", "rate_rps": [2.0],
+         "total_requests": 10, "priority": 1,
+         "slo_ttft_s": 0.5, "slo_itl_p99_s": 0.1},
+    ]})
+    options = parse_run_config(cfg).cells[0].options
+    assert options["priority"] == 1
+    assert options["slo_ttft_s"] == 0.5
+    assert options["slo_itl_p99_s"] == 0.1
+
+
+def test_lone_slo_key_rejected():
+    # Goodput is a JOINT SLO: half a pair would silently judge one clause.
+    for lone in ({"slo_ttft_s": 0.5}, {"slo_itl_p99_s": 0.1}):
+        with pytest.raises(ConfigError, match="the pair"):
+            parse_run_config(deep({"points": [
+                {"workload": "w", "mode": "closed", "concurrency": [1],
+                 "requests_per_level": 8, **lone},
+            ]}))
+
+
+def test_serve_argv_preemption_policy():
+    cfg = deep({"server": {
+        "attention": "flex", "preemption_policy": "priority",
+    }})
+    joined = " ".join(serve_argv(parse_run_config(cfg).cells[0].server))
+    assert "--preemption-policy priority" in joined

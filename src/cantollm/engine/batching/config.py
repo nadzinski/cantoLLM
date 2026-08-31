@@ -99,6 +99,14 @@ class BatchingConfig:
     the paged engine is a drop-in. Benches undercommit explicitly to
     make scarcity happen — preemption needs someone to preempt."""
 
+    preemption_policy: str = "lifo"
+    """Victim selection under block exhaustion (paged-kv-plan.md §2.10):
+    "lifo" evicts the newest-admitted active sequence, "priority" the
+    lowest-priority one (LIFO tiebreak), "cost" the one with the fewest
+    KV tokens to recompute. Eviction only exists under paged_kv (it is
+    how an exhaustible pool refuses to deadlock), so any other layout
+    rejects a non-default value as a config lie."""
+
     def __post_init__(self) -> None:
         if self.max_batch <= 0:
             raise ValueError(f"max_batch must be positive, got {self.max_batch}")
@@ -122,6 +130,13 @@ class BatchingConfig:
             )
         if self.num_kv_blocks is not None and not self.paged_kv:
             raise ValueError("num_kv_blocks is a paged_kv-only knob")
+        if self.preemption_policy not in ("lifo", "priority", "cost"):
+            raise ValueError(
+                "preemption_policy must be 'lifo', 'priority', or "
+                f"'cost', got {self.preemption_policy!r}"
+            )
+        if self.preemption_policy != "lifo" and not self.paged_kv:
+            raise ValueError("preemption_policy is a paged_kv-only knob")
         if not self.paged_kv:
             return
         if self.max_seq_len % self.block_size != 0:

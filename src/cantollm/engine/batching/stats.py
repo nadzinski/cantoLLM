@@ -44,7 +44,10 @@ from cantollm.engine.types import TokenEvent
 # v2 (Phase 4 chunk 1): additive — kv_allocated_tokens / kv_capacity_tokens
 # optional fields, and prefill/decode preferred from the scheduler's
 # plan-time counters over the snapshot-diff reconstruction.
-STATS_SCHEMA_VERSION = 2
+# v3 (Phase 4 chunk 10): additive; preemptions / preempted_tokens optional
+# per-step counters, diffed from the scheduler's monotonic totals; None
+# when the scheduler predates them, 0 on any step without an eviction.
+STATS_SCHEMA_VERSION = 3
 
 STEP_RING_SIZE = 4096
 ITL_RING_SIZE = 65536
@@ -77,6 +80,11 @@ class StepStats:
     # max_seq_len / max_batch * max_seq_len. Paged: blocks * block_size.
     kv_allocated_tokens: int | None = None
     kv_capacity_tokens: int | None = None
+    # Preemption view (schema v3): evictions this step fired and the
+    # tokens those victims must re-prefill on resume (recompute cost,
+    # §6 prediction 4's denominator). Zero-cost when nothing evicts.
+    preemptions: int | None = None
+    preempted_tokens: int | None = None
 
 
 @dataclass(frozen=True)
@@ -105,6 +113,8 @@ class StepStatsCollector:
         self._pending_count = 0
         self._queue_depth = 0
         self._graph_hits: int | None = None
+        self._preemptions: int | None = None
+        self._preempted_tokens: int | None = None
         self._t0 = 0.0
 
     @classmethod
@@ -131,6 +141,12 @@ class StepStatsCollector:
         # a per-step replayed/eager flag.
         self._graph_hits = getattr(
             getattr(scheduler, "forward_fn", None), "hits", None
+        )
+        # Monotonic eviction totals (chunk 10), diffed after the step the
+        # same way graph hits are: preemption happens inside step().
+        self._preemptions = getattr(scheduler, "preemptions_total", None)
+        self._preempted_tokens = getattr(
+            scheduler, "preempted_tokens_total", None
         )
         self._t0 = time.perf_counter()
 
@@ -197,6 +213,16 @@ class StepStatsCollector:
             None if hits_now is None or self._graph_hits is None
             else hits_now > self._graph_hits
         )
+        preempt_now = getattr(scheduler, "preemptions_total", None)
+        preemptions = (
+            None if preempt_now is None or self._preemptions is None
+            else preempt_now - self._preemptions
+        )
+        preempted_now = getattr(scheduler, "preempted_tokens_total", None)
+        preempted_tokens = (
+            None if preempted_now is None or self._preempted_tokens is None
+            else preempted_now - self._preempted_tokens
+        )
         stats = StepStats(
             seq=self._seq,
             t_wall=time.time(),
@@ -214,6 +240,8 @@ class StepStatsCollector:
             graph_replayed=graph_replayed,
             kv_allocated_tokens=kv_allocated,
             kv_capacity_tokens=kv_capacity,
+            preemptions=preemptions,
+            preempted_tokens=preempted_tokens,
         )
         self._seq += 1
         return stats

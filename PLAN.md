@@ -701,11 +701,18 @@ scaffolding, suites, the twin, and the scheduler paged mode delegated.
 Prior scope notes stand: the flash-proper restructure moved here from
 Phase 3; the 2026-07-19 review added overlap scheduling, preemption
 policies, per-request priority, and the goodput-under-joint-SLO metric.
-Open: chunks 10–13: priority/policies/goodput with round 3 next
-(delegated plumbing + pre-landed policy suite; the `priority` and
-`cost` victim policies are the author's), then overlap with round 4,
-H100 close-out; the deferred flex decode-kernel tuning at longctx
-B <= 2 stays on the list for close-out or a torch upgrade.
+Chunk 10's delegated half landed the same day: per-request `priority`
+through both API dialects and the IPC boundary, priority-sorted
+promotion (stable, FCFS within a class), the `preemption_policy` knob
+through config/CLI/bench, preemption counters in the stats stream,
+per-chunk client timestamps with a per-request ITL tail, and the
+goodput metric with per-point SLO keys; the victim-policy suite is
+pre-landed red for the author's session.
+Open: the author's `priority` and `cost` victim policies (chunk 10's
+hand-written half), then chunks 11–13: the round-3 goodput run,
+overlap with round 4, H100 close-out; the deferred flex decode-kernel
+tuning at longctx B <= 2 stays on the list for close-out or a torch
+upgrade.
 
 - KV blocks of fixed size (16 tokens is the vLLM default) in a single preallocated pool.
 - Per-request block table mapping logical token positions → block IDs.

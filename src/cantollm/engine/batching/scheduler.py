@@ -169,6 +169,11 @@ class ContinuousBatchingScheduler:
         self.queued: deque[CBSequence] = deque()
         self.active: list[CBSequence] = []
         self.pending_events: list[TokenEvent] = []
+        # Monotonic preemption counters for the stats collector: total
+        # evictions, and total tokens those victims must re-prefill on
+        # resume (their replay prefixes).
+        self.preemptions_total = 0
+        self.preempted_tokens_total = 0
 
     @property
     def kv_state(self) -> tuple[int, int] | None:
@@ -220,6 +225,7 @@ class ContinuousBatchingScheduler:
             sampling_params=request.sampling_params,
             max_tokens=request.max_tokens,
             stop_token_ids=set(request.stop_token_ids),
+            priority=request.priority,
         )
         self.queued.append(sequence)
 
@@ -274,6 +280,45 @@ class ContinuousBatchingScheduler:
         """Preempt the most recently admitted active sequence."""
         self._preempt_sequence(self.active[-1])
 
+    def _preempt_one(self) -> None:
+        """Pick a victim by `config.preemption_policy` and evict it,
+        counting the eviction and its recompute cost (the replay prefix
+        the victim must re-prefill) for the stats collector.
+
+        `lifo` is the hand-written chunk-9 machine; `priority` and `cost`
+        are the author's chunk-10 session, red→green against
+        tests/test_victim_policies.py. The selector stubs below carry
+        the contracts."""
+        policy = self.config.preemption_policy
+        if policy == "lifo":
+            victim = self.active[-1]
+        elif policy == "priority":
+            victim = self._select_victim_priority()
+        else:
+            victim = self._select_victim_cost()
+        self.preemptions_total += 1
+        self.preempted_tokens_total += (
+            len(victim.prompt_token_ids) + len(victim.output_token_ids)
+        )
+        self._preempt_sequence(victim)
+
+    def _select_victim_priority(self) -> CBSequence:
+        """[HAND, chunk 10] The `priority` victim policy (§2.10): the
+        lowest-priority active sequence, LIFO (newest-admitted) tiebreak
+        among equal-lowest. Never picks a higher-priority row while a
+        lower one is active."""
+        raise NotImplementedError(
+            "victim policy 'priority' is the author's chunk-10 session"
+        )
+
+    def _select_victim_cost(self) -> CBSequence:
+        """[HAND, chunk 10] The `cost` victim policy (§2.10): the active
+        sequence with the fewest KV tokens to lose, i.e. the cheapest
+        recompute (the smallest consumed position)."""
+        raise NotImplementedError(
+            "victim policy 'cost' is the author's chunk-10 session"
+        )
+
     def is_idle(self) -> bool:
         """Nothing queued, nothing active, nothing pending. (The shell
         blocks while this is True — see the contract note up top.)"""
@@ -305,7 +350,7 @@ class ContinuousBatchingScheduler:
         rows = self._plan_step()
         if not rows:
             if self.active:
-                self._preempt_lifo()
+                self._preempt_one()
             # Only pending events to flush (abort acks, rejections) — no
             # forward pass this step. Preemption also emits nothing.
             return events
@@ -411,11 +456,20 @@ class ContinuousBatchingScheduler:
         return events
 
     def _promote_queued(self) -> None:
-        """Admit queued sequences while slots are free (FCFS). Paged mode
+        """Admit queued sequences while slots are free, highest priority
+        first, FCFS within a priority (paged-kv-plan.md §2.10). Paged mode
         also takes the sequence's first block at admission, or stops
         promoting when the pool has none, leaving the queue intact
         (paged-kv-plan.md §3): an admitted sequence always has somewhere
         to write, and admission is what a full pool pushes back on."""
+        if self.queued and any(s.priority for s in self.queued):
+            # Stable sort by priority alone: deque order IS arrival order,
+            # so equal priorities keep today's FCFS exactly, and a
+            # preempted victim's appendleft stays "front of its priority
+            # class". Skipped entirely at the all-default fast path.
+            self.queued = deque(
+                sorted(self.queued, key=lambda s: -s.priority)
+            )
         while self.queued and self.allocator.num_free() > 0:
             if self.block_allocator is not None:
                 first = self.block_allocator.allocate()

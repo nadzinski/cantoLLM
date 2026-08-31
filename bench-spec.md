@@ -87,6 +87,16 @@ thinking tokens count; Qwen3 leads with them) → per-chunk arrival times → `t
   events cross IPC per engine step and fan out as SSE bursts, so client gaps measure
   delivery batching, not decode cadence. (Sequential engine streams token-by-token, so
   there the client-side gaps are honest — still reported only as the mean.)
+  Amendment (P4 chunk 10, paged-kv-plan.md §2.11): per-chunk arrival times are now
+  *recorded* (`t_chunks`, results schema v2) and each request derives its own
+  `client_itl_p99_s`, used ONLY as the ITL clause of the goodput SLO below, where
+  client-experienced (delivery batching included) is precisely the point. The
+  distribution still is not a reported latency metric.
+- **Goodput** (paged-kv-plan.md §2.11) = fraction of measured requests jointly meeting
+  a TTFT SLO and a per-request client-ITL-p99 SLO, the pair set per bench point
+  (`slo_ttft_s` / `slo_itl_p99_s`, both or neither). Errored and unfinished requests
+  count in the denominator; a request too short to have chunk gaps satisfies the ITL
+  clause vacuously. Meaningful on open-loop cells only (§2).
 - **Token counts** from the server's `usage` object (`stream_options.include_usage` on
   the OpenAI dialect), not client-side counting.
 - **Finish-reason distribution** and **error counts** per cell.
@@ -105,6 +115,10 @@ coarse alignment only), `t_perf` (child `perf_counter` at step end), `dur_s`
 (perf-clock time inside `scheduler.step()`), `rows` (sequences in this step's forward),
 `occupied_slots`, `queue_depth` (post-command-drain, pre-step), `kv_tokens`
 (Σ per-row positions), `prefill_tokens` / `decode_tokens` (consumed this step).
+Stats schema v3 (P4 chunk 10) adds `preemptions` / `preempted_tokens` per step
+(evictions fired, and the replay-prefix tokens those victims must re-prefill on
+resume), diffed from the scheduler's monotonic totals; summaries sum them as
+`preemptions_total` / `preempted_tokens_total`, `None` on pre-v3 history.
 
 - **Step time**: distribution of `dur_s`; report p50/p99 and the prefill-heavy vs
   pure-decode split (a step is *pure decode* iff `prefill_tokens == 0`).

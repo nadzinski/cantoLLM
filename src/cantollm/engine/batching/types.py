@@ -63,6 +63,9 @@ class CBSequence:
     sampling_params: SamplingParams
     max_tokens: int
     stop_token_ids: set[int]
+    priority: int = 0
+    """Scheduling priority (§2.10): higher wins at promotion; equal
+    priorities keep FCFS. Victim policies may read it (chunk 10)."""
     slot_idx: int | None = None
     position: int = 0
     output_token_ids: list[int] = field(default_factory=list)

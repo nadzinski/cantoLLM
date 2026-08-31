@@ -270,6 +270,7 @@ async def _run_cell(
         top_p=float(options["top_p"]),
         ignore_eos=bool(options["ignore_eos"]),
         capture_text=capture_text,
+        priority=int(options.get("priority") or 0),
     ))
     seed = int(options["seed"])
     prompt_limit = options.get("prompt_limit")
@@ -326,6 +327,8 @@ async def _run_cell(
                 {"cell_id": cell.cell_id, "repeat": repeat, **s} for s in steps
             ])
 
+        slo_ttft = options.get("slo_ttft_s")
+        slo_itl = options.get("slo_itl_p99_s")
         summary = metrics.summarize_repeat(
             repeat, result.records,
             engine_steps=steps or None,
@@ -333,6 +336,8 @@ async def _run_cell(
             max_batch=scraper.capacity.get("max_batch"),
             max_seq_len=scraper.capacity.get("max_seq_len"),
             expect_fixed_length=bool(options["ignore_eos"]),
+            slo_ttft_s=None if slo_ttft is None else float(slo_ttft),
+            slo_itl_p99_s=None if slo_itl is None else float(slo_itl),
         )
         if result.hit_inflight_cap:
             summary.warnings.append("open-loop max_inflight cap hit")

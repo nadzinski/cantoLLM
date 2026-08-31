@@ -34,6 +34,9 @@ class SendOptions:
     top_p: float = 1.0
     ignore_eos: bool = True
     capture_text: bool = False
+    # Scheduling priority (paged-kv-plan.md §2.10). Sent in the request
+    # body only when nonzero, so default cells keep today's exact bodies.
+    priority: int = 0
 
 
 def build_sender(client: httpx.AsyncClient, options: SendOptions):
@@ -94,6 +97,8 @@ async def _send_openai(
         "stream_options": {"include_usage": True},
         "ignore_eos": options.ignore_eos,
     }
+    if options.priority:
+        body["priority"] = options.priority
     parts: list[str] = []
     async with client.stream("POST", "/v1/chat/completions", json=body) as resp:
         record.t_headers = time.perf_counter()
@@ -121,8 +126,12 @@ async def _send_openai(
                 delta = choice.get("delta") or {}
                 piece = delta.get("content") or delta.get("reasoning_content")
                 if piece:
+                    now = time.perf_counter()
                     if record.t_first_token is None:
-                        record.t_first_token = time.perf_counter()
+                        record.t_first_token = now
+                    # Per-chunk arrivals: the client-experienced ITL tail
+                    # the §2.11 SLO judges (schema v2).
+                    record.t_chunks.append(now)
                     parts.append(piece)
                 if choice.get("finish_reason"):
                     record.finish_reason = choice["finish_reason"]
@@ -143,6 +152,8 @@ async def _send_anthropic(
         "stream": True,
         "ignore_eos": options.ignore_eos,
     }
+    if options.priority:
+        body["priority"] = options.priority
     if prompt.system:
         body["system"] = prompt.system
 
@@ -160,8 +171,11 @@ async def _send_anthropic(
             event = json.loads(line[len("data:"):].strip())
             kind = event.get("type")
             if kind == "content_block_delta":
+                now = time.perf_counter()
                 if record.t_first_token is None:
-                    record.t_first_token = time.perf_counter()
+                    record.t_first_token = now
+                # Per-chunk arrivals for the §2.11 client ITL tail.
+                record.t_chunks.append(now)
                 delta = event.get("delta") or {}
                 piece = delta.get("text") or delta.get("thinking")
                 if piece:

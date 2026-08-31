@@ -63,7 +63,7 @@ class ChatCompletionRequest(BaseModel):
     model: str
     messages: list[OpenAIMessage] = Field(min_length=1)
     # OpenAI's documented ranges. Values inside them are safe: near-zero
-    # temperature maps to greedy at the engine seam (see
+    # temperature maps to greedy at the engine boundary (see
     # SamplingParams.from_temperature_top_p) instead of dividing logits.
     temperature: float = Field(default=1.0, ge=0.0, le=2.0)
     top_p: float = Field(default=1.0, ge=0.0, le=1.0)
@@ -86,6 +86,10 @@ class ChatCompletionRequest(BaseModel):
     ignore_eos: bool = False
     # `user` is a free-form id OpenAI uses for abuse tracking; harmless pass-through.
     user: str | None = None
+    # Scheduling priority, higher wins (vLLM's de-facto extension, reachable
+    # via the SDK's extra_body; paged-kv-plan.md §2.10). Equal priorities
+    # keep FCFS, so the default changes nothing.
+    priority: int = Field(default=0, ge=-2, le=2)
     # Everything else (tools, tool_choice, n, top_logprobs, response_format,
     # modalities, audio, seed, parallel_tool_calls, presence_penalty,
     # frequency_penalty, etc.) is rejected by extra="forbid".

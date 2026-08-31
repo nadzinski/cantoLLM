@@ -16,7 +16,10 @@ import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-RESULTS_SCHEMA_VERSION = 1
+# v2 (Phase 4 chunk 10): additive; per-chunk client arrival timestamps
+# (t_chunks) with the derived per-request client_itl_p99_s, the goodput
+# inputs of paged-kv-plan.md §2.11.
+RESULTS_SCHEMA_VERSION = 2
 
 
 @dataclass
@@ -35,6 +38,10 @@ class RequestRecord:
     t_headers: float | None = None
     t_first_token: float | None = None
     t_done: float | None = None
+    # Arrival time of every content chunk (schema v2; t_chunks[0] equals
+    # t_first_token). SLOs are client-experienced (paged-kv-plan.md §2.11),
+    # so the ITL tail must come from these, not from engine step times.
+    t_chunks: list[float] = field(default_factory=list)
 
     input_tokens: int = 0
     output_tokens: int = 0
@@ -51,6 +58,7 @@ class RequestRecord:
     completion_s: float | None = None
     accept_s: float | None = None
     client_itl_mean_s: float | None = None
+    client_itl_p99_s: float | None = None
     dispatch_lag_s: float | None = None
 
     def finalize(self) -> "RequestRecord":
@@ -69,6 +77,16 @@ class RequestRecord:
             self.client_itl_mean_s = (
                 (self.t_done - self.t_first_token) / (self.output_tokens - 1)
             )
+        if len(self.t_chunks) >= 2:
+            # Per-request ITL tail over the chunk arrival gaps: one half of
+            # the joint SLO goodput judges (paged-kv-plan.md §2.11). Lazy
+            # import: metrics.py imports this module.
+            from cantollm.bench.metrics import percentile
+
+            gaps = [
+                b - a for a, b in zip(self.t_chunks, self.t_chunks[1:])
+            ]
+            self.client_itl_p99_s = percentile(gaps, 0.99)
         if self.t_scheduled is not None:
             self.dispatch_lag_s = self.t_send - self.t_scheduled
         return self
@@ -105,6 +123,14 @@ class RepeatSummary:
     occupancy_mean: float | None = None
     kv_fill_mean: float | None = None
     queue_depth_max: int | None = None
+
+    # Goodput under a joint client-experienced SLO pair (paged-kv-plan.md
+    # §2.11); None when the cell configures no SLOs.
+    goodput: float | None = None
+    # Eviction totals over the repeat's engine window (stats schema v3);
+    # None when the scraped steps predate the counters.
+    preemptions_total: int | None = None
+    preempted_tokens_total: int | None = None
 
     finish_reasons: dict[str, int] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
