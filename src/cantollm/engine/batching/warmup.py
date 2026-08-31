@@ -39,9 +39,11 @@ and its seeded `PagedTables` come from the SAME persistent
 points at the scratch block, with the write map swapped for entries
 parked on the scratch block's flat indices. Filling through the state
 also builds each family's cached `BlockMask` behind Ready, so traffic
-never constructs one. Each family runs two forwards, one per write-map
-length population (see the loop comment): with no kv sweep to alternate
-along, the alternation becomes an inner pair.
+never constructs one. Each family runs ONE forward: unlike the padded
+sweep, only one write-map length population is reachable per family
+(see `_warmup_paged`), and paged compiles are expensive enough (round-1
+5090 bills) that warming the unreachable one doubles the Ready bill for
+nothing.
 """
 
 from __future__ import annotations
@@ -198,28 +200,33 @@ def _warmup_paged(
     vocabulary: list[tuple[int, int, int]],
     device: torch.device | None,
 ) -> int:
-    """The paged sweep: two forwards per (batch, width) family, one per
-    write-map length population. Torch's 0/1 rule specializes a length-1
-    map (a step with one real new token), while any length >= 2 goes
-    symbolic and serves every other count; both artifacts must exist
-    behind Ready, and with the kv sweep gone there is no family-internal
-    axis to alternate along, so the pair runs back to back. The
-    vocabulary's kv element is the constant logical bound; it keys
-    nothing (paged-kv-plan.md §2.6)."""
+    """The paged sweep: ONE forward per (batch, width) family, at the
+    only write-map length population that family can serve. Torch's 0/1
+    rule splits map lengths into two artifact populations (length 1
+    specializes; length >= 2 goes symbolic and covers every other
+    count), but bucketing makes exactly one population reachable per
+    family: a batch bucket b >= 2 means more than the previous bucket's
+    real rows, so at least two real tokens; a lone row whose chunk is a
+    single token always lands at width 1 (shape_step only rounds widths
+    above 1); so a length-1 map occurs in the (1, 1) family and nowhere
+    else, and (1, 1) can carry nothing but length 1. Warming the
+    unreachable population doubled the round-1 5090 Ready bill for
+    artifacts no traffic can hit. The vocabulary's kv element is the
+    constant logical bound; it keys nothing (paged-kv-plan.md §2.6)."""
     logger.info(
-        "warming %d paged (batch, width) families x 2 map lengths "
+        "warming %d paged (batch, width) families, one map length each "
         "(batch buckets %s, widths {1} + %s; kv is a value, no sweep)",
         len(vocabulary), config.batch_buckets, config.prefill_widths,
     )
     t0 = time.perf_counter()
     for i, (batch, width, kv_len) in enumerate(vocabulary):
-        for length in (1, max(2, batch)):
-            input_ids = torch.zeros((batch, width), dtype=torch.int64)
-            meta = warmup_meta(batch, width, kv_len, device)
-            meta.seed_paged_tables(paged_scratch_tables(
-                paged_state, batch, width, length, config.block_size
-            ))
-            forward_fn(input_ids, meta, pool)
+        length = 1 if (batch, width) == (1, 1) else max(2, batch)
+        input_ids = torch.zeros((batch, width), dtype=torch.int64)
+        meta = warmup_meta(batch, width, kv_len, device)
+        meta.seed_paged_tables(paged_scratch_tables(
+            paged_state, batch, width, length, config.block_size
+        ))
+        forward_fn(input_ids, meta, pool)
         progress.report("sweep", i + 1, len(vocabulary))
     if device is not None and device.type == "cuda":
         torch.cuda.synchronize()

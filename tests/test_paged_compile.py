@@ -305,6 +305,73 @@ class TestPagedWarmup:
             "write ints into preallocated tensors (paged-kv-plan.md §2.6)"
         )
 
+    def test_one_sweep_forward_per_family(self):
+        """The round-1 warm-bill finding: only one write-map length
+        population is reachable per family (length 1 exists only in
+        (1, 1)), so the sweep must pay exactly one forward per family,
+        with (1, 1) warmed at length 1 and everything else symbolic."""
+        model = make_flex_model()
+        runtime = make_runtime(model)
+        config = paged_config(warmup_shapes=True)
+        pool = runtime.new_kv_pool(config)
+        state = make_state(model, max_rows=config.max_batch)
+        calls = []
+
+        def spy(input_ids, meta, pool_):
+            wm = meta.paged_tables.write_map
+            calls.append(
+                (len(meta.rows), meta.num_new_max, wm.pool_index.numel())
+            )
+            return runtime.forward_batched(input_ids, meta, pool_)
+
+        warmed = warmup_shape_vocabulary(spy, pool, config, paged_state=state)
+        assert warmed == len(calls) == 4
+        lengths = {(b, w): n for b, w, n in calls}
+        assert lengths[(1, 1)] == 1
+        assert all(
+            n >= 2 for (b, w), n in lengths.items() if (b, w) != (1, 1)
+        ), f"non-(1,1) families must warm the symbolic map: {lengths}"
+
+    def test_warm_traffic_compiles_nothing_after_ready(self, monkeypatch):
+        """The reachability claim behind the one-forward sweep, enforced
+        end to end: a compiled paged engine warmed behind Ready serves
+        staggered traffic, including the lone-row decode that is the
+        length-1 (1, 1) family and multi-row decode, with ZERO
+        post-Ready compiles. A hole in the reachability argument shows
+        up here as a live-request artifact."""
+        model = make_flex_model()
+        runtime = make_runtime(model)
+        compiles = []
+
+        def counting_backend(gm, example_inputs):
+            compiles.append(1)
+            return gm.forward
+
+        original = ModelRuntime.enable_torch_compile
+
+        def spy(self, strategy="dynamic", backend="inductor"):
+            original(self, strategy=strategy, backend=counting_backend)
+
+        monkeypatch.setattr(ModelRuntime, "enable_torch_compile", spy)
+        scheduler = scheduler_from_runtime(
+            runtime, paged_config(warmup_shapes=True, torch_compile=True)
+        )
+        behind_ready = len(compiles)
+        assert behind_ready > 0, "warm-up built nothing; vacuous test"
+        # Staggered arrivals: chunked prefill at both batch sizes,
+        # two-row decode, then the second request decodes alone (the
+        # length-1 map family).
+        tokens, _ = drive(scheduler, {
+            0: [make_request("a", PROMPT, max_tokens=3)],
+            1: [make_request("b", list(range(31, 42)), max_tokens=8)],
+        })
+        assert tokens["a"] and tokens["b"]
+        assert len(compiles) == behind_ready, (
+            f"{len(compiles) - behind_ready} artifact(s) compiled on live "
+            "traffic: a reachable (batch, width, map-length) population "
+            "was not warmed behind Ready"
+        )
+
     def test_cuda_graphs_with_paged_refused_until_chunk_8(self):
         model = make_flex_model()
         runtime = make_runtime(model)
