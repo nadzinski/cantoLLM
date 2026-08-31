@@ -866,4 +866,17 @@ phase start; Mac/CPU counts).
    concurrency and 1.5x clauses (5479 tok/s at 64 slots on 16-slot KV
    parity, no deadlock) while the kv_fill_mean >= 60% clause fails as
    written (short_chat frees too fast to bind it). Suite 618 + 5
-   chaos local, 631 + 5 on the box.
+   chaos local, 631 + 5 on the box. Chunk-9 prep rode out with the
+   close: tests/test_preemption.py PRE-LANDED RED (6 strict xfails,
+   all failing today via the chunk-5 deadlock raise, verified with
+   --runxfail): exhaustion-evicts-instead-of-deadlocking, LIFO victim
+   requeued at the queue front ahead of waiting arrivals, eviction
+   emits nothing with append-only streams (exact token counts),
+   abort-while-preempted with no double-free, per-step accounting and
+   kv_state coherence through evictions, and the §2.9 bar: greedy
+   streams token-identical between an unconstrained arm and a
+   4-block-pool arm that must evict (weight-shared tiny Qwen3). The
+   chunk-9 session is the author's: the evict/resume machine,
+   red→green, LIFO first; note in the suite header that
+   test_paged_scheduler's deadlock pin must be updated deliberately in
+   that session.
