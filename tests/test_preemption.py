@@ -1,9 +1,8 @@
-"""Chunk-9 preemption suite, PRE-LANDED RED (paged-kv-plan.md §5.9).
+"""Chunk-9 preemption suite (paged-kv-plan.md §5.9).
 
-THIS FILE IS THE DEFINITION OF DONE FOR THE HAND-WRITTEN EVICT/RESUME
-MACHINE (P4 chunk 9, the author's session). The module-level strict
-xfail comes off as the implementation lands; every test then runs
-unmarked. Run with:
+Pre-landed red one chunk ahead; the author's evict/resume machine
+(6457e17, LIFO) turned every test green and the module-level strict
+xfail came off in the same session. Run with:
 
     pytest tests/test_preemption.py -x
 
@@ -25,13 +24,11 @@ Semantics under test (§2.9, §3, and the §9.6 call):
 Trust model: the toy layer (ConstantForward, borrowed from the chunk-5
 suite) isolates the scheduling and accounting; the oracle layer runs
 the weight-shared tiny Qwen3 pair from test_paged_engine_oracle, with
-the padded arm as ground truth. NOTE for the implementing session:
-tests/test_paged_scheduler.py::test_true_deadlock_raises_loudly pins
-the pre-chunk-9 behavior (raise instead of evict) and must be updated
-in the same session, deliberately, not as collateral.
+the padded arm as ground truth. The chunk-5 deadlock pin
+(test_paged_scheduler) was updated deliberately alongside the machine:
+it is now test_true_deadlock_preempts_and_completes.
 """
 
-import pytest
 import torch
 
 from cantollm.engine.batching import BatchingConfig
@@ -51,12 +48,6 @@ from tests.test_paged_scheduler import (
     run_to_completion,
 )
 from tests.tiny_model import TINY_ARCH
-
-pytestmark = pytest.mark.xfail(
-    strict=True,
-    reason="P4 chunk 9: the hand-written evict/resume machine is not "
-    "implemented; exhaustion still raises 'paged KV deadlock'",
-)
 
 # The exhaustion shape (from the chunk-5 deadlock pin): a 4-block pool
 # at 16-token capacity, two rows that both grow across block boundaries

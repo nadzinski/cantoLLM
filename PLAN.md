@@ -628,7 +628,7 @@ unchanged (plausibly the new request path).
 memory management lesson — and overlap scheduling with execution so the CPU plans step
 N+1 while the GPU runs step N.
 
-**Status (2026-08-30):** Done: chunks 1–8 of `paged-kv-plan.md`'s 13
+**Status (2026-08-30):** Done: chunks 1–9 of `paged-kv-plan.md`'s 13
 (that doc's chunk log is the detailed record). The paged foundations are in:
 KVPool protocol + config knobs (chunk 1), flat `PagedKVPool` + the
 hand-written `BlockAllocator` (chunk 2), block tables / seeded `PagedTables`
@@ -683,6 +683,16 @@ reservation sustained 5479 tok/s (1.53x) with zero errors and no
 deadlock. Prediction 3's kv_fill_mean >= 60% clause failed as
 written (short_chat frees blocks too fast to bind it); the deferred
 flex decode-kernel gap at longctx B <= 2 stays the open perf item.
+Chunk 9 closed the same day: the author hand-wrote the evict/resume
+machine red→green against the pre-landed suite. Where planning yields
+no rows with rows still active (grant trimming already failed), the
+scheduler now evicts the newest-admitted row instead of raising: blocks
+and slot freed, requeued at the queue front ahead of waiting arrivals
+with a replay prefix of prompt plus every emitted token, position reset
+for full re-prefill, no client event; the client stream stays
+append-only and greedy streams are token-identical to a never-preempted
+run (the model-free correctness bar, proven on the weight-shared tiny
+Qwen3 pair).
 Kernel route stands as spiked
 (`flex-spike-results.md`): FlexAttention over engine-owned tables;
 flash-attn deferred (no torch-2.10/sm_120 wheel, 256-token pages). Division
@@ -691,8 +701,9 @@ scaffolding, suites, the twin, and the scheduler paged mode delegated.
 Prior scope notes stand: the flash-proper restructure moved here from
 Phase 3; the 2026-07-19 review added overlap scheduling, preemption
 policies, per-request priority, and the goodput-under-joint-SLO metric.
-Open: chunks 9–13: preemption next (hand-written, suite pre-landed),
-then priority/policies/goodput with round 3, overlap with round 4,
+Open: chunks 10–13: priority/policies/goodput with round 3 next
+(delegated plumbing + pre-landed policy suite; the `priority` and
+`cost` victim policies are the author's), then overlap with round 4,
 H100 close-out; the deferred flex decode-kernel tuning at longctx
 B <= 2 stays on the list for close-out or a torch upgrade.
 

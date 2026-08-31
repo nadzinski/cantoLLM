@@ -10,15 +10,17 @@ complete) the validated results with §6's predictions graded.
 `flex-spike-results.md` is this doc's gates annex: the kernel route was decided
 there, on the 5090, before any of this was designed.
 
-**Status: chunks 1–8 complete (chunk 8 closed 2026-08-30, round 2
-green: bit-exact replay gate incl. table permutation PASSED, capture
-0.1 s for 5 graphs, replay 100%; prediction 1 passes everywhere but
-the pre-accepted longctx kernel cells, flex beats the padded default
-on short_chat c=16, the capacity headline lands 5479 tok/s = 1.53x on
-16-slot KV parity with no deadlock; kv_fill_mean clause fails as
-written; §10 is the record). Next: chunk 9, [HAND] preemption — the
-suite pre-lands from this side, the evict/resume machine is the
-author's session.**
+**Status: chunks 1–9 complete (chunk 9 closed 2026-08-30: the author
+hand-wrote the evict/resume machine, 6457e17 (LIFO victim, blocks and
+slot freed, requeue at the queue front with the prompt+emitted replay
+prefix, eviction emits nothing) and updated the chunk-5 deadlock pin
+deliberately in the same commit; all 6 pre-landed preemption tests
+went green including the §2.9 greedy-token-identical oracle, strict
+xfail removed, suite 624). Next: chunk 10. Claude: priority through
+both dialects and IPC, priority-sorted promotion, per-chunk client
+timestamps, the goodput metric + SLO config keys, paged bench fields,
+and the pre-landed policy-comparison suite; the author: `priority` and
+`cost` victim policies red→green.**
 
 ## 1. Goal
 
@@ -885,3 +887,33 @@ phase start; Mac/CPU counts).
    red→green, LIFO first; note in the suite header that
    test_paged_scheduler's deadlock pin must be updated deliberately in
    that session.
+9. [HAND] Preemption (2026-08-30, the author's session, 6457e17
+   red→green against the pre-landed suite). The machine:
+   `_preempt_sequence` evicts where the chunk-5 deadlock raise stood
+   (step() falls through to it only when planning yields no rows with
+   rows still active, i.e. after grant trimming has already failed),
+   frees the victim's blocks AND slot via the existing `_release_kv`,
+   and requeues it with `appendleft` (the queue front, ahead of
+   waiting arrivals), emitting no client event. `_preempt_lifo` picks
+   `active[-1]`, the newest-admitted row (victim POLICIES are chunk
+   10). Resume state lives on `CBSequence.replay_prefix_token_ids`
+   (prompt + every token already emitted) with `position` reset to 0;
+   a new `prefill_token_ids` property routes `is_prefilling`,
+   `remaining_prompt`, `input_tokens_at`, and the step-plan prefill
+   accounting through the replay prefix while leaving
+   `prompt_token_ids` (the client's input) and `output_token_ids`
+   (the append-only ledger) untouched, so re-preemption after further
+   decoding recomputes the prefix correctly. The chunk-5 deadlock pin
+   was updated deliberately in the same commit:
+   test_true_deadlock_raises_loudly became
+   test_true_deadlock_preempts_and_completes, asserting no leaks each
+   step, the victim reset (position 0, no slot, empty table, correct
+   replay prefix), and full completion. Close-out from this side: the
+   suite's module-level strict xfail removed, all 6 tests green
+   unmarked: exhaustion completes both requests with zero allocated
+   blocks at idle, LIFO victim ordering ahead of arrivals, exact
+   append-only token counts through eviction, abort-while-preempted
+   with the allocator count unmoved, per-step accounting/kv_state
+   coherence, and the §2.9 bar: greedy streams token-identical between
+   the unconstrained arm and the 4-block arm forced to evict. Suite
+   624 + 5 chaos.
