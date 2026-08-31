@@ -676,6 +676,54 @@ key) so overload queues in the scheduler rather than 429ing, client
 cap 240 under it. Validity gate hardened: preemptions_total > 0 on
 every cell, no generator warnings, or stop after the first cell.
 
+### Round 4 (chunk 12), 2026-08-30: overlap on/off x {padded, paged}
+
+Run on the 5090 at b3040f2 (box push 0f440be; run dirs
+`...T222756_b3040f2_ab-5090-overlap`,
+`...T223645_b3040f2_ab-5090-overlap-longctx`). The correctness gate
+PASSED: greedy token equivalence overlap-on vs overlap-off, 6/6
+prompts token-identical on the live server pair; no NaN, zero errors
+in all 24 cells, recompiles after Ready 0, replay 100% on the graph
+arms, no drain hangs (the trailing reap held the loop contract).
+
+PREDICTION 6 MISSED EVERYWHERE, graded and kept: overlap-on COSTS
+-0.5..-2.6% aggregate on every well-behaved cell (short_chat c=16:
+sdpa 3549 -> 3484, flex 3543 -> its collapsed cells below; c=4 both
+arms -2.6%; code -0.9%; multi_turn -1.6..-2.6%) and engine ITL p50 is
+0.3-2.2% WORSE, against a predicted 5-15% improvement. Longctx moved
+least (-0.5..-1.6% sdpa), as the config header expected. The
+mechanism, confirmed by a CPU repro with the drive loop paced to 4 ms
+steps: at 5090 step times the graphs+compile stack already leaves no
+CPU dispatch slack to hide, and the split ADDS steps and latency
+(bonus decodes, trailing reaps, finalize one step late costs ~2-4
+steps of TTFT per request; the paced repro measured +9% wall for the
+same work). "Overlap pays where dispatch does" cuts both ways: where
+dispatch doesn't bind, overlap only spends. The H100 32B geometry
+(27.5 ms server-host-dispatch-bound steps) was always the predicted
+winner; that test rides with the deferred H100 day. DECISION RIDER:
+overlap stays DEFAULT OFF everywhere.
+
+OPEN BUG, on record (chunk-12 follow-up): intermittent flex+overlap
+concurrency collapse under bench load. Two cells bimodal across
+repeats (short_chat c=16: 453/899/3513 tok/s, CV 163%; code:
+301/1996/767) with per-step durations NORMAL (decode p50 4.02 ms,
+replay 100%, no host gap): the collapsed repeat ran 128 CONSECUTIVE
+fwd_rows=4 decode steps, i.e. 4 requests ran their entire generation
+alone after everything else finished, tokens correct but late.
+Narrowed so far: the engine emits promptly (reap events ride the same
+step's StepUpdate; the drive loop drains commands every step, so the
+replacement requests genuinely arrived late), the mux/bridge path is
+mode-independent, and neither an instant-step nor a 4 ms-paced CPU
+closed-loop repro through the real engine + mux shows any stagger, so
+the stall lives in the process-split delivery timing under real load
+(box's candidates: reap-flush ordering vs shell dispatch, or a lost
+queue wakeup). sdpa+overlap showed no collapse in this run but is not
+certified clean (intermittent; flex's longer steps may just widen the
+window). Immaterial to the round's decision (overlap loses even on
+its clean cells) and to correctness (equivalence gate passed); it
+matters only if overlap is ever revisited, so it is flagged, not
+chased.
+
 ### Chunk log
 
 Suite green at every step (530 tests + 5 chaos at chunk 1, from 521 at
