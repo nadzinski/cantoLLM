@@ -1,0 +1,959 @@
+{"ts": "2026-08-31T00:22:52.510Z", "level": "INFO", "logger": "httpx", "process": "api", "msg": "HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/tokenizer.json \"HTTP/1.1 302 Found\""}
+INFO:     Started server process [2448943]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Using device: cuda (NVIDIA GeForce RTX 5090)
+
+CantoLLM server starting on http://127.0.0.1:8377
+  POST /v1/messages  — Anthropic-compatible Messages API
+  GET  /health       — Health check (API liveness)
+  GET  /ready        — Readiness + warm-up progress
+  GET  /docs         — OpenAPI docs
+
+Model: qwen3-0.6B  ·  Engine: continuous batching, engine process (max_batch=4, slot=10240 tok, budget=512 tok/step, attention=sdpa, shape_buckets=on, warmup=on, cuda_graphs=off, torch_compile=dynamic)
+
+INFO:     Uvicorn running on http://127.0.0.1:8377 (Press CTRL+C to quit)
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-31T00:22:53.246Z", "level": "INFO", "logger": "cantollm.runtime", "process": "engine", "msg": "Downloading 0.6B model weights..."}
+{"ts": "2026-08-31T00:22:53.335Z", "level": "INFO", "logger": "httpx", "process": "engine", "msg": "HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/tokenizer.json \"HTTP/1.1 302 Found\""}
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+{"ts": "2026-08-31T00:22:53.336Z", "level": "WARNING", "logger": "huggingface_hub.utils._http", "process": "engine", "msg": "Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads."}
+{"ts": "2026-08-31T00:22:53.416Z", "level": "INFO", "logger": "httpx", "process": "engine", "msg": "HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/model.safetensors \"HTTP/1.1 302 Found\""}
+{"ts": "2026-08-31T00:22:53.419Z", "level": "INFO", "logger": "cantollm.runtime", "process": "engine", "msg": "Creating model..."}
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-31T00:22:56.649Z", "level": "INFO", "logger": "cantollm.runtime", "process": "engine", "msg": "Loading pretrained weights..."}
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-31T00:22:57.476Z", "level": "INFO", "logger": "cantollm.engine.batching.engine", "process": "engine", "msg": "torch.compile enabled on the batched forward (fullgraph, strategy=dynamic, artifacts built during warm-up)"}
+{"ts": "2026-08-31T00:22:57.476Z", "level": "INFO", "logger": "cantollm.engine.batching.warmup", "process": "engine", "msg": "warming 477 shapes (batch buckets (1, 2, 4), widths {1} + (128, 256, 512), kv step 256)"}
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-31T00:24:59.046Z", "level": "INFO", "logger": "cantollm.engine.batching.warmup", "process": "engine", "msg": "shape warm-up done: 477 shapes in 121.6 s"}
+{"ts": "2026-08-31T00:24:59.046Z", "level": "INFO", "logger": "cantollm.lifecycle", "process": "api", "msg": "engine for qwen3-0.6B built and warm in 126.4 s"}
+{"ts": "2026-08-31T00:24:59.046Z", "level": "INFO", "logger": "cantollm.lifecycle", "process": "api", "msg": "engine ready: qwen3-0.6B (generation 1)"}
+INFO:     127.0.0.1:42184 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41340 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41340 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41340 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41340 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41344 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41346 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41346 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41362 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41374 - "GET /debug/engine-stats?since=220 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41374 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41386 - "GET /debug/engine-stats?since=413 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41386 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41388 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41390 - "GET /debug/engine-stats?since=644 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41390 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41404 - "GET /debug/engine-stats?since=835 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41404 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41406 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41414 - "GET /debug/engine-stats?since=1069 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41414 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38194 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38208 - "GET /debug/engine-stats?since=1296 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38208 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38222 - "GET /debug/engine-stats?since=1488 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38222 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38228 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38236 - "GET /debug/engine-stats?since=1698 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38236 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38250 - "GET /debug/engine-stats?since=1923 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38250 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38256 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38270 - "GET /debug/engine-stats?since=2134 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38270 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38276 - "GET /debug/engine-stats?since=2332 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38280 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38276 - "GET /debug/engine-stats?since=2565 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38276 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38288 - "GET /debug/engine-stats?since=2711 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38288 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38292 - "GET /debug/engine-stats?since=2728 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38292 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38300 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38304 - "GET /debug/engine-stats?since=2958 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38304 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44402 - "GET /debug/engine-stats?since=3137 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44402 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44414 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44424 - "GET /debug/engine-stats?since=3324 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44424 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44434 - "GET /debug/engine-stats?since=3550 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44434 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44436 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44446 - "GET /debug/engine-stats?since=3783 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44446 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44458 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44460 - "GET /debug/engine-stats?since=4012 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44460 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44474 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44484 - "GET /debug/engine-stats?since=4238 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44484 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44500 - "GET /debug/engine-stats?since=4467 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44500 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44504 - "GET /debug/engine-stats?since=4643 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44504 - "GET /debug/engine-stats?since=4877 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44504 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44518 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44524 - "GET /debug/engine-stats?since=4880 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44524 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44532 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44536 - "GET /debug/engine-stats?since=5101 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44536 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36368 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36382 - "GET /debug/engine-stats?since=5330 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36382 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36398 - "GET /debug/engine-stats?since=5556 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36398 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36412 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36414 - "GET /debug/engine-stats?since=5789 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36414 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36424 - "GET /debug/engine-stats?since=5958 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36424 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36432 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36446 - "GET /debug/engine-stats?since=6168 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36446 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36454 - "GET /debug/engine-stats?since=6372 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36454 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36460 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36474 - "GET /debug/engine-stats?since=6571 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36474 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36490 - "GET /debug/engine-stats?since=6785 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36490 - "GET /debug/engine-stats?since=6968 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36490 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36490 - "GET /debug/engine-stats?since=7063 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36490 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36502 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36508 - "GET /debug/engine-stats?since=7063 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36522 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36508 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36538 - "GET /debug/engine-stats?since=7182 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36538 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36546 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50486 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50498 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50514 - "GET /debug/engine-stats?since=7303 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50514 - "GET /debug/engine-stats?since=7502 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50514 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50518 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50530 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50544 - "GET /debug/engine-stats?since=7625 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50544 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50546 - "GET /debug/engine-stats?since=7785 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50546 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50548 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50550 - "GET /debug/engine-stats?since=7882 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50550 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50558 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50572 - "GET /debug/engine-stats?since=8050 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50572 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50580 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50586 - "GET /debug/engine-stats?since=8191 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50586 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50600 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50602 - "GET /debug/engine-stats?since=8310 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50602 - "GET /debug/engine-stats?since=8429 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50604 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50602 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50608 - "GET /debug/engine-stats?since=8561 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50608 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50614 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50624 - "GET /debug/engine-stats?since=8584 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50624 - "GET /debug/engine-stats?since=8718 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50624 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41870 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41884 - "GET /debug/engine-stats?since=8819 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41884 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41892 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41904 - "GET /debug/engine-stats?since=8924 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41904 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41912 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41928 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41942 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41950 - "GET /debug/engine-stats?since=9104 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41950 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41958 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41960 - "GET /debug/engine-stats?since=9313 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41960 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41966 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41970 - "GET /debug/engine-stats?since=9475 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41970 - "GET /debug/engine-stats?since=9585 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41970 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41976 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41988 - "GET /debug/engine-stats?since=9713 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41988 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41996 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42012 - "GET /debug/engine-stats?since=9751 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42012 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42022 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42034 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42048 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42052 - "GET /debug/engine-stats?since=9975 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42052 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42056 - "GET /debug/engine-stats?since=10145 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42056 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35046 - "GET /debug/engine-stats?since=10273 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35046 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35050 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35062 - "GET /debug/engine-stats?since=10375 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35062 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35076 - "GET /debug/engine-stats?since=10486 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35076 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35090 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35106 - "GET /debug/engine-stats?since=10585 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35106 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35112 - "GET /debug/engine-stats?since=10726 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35112 - "GET /debug/engine-stats?since=10828 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35112 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35112 - "GET /debug/engine-stats?since=10886 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35112 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35116 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35128 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35144 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35146 - "GET /debug/engine-stats?since=10886 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35146 - "GET /debug/engine-stats?since=10923 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35146 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35152 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35182 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35166 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35198 - "GET /debug/engine-stats?since=11008 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35198 - "GET /debug/engine-stats?since=11093 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35198 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35212 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35220 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35226 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35234 - "GET /debug/engine-stats?since=11179 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35234 - "GET /debug/engine-stats?since=11227 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35234 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60418 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60430 - "GET /debug/engine-stats?since=11268 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60430 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60442 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60452 - "GET /debug/engine-stats?since=11348 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60452 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60462 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60476 - "GET /debug/engine-stats?since=11410 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60476 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60490 - "GET /debug/engine-stats?since=11484 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60490 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60496 - "GET /debug/engine-stats?since=11520 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60496 - "GET /debug/engine-stats?since=11573 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60496 - "GET /debug/engine-stats?since=11668 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60496 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60508 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60526 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60522 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60532 - "GET /debug/engine-stats?since=11709 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60532 - "GET /debug/engine-stats?since=11762 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60532 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60542 - "GET /debug/engine-stats?since=11841 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60542 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60548 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60552 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58916 - "GET /debug/engine-stats?since=11881 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58916 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58920 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58930 - "GET /debug/engine-stats?since=11935 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58930 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58936 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58948 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58954 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58966 - "GET /debug/engine-stats?since=12033 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58966 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58982 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58992 - "GET /debug/engine-stats?since=12177 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58992 - "GET /debug/engine-stats?since=12218 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58992 - "GET /debug/engine-stats?since=12310 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58992 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58994 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59000 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59016 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59026 - "GET /debug/engine-stats?since=12350 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59026 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59034 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59046 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59060 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59074 - "GET /debug/engine-stats?since=12482 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59074 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59076 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59084 - "GET /debug/engine-stats?since=12553 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59084 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59092 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59098 - "GET /debug/engine-stats?since=12639 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59098 - "GET /debug/engine-stats?since=12687 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59098 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42704 - "GET /debug/engine-stats?since=12743 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42704 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42714 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42722 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42728 - "GET /debug/engine-stats?since=12801 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42728 - "GET /debug/engine-stats?since=12839 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42728 - "GET /debug/engine-stats?since=12883 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42728 - "GET /debug/engine-stats?since=12989 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42728 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42728 - "GET /debug/engine-stats?since=13012 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42728 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42736 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42746 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42742 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42748 - "GET /debug/engine-stats?since=13012 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42748 - "GET /debug/engine-stats?since=13058 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42748 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42756 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42774 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42772 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42790 - "GET /debug/engine-stats?since=13155 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42790 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42806 - "GET /debug/engine-stats?since=13227 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42806 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42812 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42826 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42830 - "GET /debug/engine-stats?since=13322 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42830 - "GET /debug/engine-stats?since=13358 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42830 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51228 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51238 - "GET /debug/engine-stats?since=13403 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51238 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51244 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51250 - "GET /debug/engine-stats?since=13475 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51250 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51252 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51258 - "GET /debug/engine-stats?since=13539 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51258 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51272 - "GET /debug/engine-stats?since=13608 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51272 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51274 - "GET /debug/engine-stats?since=13646 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51274 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51280 - "GET /debug/engine-stats?since=13700 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51280 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51288 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51290 - "GET /debug/engine-stats?since=13758 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51290 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51304 - "GET /debug/engine-stats?since=13797 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51304 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51314 - "GET /debug/engine-stats?since=13855 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51314 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51328 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51344 - "GET /debug/engine-stats?since=13916 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51344 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51346 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57040 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57050 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57062 - "GET /debug/engine-stats?since=13984 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57062 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57078 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57088 - "GET /debug/engine-stats?since=14080 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57088 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57094 - "GET /debug/engine-stats?since=14148 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57094 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57104 - "GET /debug/engine-stats?since=14210 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57104 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57108 - "GET /debug/engine-stats?since=14276 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57108 - "GET /debug/engine-stats?since=14318 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57114 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57108 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57130 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57146 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57154 - "GET /debug/engine-stats?since=14446 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57154 - "GET /debug/engine-stats?since=14469 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57154 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57160 - "GET /debug/engine-stats?since=14532 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57160 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57162 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57164 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57166 - "GET /debug/engine-stats?since=14602 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57166 - "GET /debug/engine-stats?since=14638 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57166 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33158 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33174 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33184 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33196 - "GET /debug/engine-stats?since=14722 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33196 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33206 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33220 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33232 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33236 - "GET /debug/engine-stats?since=14839 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33236 - "GET /debug/engine-stats?since=14929 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33236 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33252 - "GET /debug/engine-stats?since=14974 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33252 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33264 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33266 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33268 - "GET /debug/engine-stats?since=15037 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33268 - "GET /debug/engine-stats?since=15084 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33268 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33284 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33292 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33296 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33306 - "GET /debug/engine-stats?since=15169 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33306 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33314 - "GET /debug/engine-stats?since=15241 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33314 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33318 - "GET /debug/engine-stats?since=15320 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33318 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33330 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33342 - "GET /debug/engine-stats?since=15358 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33342 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46390 - "GET /debug/engine-stats?since=15408 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46390 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46404 - "GET /debug/engine-stats?since=15471 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46404 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46412 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46418 - "GET /debug/engine-stats?since=15505 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46418 - "GET /debug/engine-stats?since=15564 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46418 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46462 - "GET /debug/engine-stats?since=15693 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46420 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46432 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46446 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46462 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46464 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46470 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46486 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46490 - "GET /debug/engine-stats?since=15693 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46490 - "GET /debug/engine-stats?since=15852 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46490 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46500 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46514 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46530 - "GET /debug/engine-stats?since=15926 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46530 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46536 - "GET /debug/engine-stats?since=15997 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46536 - "GET /debug/engine-stats?since=16041 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46536 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46540 - "GET /debug/engine-stats?since=16120 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46540 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53884 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53888 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53898 - "GET /debug/engine-stats?since=16154 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53898 - "GET /debug/engine-stats?since=16200 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53898 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53904 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53908 - "GET /debug/engine-stats?since=16256 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53908 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53924 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53938 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53952 - "GET /debug/engine-stats?since=16319 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53952 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53964 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53974 - "GET /debug/engine-stats?since=16423 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53974 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53984 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54000 - "GET /debug/engine-stats?since=16490 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54000 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54012 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54026 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54032 - "GET /debug/engine-stats?since=16557 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54032 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54044 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54060 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54074 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54078 - "GET /debug/engine-stats?since=16662 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54078 - "GET /debug/engine-stats?since=16785 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54078 - "GET /debug/engine-stats?since=16864 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54078 - "GET /debug/engine-stats?since=16928 HTTP/1.1" 200 OK
+{"ts": "2026-08-31T00:27:24.739Z", "level": "INFO", "logger": "cantollm.server", "process": "api", "msg": "draining: 0 in-flight, deadline 30 s"}
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [2448943]
+/home/nadia/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 6 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
