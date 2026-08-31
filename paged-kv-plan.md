@@ -10,18 +10,15 @@ complete) the validated results with §6's predictions graded.
 `flex-spike-results.md` is this doc's gates annex: the kernel route was decided
 there, on the 5090, before any of this was designed.
 
-**Status: chunks 1–7 complete (chunk 7 closed 2026-08-30: flex wired
-end-to-end, three 5090 runs; the batch-dim/flex-decoding cliff found
-and fixed, sweep trimmed to one forward per family; round-1 gate miss
-on 4 cells ACCEPTED by the author — attributed kernel-side
-flex-vs-cuDNN decode gap, tuning deferred; §10 is the record). Chunk 8
-implementation landed 2026-08-30 (4367cb6): graphs keyed (batch, 1),
-fill() is the replay marshal over a persistent padded decode map +
-CPU-staged bulk copies, capture bakes the step-state buffers, wiring
-and defaults open, round-2 configs
-`ab_5090_paged_full{,_longctx}.toml` + `capacity_5090_paged.toml`
-written with prediction-1/-3 gates in their headers. The 5090 round 2
-is dispatched to the box; §10 takes the results.**
+**Status: chunks 1–8 complete (chunk 8 closed 2026-08-30, round 2
+green: bit-exact replay gate incl. table permutation PASSED, capture
+0.1 s for 5 graphs, replay 100%; prediction 1 passes everywhere but
+the pre-accepted longctx kernel cells, flex beats the padded default
+on short_chat c=16, the capacity headline lands 5479 tok/s = 1.53x on
+16-slot KV parity with no deadlock; kv_fill_mean clause fails as
+written; §10 is the record). Next: chunk 9, [HAND] preemption — the
+suite pre-lands from this side, the evict/resume machine is the
+author's session.**
 
 ## 1. Goal
 
@@ -574,6 +571,55 @@ proceed to chunk 8. The misses are attributed (kernel-side
 flex-vs-cuDNN decode gap) and stand on record for round 2's grading;
 kernel tuning is deferred, not dropped.
 
+### Round 2 (chunk 8), 2026-08-30: full stacks + capacity headline
+
+Run on the 5090 at e68bbff (box push e6bc10f; run dirs
+`...T182141/T182741/T183950_e68bbff_*`). Suite on the box 631 + 5
+chaos green; the chunk-8 exit gate (bit-exact replay including the
+in-place physical table permutation, spike gate 4's probe) PASSED at
+the bit-exact bar. Boot: 5 decode graphs captured in 0.1 s (the
+persistent-buffer design: recordings bake the step state's addresses,
+there is nothing to marshal at capture), Ready bills hold the trimmed
+sweep's numbers (cold 364 s / warm 81 s; graphs add ~nothing), zero
+recompiles after Ready, decode replay 194/194 = 100% with zero false
+replays.
+
+Full-stack A/B (median of 3; delta = flex vs padded, both complete
+pipelines; §6 prediction 1's ranges):
+- short_chat c=4 +1.8% PASS, c=16 +1.3% PASS: flex 3612 tok/s is
+  ABOVE the padded default record (3581) with TTFT 9 ms better.
+- code c=8 -1.8% PASS; multi_turn c=8 -4.6% PASS (round-1 rerun had
+  -15.1: the graphs plus the bulk-copy fill closed the host share as
+  attributed).
+- long_context c=1 -22.6% MISS, c=2 -17.9% MISS: the pre-accepted
+  kernel cells. Both arms improved with graphs; padded improved MORE
+  at c=1 (its 1.84 ms host gap was the bigger share there), which
+  widened the percentage exactly as probe B's split predicted.
+  c=4 +5.0% PASS: flex WINS the saturated cell, with lower step_p99
+  (26.8 vs 32.7 ms).
+- Decode step_p50, longctx c=1/2/4: flex 3.27/5.27/8.13 ms (was
+  4.72/8.00/12.8 without graphs) vs padded 2.26/4.60/8.90. Flex is
+  now FASTER per step at c=4; the ~1.0/0.7 ms deficit at c=1/2 is the
+  attributed flex-template kernel time.
+- No NaN, zero errors everywhere.
+
+Capacity headline (§6 prediction 3: flex full stack, max_batch 64 on
+num_kv_blocks 1024, exactly the padded pool's 16-slot reservation):
+c=16/32/48/64 gave 3545/5392/5165/5479 tok/s, every request
+completed, no paged-KV deadlock, zero errors. Clause grades:
+sustained >= 48 concurrent PASS; saturated aggregate 5479 = 1.53x the
+3581 padded default record, PASS (>= 1.5x); kv_fill_mean
+0.026/0.051/0.071/0.070 FAILS the >= 60% clause as written.
+short_chat requests hold ~350 tokens for seconds and free them, so
+the mean allocated share of a 65 536-token pool stays small; the
+clause needs a longer-held workload or a smaller pool to bind.
+Graded, not tuned, per the house rule. (TTFT CV warnings 6.7-14.6% on
+the capacity cells: arrival jitter at high fan-in, on record.)
+
+Open from the rounds: the longctx B <= 2 flex decode-kernel gap
+(template/split tuning, deferred by the author's round-1 call), and
+the §7 flex-kernel-ran counter's in-bench encoding.
+
 ### Chunk log
 
 Suite green at every step (530 tests + 5 chaos at chunk 1, from 521 at
@@ -793,3 +839,31 @@ phase start; Mac/CPU counts).
    2.10 (fused names come from the fusion group, not the winning
    template); the step-scaling signature is the working substitute.
    Suite 609 + 5 chaos.
+8. CUDA graphs on paged decode + round 2 (2026-08-30, delegated; §10's
+   round-2 section is the record). Graphs key on (batch, 1): kv is a
+   value (§2.6), so the capture set is the batch buckets, 5 recordings
+   vs padded's ~80. The static buffers ARE the step tables:
+   `PagedStepState` gained the persistent padded decode write map §3
+   always specified (batch_row/token_offset constants, pool_index
+   rewritten per step, fillers parked on the scratch block; prefill
+   maps stay exact and fresh), and `fill` was rewritten to assemble
+   each step in CPU staging and land it with one bulk `copy_` per
+   buffer, which is simultaneously the replay marshal (recordings bake
+   the state's addresses; the wrapper copies only the five meta-side
+   tensors) and the fix for probe B's +2 ms/step flex-side host gap
+   from per-element device table writes. `_replayable` verifies by
+   data_ptr that a step's seeded tables and map are the state's
+   buffers, so hand-built metas fall through to eager; capture runs
+   through `fill` itself with a shared-block dummy batch, the family
+   mask riding in. Wiring opened (assembly refusal removed, graphs
+   default-on under flex on CUDA). Exit gates: CPU decode-map/staging
+   pins plus wrapper guard and capture-setup identity tests; on the
+   box, the bit-exact-replay-after-in-place-table-permutation gate
+   PASSED, capture cost 0.1 s, replay 194/194, zero recompiles.
+   Round 2: prediction 1 PASSES on every cell except the pre-accepted
+   longctx kernel cells (and flex now beats the padded default on
+   short_chat c=16, 3612 vs 3581); the capacity headline passes its
+   concurrency and 1.5x clauses (5479 tok/s at 64 slots on 16-slot KV
+   parity, no deadlock) while the kv_fill_mean >= 60% clause fails as
+   written (short_chat frees too fast to bind it). Suite 618 + 5
+   chaos local, 631 + 5 on the box.
