@@ -99,6 +99,16 @@ class BatchingConfig:
     the paged engine is a drop-in. Benches undercommit explicitly to
     make scarcity happen — preemption needs someone to preempt."""
 
+    overlap_scheduling: bool = False
+    """Split step() into launch and reap (paged-kv-plan.md §2.12, §3):
+    launch plans and enqueues the forward with the previous step's
+    sampled tokens still GPU-resident (scattered device-side into the
+    input), sampling's D2H rides a side stream behind an event, and
+    finalize (stop/max_tokens, events) runs one step late at reap. A
+    row that stopped at step N wasted one decode at N+1 and rolls
+    back. Orthogonal to layout: works on the padded and paged arms;
+    off = the serial loop, byte-identical to Phase 3."""
+
     preemption_policy: str = "lifo"
     """Victim selection under block exhaustion (paged-kv-plan.md §2.10):
     "lifo" evicts the newest-admitted active sequence, "priority" the

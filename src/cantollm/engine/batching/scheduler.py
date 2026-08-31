@@ -22,7 +22,7 @@ Contract with the engine shell (see `SchedulerLike` in types.py):
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import torch
 
@@ -56,6 +56,32 @@ class Row:
     @property
     def input_tokens(self) -> list[int]:
         return self.sequence.input_tokens_at(self.start_pos, self.num_new)
+
+
+@dataclass
+class InFlightStep:
+    """One launched-but-not-finalized step (overlap scheduling, §2.12).
+
+    Holds everything reap needs one step later: the planned rows, the
+    launch-time keep/discard decision per row (`emits`: the sample is a
+    real token, not a mid-prefill throwaway; frozen at launch because
+    positions keep moving), the device-resident sampled tokens (the next
+    launch's decode inputs), the pinned host landing buffers their D2H
+    targets on the side stream, and the CUDA event that says the copy
+    arrived (None off-CUDA: the "copy" was synchronous). `dead` rows are
+    skipped at reap: rolled back after a late-detected finish, or
+    aborted while in flight. Their KV was already released, so reap
+    releasing again would be the §4 double-free."""
+
+    rows: list[Row]
+    emits: list[bool]
+    tokens_dev: torch.Tensor
+    logprobs_dev: torch.Tensor
+    tokens_host: torch.Tensor
+    logprobs_host: torch.Tensor
+    done: object | None
+    row_index: dict[int, int]
+    dead: set[int] = field(default_factory=set)
 
 
 def water_fill(budget: int, caps: list[int]) -> list[int]:
@@ -174,6 +200,12 @@ class ContinuousBatchingScheduler:
         # resume (their replay prefixes).
         self.preemptions_total = 0
         self.preempted_tokens_total = 0
+        # Overlap scheduling (§2.12): the one step whose forward is
+        # enqueued but not yet finalized, and the lazily created side
+        # stream its sampled-token D2H rides. None when overlap is off
+        # or the machine is settled.
+        self._in_flight: InFlightStep | None = None
+        self._side_stream = None
 
     @property
     def kv_state(self) -> tuple[int, int] | None:
@@ -242,6 +274,11 @@ class ContinuousBatchingScheduler:
         if seq is not None:
             self.active.remove(seq)
             self._release_kv(seq)
+            if self._in_flight is not None:
+                # Abort-while-in-flight (§4): the pending sample must not
+                # emit after this ack, and reap must not release again;
+                # dead rows are skipped there entirely.
+                self._in_flight.dead.add(id(seq))
         else:
             seq = next((s for s in self.queued if s.request_id == request_id), None)
             if seq is None:
@@ -324,9 +361,14 @@ class ContinuousBatchingScheduler:
         return victim
 
     def is_idle(self) -> bool:
-        """Nothing queued, nothing active, nothing pending. (The shell
-        blocks while this is True — see the contract note up top.)"""
-        return not self.queued and not self.active and not self.pending_events
+        """Nothing queued, nothing active, nothing pending, nothing in
+        flight. (The shell blocks while this is True; see the contract
+        note up top. An in-flight step still owes its reap's events, so
+        it must keep the loop stepping.)"""
+        return (
+            not self.queued and not self.active
+            and not self.pending_events and self._in_flight is None
+        )
 
     def step(self) -> list[TokenEvent]:
         """One scheduler step: flush pending events, promote queued
@@ -342,6 +384,9 @@ class ContinuousBatchingScheduler:
           - `>=` on the max_tokens check: monotone, can't be skipped past.
           - Finished sequences free their slot the same step.
         """
+        if self.config.overlap_scheduling:
+            return self._step_overlapped()
+
         events = self.pending_events
         self.pending_events = []
         # Cleared up front so a no-forward step (pending flush only) never
@@ -370,42 +415,7 @@ class ContinuousBatchingScheduler:
             return events
 
         input_ids = self._build_input_ids(rows)
-        meta = build_batch_meta(rows, device=self.pool.device)
-        # Pad the planned geometry into the bounded shape vocabulary (an
-        # exact no-op without the bucket knobs) — see shaping.py for why
-        # kernels care about step shapes.
-        input_ids, meta = shape_step(input_ids, meta, self.config)
-        if self.paged_state is not None:
-            # Project the host block tables into the step's device tensors
-            # and hand the meta its references (paged-kv-plan.md §2.5);
-            # filler rows appended by shape_step get the scratch block.
-            # The width names the mask family (chunk 6): fill returns the
-            # family's cached BlockMask with the tables.
-            meta.seed_paged_tables(self.paged_state.fill(
-                meta.rows,
-                [row.sequence.block_table for row in rows],
-                self.config.block_size,
-                meta.num_new_max,
-            ))
-
-        # The forward's actual problem shape (post-bucketing), for the
-        # stats collector — StepStats.rows counts real sequences only.
-        self.last_forward_shape = (
-            len(meta.rows), meta.num_new_max, meta.max_history_len
-        )
-        # (rows, prefill, decode) of this forward, stated at plan time for
-        # the stats collector: the snapshot-diff derivation it replaces
-        # leaned on invariants ("finish implies past prefill", "finished
-        # rows free slots in-step") that preemption and overlap break in
-        # Phase 4. A chunk never straddles the prompt boundary, so a row
-        # is all-prefill or all-decode.
-        prefill = sum(
-            r.num_new for r in rows
-            if r.start_pos < len(r.sequence.prefill_token_ids)
-        )
-        self.last_step_plan = (
-            len(rows), prefill, sum(r.num_new for r in rows) - prefill
-        )
+        input_ids, meta = self._stage_forward(rows, input_ids)
 
         logits = self.forward_fn(input_ids, meta, self.pool)
 
@@ -468,6 +478,221 @@ class ContinuousBatchingScheduler:
         )
         self.active = [s for s in self.active if id(s) not in finished]
         return events
+
+    def _stage_forward(
+        self, rows: list[Row], input_ids: torch.Tensor
+    ) -> tuple[torch.Tensor, BatchMeta]:
+        """Shared launch staging (extracted unchanged from the serial
+        step() for the overlap split): meta, shape-vocabulary padding,
+        paged table projection, plan-time stats."""
+        meta = build_batch_meta(rows, device=self.pool.device)
+        # Pad the planned geometry into the bounded shape vocabulary (an
+        # exact no-op without the bucket knobs) — see shaping.py for why
+        # kernels care about step shapes.
+        input_ids, meta = shape_step(input_ids, meta, self.config)
+        if self.paged_state is not None:
+            # Project the host block tables into the step's device tensors
+            # and hand the meta its references (paged-kv-plan.md §2.5);
+            # filler rows appended by shape_step get the scratch block.
+            # The width names the mask family (chunk 6): fill returns the
+            # family's cached BlockMask with the tables.
+            meta.seed_paged_tables(self.paged_state.fill(
+                meta.rows,
+                [row.sequence.block_table for row in rows],
+                self.config.block_size,
+                meta.num_new_max,
+            ))
+
+        # The forward's actual problem shape (post-bucketing), for the
+        # stats collector — StepStats.rows counts real sequences only.
+        self.last_forward_shape = (
+            len(meta.rows), meta.num_new_max, meta.max_history_len
+        )
+        # (rows, prefill, decode) of this forward, stated at plan time for
+        # the stats collector: the snapshot-diff derivation it replaces
+        # leaned on invariants ("finish implies past prefill", "finished
+        # rows free slots in-step") that preemption and overlap break in
+        # Phase 4. A chunk never straddles the prompt boundary, so a row
+        # is all-prefill or all-decode.
+        prefill = sum(
+            r.num_new for r in rows
+            if r.start_pos < len(r.sequence.prefill_token_ids)
+        )
+        self.last_step_plan = (
+            len(rows), prefill, sum(r.num_new for r in rows) - prefill
+        )
+        return input_ids, meta
+
+    def _step_overlapped(self) -> list[TokenEvent]:
+        """The §2.12 split: LAUNCH this step's forward (planned from
+        positions the previous launch already advanced, its decode inputs
+        the previous step's still-GPU-resident samples), then REAP the
+        previous step (wait its D2H event, finalize, emit). The CPU never
+        blocks on the step it just enqueued, so planning k+1 overlaps
+        forward k on the GPU; finalize runs one step late by design.
+
+        Eviction stays a settled-state move: with a step in flight, a
+        starved plan skips preemption for one step (the reap below may
+        free what it needs; if not, the next call evicts with nothing in
+        flight), so the §4 in-flight hazards never open."""
+        events = self.pending_events
+        self.pending_events = []
+        self.last_forward_shape = None
+        self.last_step_plan = None
+
+        self._promote_queued()
+        rows = self._plan_step()
+        if not rows and self.active and self._in_flight is None:
+            # Same-step evict-and-replan retry, exactly as the serial
+            # loop: planning is the can-anyone-advance oracle.
+            while not rows and self.active:
+                self._preempt_one()
+                rows = self._plan_step() if self.active else []
+
+        launched = self._launch(rows) if rows else None
+        if self._in_flight is not None:
+            events.extend(self._reap(self._in_flight, launched))
+        self._in_flight = launched
+        return events
+
+    def _launch(self, rows: list[Row]) -> InFlightStep:
+        """Enqueue one forward + sampling + side-stream D2H; no host
+        sync. Decode rows whose last token is still in flight get it
+        scattered device-side into the input (§3); everyone else builds
+        from host lists exactly like the serial path."""
+        prev = self._in_flight
+        width = max(row.num_new for row in rows)
+        input_ids = torch.zeros((len(rows), width), dtype=torch.int64)
+        scatter: list[tuple[int, int]] = []
+        for i, row in enumerate(rows):
+            seq = row.sequence
+            src = prev.row_index.get(id(seq)) if prev is not None else None
+            if src is not None and prev.emits[src] and row.num_new == 1:
+                # Its decode input is the previous step's sample, still
+                # device-resident and unread by the host.
+                scatter.append((i, src))
+            else:
+                input_ids[i, : row.num_new] = torch.tensor(
+                    row.input_tokens, dtype=torch.int64
+                )
+
+        # Advance positions at launch (the serial path advances at
+        # finalize) so the next plan sees the committed state; freeze the
+        # keep/discard decision per row now, while position is fresh.
+        emits = []
+        for row in rows:
+            row.sequence.position += row.num_new
+            emits.append(not row.sequence.is_prefilling())
+
+        input_ids, meta = self._stage_forward(rows, input_ids)
+        input_ids = input_ids.to(self.pool.device)
+        if scatter:
+            dst = torch.tensor([d for d, _ in scatter],
+                               device=input_ids.device)
+            src_idx = torch.tensor([s for _, s in scatter],
+                                   device=input_ids.device)
+            # One vectorized scatter, not a kernel per row (the Phase 2
+            # launch-flood lesson).
+            input_ids[dst, 0] = prev.tokens_dev[src_idx]
+
+        logits = self.forward_fn(input_ids, meta, self.pool)
+        toks, lps = [], []
+        for r, row in enumerate(rows):
+            token_tensor, probs = sampler.sample(
+                logits[r], row.sequence.sampling_params
+            )
+            toks.append(token_tensor)
+            lps.append(probs[token_tensor].log())
+        tokens_dev = torch.stack(toks)
+        logprobs_dev = torch.stack(lps)
+
+        if tokens_dev.is_cuda:
+            tokens_host = torch.empty_like(
+                tokens_dev, device="cpu", pin_memory=True
+            )
+            logprobs_host = torch.empty_like(
+                logprobs_dev, device="cpu", pin_memory=True
+            )
+            if self._side_stream is None:
+                self._side_stream = torch.cuda.Stream()
+            sampled = torch.cuda.Event()
+            sampled.record(torch.cuda.current_stream())
+            done = torch.cuda.Event()
+            with torch.cuda.stream(self._side_stream):
+                self._side_stream.wait_event(sampled)
+                tokens_host.copy_(tokens_dev, non_blocking=True)
+                logprobs_host.copy_(logprobs_dev, non_blocking=True)
+                done.record(self._side_stream)
+        else:
+            # Off-CUDA the forward already ran synchronously; the reap's
+            # "wait" degenerates to reading these directly.
+            tokens_host, logprobs_host, done = tokens_dev, logprobs_dev, None
+
+        return InFlightStep(
+            rows=rows,
+            emits=emits,
+            tokens_dev=tokens_dev,
+            logprobs_dev=logprobs_dev,
+            tokens_host=tokens_host,
+            logprobs_host=logprobs_host,
+            done=done,
+            row_index={id(row.sequence): i for i, row in enumerate(rows)},
+        )
+
+    def _reap(
+        self, flight: InFlightStep, launched: InFlightStep | None
+    ) -> list[TokenEvent]:
+        """Finalize the previous launch: wait its D2H event, then the
+        serial finalize semantics with positions already advanced. A row
+        found finished here may have a bonus decode in `launched`; it
+        rolls back (dead-marked, position decremented) and its whole
+        table, bonus block included, returns via _release_kv."""
+        if flight.done is not None:
+            flight.done.synchronize()
+        tokens = flight.tokens_host.tolist()
+        logprobs = flight.logprobs_host.tolist()
+
+        events: list[TokenEvent] = []
+        for i, row in enumerate(flight.rows):
+            seq = row.sequence
+            if id(seq) in flight.dead or not flight.emits[i]:
+                # Rolled back / aborted in flight (KV already released),
+                # or a mid-prefill throwaway sample.
+                continue
+            token = tokens[i]
+            if token in seq.stop_token_ids:
+                events.append(TokenEvent(
+                    finish_reason="end_turn", request_id=seq.request_id
+                ))
+                self._finish_in_flight(seq, launched)
+                continue
+            seq.output_token_ids.append(token)
+            events.append(TokenEvent(
+                token_id=token, logprob=logprobs[i],
+                request_id=seq.request_id,
+            ))
+            if len(seq.output_token_ids) >= seq.max_tokens:
+                events.append(TokenEvent(
+                    finish_reason="max_tokens", request_id=seq.request_id
+                ))
+                self._finish_in_flight(seq, launched)
+        return events
+
+    def _finish_in_flight(
+        self, seq: CBSequence, launched: InFlightStep | None
+    ) -> None:
+        """A reap discovered `seq` finished one step ago. If the current
+        launch optimistically ran its bonus decode, roll it back: dead-
+        mark (its sample must not emit), un-advance the position. Then
+        release everything; the bonus block, if planning allocated one,
+        goes back with the rest of the table."""
+        if launched is not None:
+            idx = launched.row_index.get(id(seq))
+            if idx is not None:
+                launched.dead.add(id(seq))
+                seq.position -= launched.rows[idx].num_new
+        self.active = [s for s in self.active if s is not seq]
+        self._release_kv(seq)
 
     def _promote_queued(self) -> None:
         """Admit queued sequences while slots are free, highest priority

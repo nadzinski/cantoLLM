@@ -191,6 +191,7 @@ def cmd_serve(args):
             max_batch=args.max_batch,
             max_seq_len=args.batch_max_seq_len,
             max_tokens_per_step=args.max_tokens_per_step,
+            overlap_scheduling=bool(args.overlap_scheduling),
             **bucket_kwargs,
             **paged_kwargs,
         )
@@ -551,6 +552,12 @@ def parse_args(argv=None):
                                    "max-batch x batch-max-seq-len / block-size, at "
                                    "which exhaustion is impossible; benches "
                                    "undercommit explicitly)")
+    serve_parser.add_argument("--overlap-scheduling", default=None,
+                              action=argparse.BooleanOptionalAction,
+                              help="Batched engine: launch/reap step split "
+                                   "(paged-kv-plan.md §2.12): plan step N+1 "
+                                   "while step N runs; finalize one step "
+                                   "late behind a CUDA event (default: off)")
     serve_parser.add_argument("--preemption-policy", default=None,
                               choices=("lifo", "priority", "cost"),
                               help="Paged KV (--attention flex): victim "

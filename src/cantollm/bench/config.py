@@ -262,7 +262,7 @@ def serve_argv(variant: ServerVariant, extra: list[str] | None = None) -> list[s
     # (on for CUDA), so an explicit false must be SAID (--no-...), not
     # merely omitted — else a config that means "off" silently runs "on".
     for key in ("shape_buckets", "warmup_shapes", "cuda_graphs",
-                "torch_compile"):
+                "torch_compile", "overlap_scheduling"):
         if key in cfg and cfg[key] is not None:
             flag = key.replace("_", "-")
             argv.append(f"--{flag}" if cfg[key] else f"--no-{flag}")
