@@ -1,0 +1,768 @@
+{"ts": "2026-08-31T05:32:17.920Z", "level": "INFO", "logger": "httpx", "process": "api", "msg": "HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/tokenizer.json \"HTTP/1.1 302 Found\""}
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+{"ts": "2026-08-31T05:32:17.920Z", "level": "WARNING", "logger": "huggingface_hub.utils._http", "process": "api", "msg": "Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads."}
+INFO:     Started server process [2488205]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Using device: cuda (NVIDIA GeForce RTX 5090)
+
+CantoLLM server starting on http://127.0.0.1:8377
+  POST /v1/messages  — Anthropic-compatible Messages API
+  GET  /health       — Health check (API liveness)
+  GET  /ready        — Readiness + warm-up progress
+  GET  /docs         — OpenAPI docs
+
+Model: qwen3-0.6B  ·  Engine: continuous batching, engine process (max_batch=16, paged 1024x64 tok, budget=512 tok/step, attention=flex, shape_buckets=on, warmup=on, cuda_graphs=on, torch_compile=dynamic)
+
+INFO:     Uvicorn running on http://127.0.0.1:8377 (Press CTRL+C to quit)
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-31T05:32:18.662Z", "level": "INFO", "logger": "cantollm.runtime", "process": "engine", "msg": "Downloading 0.6B model weights..."}
+{"ts": "2026-08-31T05:32:18.752Z", "level": "INFO", "logger": "httpx", "process": "engine", "msg": "HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/tokenizer.json \"HTTP/1.1 302 Found\""}
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+{"ts": "2026-08-31T05:32:18.752Z", "level": "WARNING", "logger": "huggingface_hub.utils._http", "process": "engine", "msg": "Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads."}
+{"ts": "2026-08-31T05:32:18.833Z", "level": "INFO", "logger": "httpx", "process": "engine", "msg": "HTTP Request: HEAD https://huggingface.co/Qwen/Qwen3-0.6B/resolve/main/model.safetensors \"HTTP/1.1 302 Found\""}
+{"ts": "2026-08-31T05:32:18.836Z", "level": "INFO", "logger": "cantollm.runtime", "process": "engine", "msg": "Creating model..."}
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-31T05:32:22.076Z", "level": "INFO", "logger": "cantollm.runtime", "process": "engine", "msg": "Loading pretrained weights..."}
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-31T05:32:22.920Z", "level": "INFO", "logger": "cantollm.engine.batching.engine", "process": "engine", "msg": "torch.compile enabled on the batched forward (fullgraph, strategy=dynamic, artifacts built during warm-up)"}
+{"ts": "2026-08-31T05:32:22.920Z", "level": "INFO", "logger": "cantollm.engine.batching.warmup", "process": "engine", "msg": "warming 20 paged (batch, width) families, one map length each (batch buckets (1, 2, 4, 8, 16), widths {1} + (128, 256, 512); kv is a value, no sweep)"}
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 503 Service Unavailable
+{"ts": "2026-08-31T05:33:28.577Z", "level": "INFO", "logger": "cantollm.engine.batching.warmup", "process": "engine", "msg": "paged shape warm-up done: 20 families (20 masks cached) in 65.7 s"}
+{"ts": "2026-08-31T05:33:28.653Z", "level": "INFO", "logger": "cantollm.engine.batching.engine", "process": "engine", "msg": "CUDA graphs: captured 5 decode shapes in 0.1 s"}
+{"ts": "2026-08-31T05:33:28.653Z", "level": "INFO", "logger": "cantollm.lifecycle", "process": "api", "msg": "engine for qwen3-0.6B built and warm in 70.6 s"}
+{"ts": "2026-08-31T05:33:28.653Z", "level": "INFO", "logger": "cantollm.lifecycle", "process": "api", "msg": "engine ready: qwen3-0.6B (generation 1)"}
+INFO:     127.0.0.1:47994 - "GET /ready HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37750 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37750 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37750 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37750 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37758 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37768 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37782 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37786 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37794 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37802 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37816 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37826 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37842 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37850 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37866 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37878 - "GET /debug/engine-stats?since=-1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37878 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37884 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37898 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37912 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37918 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37924 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37930 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37932 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37934 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37944 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37958 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37966 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37974 - "GET /debug/engine-stats?since=302 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37974 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37982 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37990 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37996 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37998 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38010 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38024 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38026 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38028 - "GET /debug/engine-stats?since=647 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38028 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38032 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38042 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38058 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38072 - "GET /debug/engine-stats?since=995 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38072 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38080 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38096 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38112 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38120 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38122 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38132 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38148 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38160 - "GET /debug/engine-stats?since=1160 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38160 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38164 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38172 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38176 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38182 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38184 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38194 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38196 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38210 - "GET /debug/engine-stats?since=1325 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38210 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38212 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38218 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38230 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38242 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38258 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38262 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38272 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38274 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38276 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38280 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38292 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38308 - "GET /debug/engine-stats?since=1666 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38308 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38312 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38316 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38328 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38332 - "GET /debug/engine-stats?since=2013 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38332 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38334 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38338 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38344 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53324 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53330 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53336 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53342 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53352 - "GET /debug/engine-stats?since=2192 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53352 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53368 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53382 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53386 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53396 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53402 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53408 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53420 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53434 - "GET /debug/engine-stats?since=2343 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53434 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53448 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53464 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53478 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53486 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53496 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53502 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53508 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53520 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53532 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53542 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53558 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53572 - "GET /debug/engine-stats?since=2687 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53572 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53576 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53592 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53608 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53620 - "GET /debug/engine-stats?since=3030 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53620 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53620 - "GET /debug/engine-stats?since=3224 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53620 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53628 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53638 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53648 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53662 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53668 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53674 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53686 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53692 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53700 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53716 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53720 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53728 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53732 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53746 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53752 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53762 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53778 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53782 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53792 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53794 - "GET /debug/engine-stats?since=3224 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53794 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53806 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53814 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53830 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53838 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53840 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53846 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53862 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53864 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53874 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53890 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53894 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53910 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53924 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53932 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53942 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53952 - "GET /debug/engine-stats?since=3353 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53952 - "GET /debug/engine-stats?since=3587 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53952 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53954 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53960 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53970 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53974 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53990 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53994 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53996 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54000 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54014 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54022 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54028 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54030 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54044 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54058 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54070 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54074 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54088 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54104 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54106 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54114 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54124 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54126 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54132 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54134 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54136 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54138 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54144 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54158 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54164 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54172 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54188 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54204 - "GET /debug/engine-stats?since=3613 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54204 - "GET /debug/engine-stats?since=3821 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54204 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54218 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54222 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54226 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54240 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54256 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54268 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54274 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54290 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54292 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54296 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54300 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54314 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54330 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54342 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54346 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54360 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54374 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54376 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54392 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54400 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54414 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54426 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54440 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54442 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54458 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54474 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54484 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54490 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54492 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54508 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54512 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54520 - "GET /debug/engine-stats?since=3891 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54520 - "GET /debug/engine-stats?since=4043 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54520 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54520 - "GET /debug/engine-stats?since=4152 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54520 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54528 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54530 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54538 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54550 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54566 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54580 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54584 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54598 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54602 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54616 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54628 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54632 - "GET /debug/engine-stats?since=4152 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54632 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54642 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54644 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54654 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54662 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54668 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54684 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54690 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54700 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54714 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54722 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54724 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54726 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54732 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54746 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54750 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54752 - "GET /debug/engine-stats?since=4299 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54752 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54760 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54776 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54790 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54806 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54816 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54820 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54830 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54846 - "GET /debug/engine-stats?since=4564 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54846 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54854 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54868 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54870 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54884 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54892 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54894 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54902 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54910 - "GET /debug/engine-stats?since=4808 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54910 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41292 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41298 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41314 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41316 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41322 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41324 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41328 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41332 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41338 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41354 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41362 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41370 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41372 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41384 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41392 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41408 - "GET /debug/engine-stats?since=4820 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41408 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41420 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41430 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41438 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41448 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41458 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41460 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41462 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41470 - "GET /debug/engine-stats?since=5083 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41470 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41472 - "GET /debug/engine-stats?since=5341 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41474 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41480 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41486 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41494 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41504 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41516 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41522 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41472 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41528 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41544 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41548 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41562 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41566 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41572 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41576 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41590 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41602 - "GET /debug/engine-stats?since=5341 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41602 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41618 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41624 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41636 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41650 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41656 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41658 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41664 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41666 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41672 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41678 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41686 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41692 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41708 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41716 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41720 - "GET /debug/engine-stats?since=5600 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41726 - "GET /debug/engine-stats?since=5600 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41720 - "GET /v1/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41720 - "GET /debug/engine-stats?since=5872 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41720 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41726 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41742 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41754 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41764 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41776 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41778 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41788 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41796 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41812 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41820 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41832 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41834 - "GET /debug/engine-stats?since=5872 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41834 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41850 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41862 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41878 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41882 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41894 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41908 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41924 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41932 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41946 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41948 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41962 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41970 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41980 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41988 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42000 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42010 - "GET /debug/engine-stats?since=6102 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42010 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42026 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42028 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42040 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42046 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42056 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42058 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42064 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42070 - "GET /debug/engine-stats?since=6316 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42072 - "GET /debug/engine-stats?since=6316 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42070 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42072 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42078 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42084 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42098 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42112 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42124 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42134 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42146 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42148 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42154 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42170 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42180 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42194 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42202 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42204 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42210 - "GET /debug/engine-stats?since=6542 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42210 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42224 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42238 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42244 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42258 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42262 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42270 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42286 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42288 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42300 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42304 - "GET /debug/engine-stats?since=6739 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42304 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42320 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42328 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42332 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42334 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42340 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42352 - "GET /debug/engine-stats?since=6943 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42352 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42364 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42366 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42374 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42384 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42386 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42390 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42392 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42398 - "GET /debug/engine-stats?since=7084 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42398 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42414 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42430 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42438 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42450 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42466 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42468 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42478 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54602 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54616 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54624 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54640 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54650 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54658 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54664 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54670 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54682 - "GET /debug/engine-stats?since=7170 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54682 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54698 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54714 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54720 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54728 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54734 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54738 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54752 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54756 - "GET /debug/engine-stats?since=7364 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54756 - "GET /debug/engine-stats?since=7588 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54756 - "GET /debug/engine-stats?since=7620 HTTP/1.1" 200 OK
+{"ts": "2026-08-31T05:33:57.283Z", "level": "INFO", "logger": "cantollm.server", "process": "api", "msg": "draining: 0 in-flight, deadline 30 s"}
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [2488205]
+/home/nadia/.local/share/uv/python/cpython-3.11.13-linux-x86_64-gnu/lib/python3.11/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 6 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
