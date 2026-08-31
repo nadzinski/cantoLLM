@@ -642,6 +642,40 @@ flex-kernel-ran counter question is settled: no in-bench counter (the
 author, 2026-08-30); the suite's profiler test and the step-time
 signature are the gate's working form.
 
+### Round 3 (chunk 11): first run 2026-08-30, INVALID (zero preemptions), cause found, v2 rerun below
+
+Run on the 5090 at c7c1915 (box push b3040f2, run dir
+`...T220602_c7c1915_goodput-5090`, commit flagged INVALID).
+Mechanically clean: 6 cells x 3 repeats, errors 0, every request
+completed, recompiles after Ready 0, no NaN, no wedge. But
+preemptions_total = 0 in ALL SIX cells, so the per-policy goodput
+spreads (lifo 0.165/0.138, priority 0.210/0.088, cost 0.185/0.148 at
+30/45 rps) are admission-queue and arrival-order effects, not victim
+selection: the round's own validity gate, failed. Cause, on record in
+the v2 config header: short_chat's footprint stops growing 128 tokens
+after admission, and the machine's designed shortage absorbers
+(admission-time first-block gating, §9.6 grant-shrink, fast request
+turnover freeing blocks) soak every shortage before total starvation
+is reached, so v1's 8x block undercommit pooled entirely in the
+ADMISSION queue (TTFT p50 3-5 s at 2-4x over capacity). Two riders:
+the 45 rps cells were load-generator-bound (dispatch lag p99
+1.3-1.6 s + inflight-cap warnings in every repeat), and aggregate
+tok/s WAS flat across policies (~2 350-2 440 everywhere), prediction
+5's flatness clause showing up even in an invalid round. Also
+learned: max_batch 64 adds batch buckets 32/64, 8 new compile
+families, a ~9-minute one-time cold bill on first boot.
+
+The general lesson, stated for the record: EVICTION NEEDS PER-REQUEST
+GROWTH THAT OUTRUNS THE FREE RATE AFTER ADMISSION; undercommitting
+blocks against a short-generation workload just moves scarcity to the
+admission queue. v2 (b1f89b6): max_tokens 512 (~9-block eventual
+footprint per request) over num_kv_blocks 64 (the minimum legal pool,
+~7 full-grown requests) at max_batch 16, rates [3, 5] rps bracketing
+this geometry's ~4.3 rps knee, server --max-inflight 256 (new serve
+key) so overload queues in the scheduler rather than 429ing, client
+cap 240 under it. Validity gate hardened: preemptions_total > 0 on
+every cell, no generator warnings, or stop after the first cell.
+
 ### Chunk log
 
 Suite green at every step (530 tests + 5 chaos at chunk 1, from 521 at
