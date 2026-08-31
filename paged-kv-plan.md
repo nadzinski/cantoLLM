@@ -27,15 +27,20 @@ the victim and hands the block straight back; lifo livelocks
 identically under the swapped arrival order), fixed by her call:
 same-step evict-and-replan retry in step(), planning as the
 can-anyone-advance oracle. Markers off, suite 653 + 5 chaos.
-Chunks 11+12 local halves landed same day (c7c1915, 9cf0c3e):
-priority_mix mixed-priority cells + per-class goodput +
-goodput_5090.toml (the §9.3 straw SLO pair adopted on record), and the
-§2.12 overlap restructure (launch/reap split, device-resident decode
-inputs, side-stream D2H, finalize one step late with bonus-decode
-rollback; serial equivalence token-for-token on both layouts in
-tests/test_overlap_scheduler.py) + round-4 configs
-ab_5090_overlap{,_longctx}.toml. Rounds 3 and 4 running on the box
-(the 5090-agent session); §10 gets their records as they land.**
+Chunks 11-13 closed 2026-08-30/31 at 5090 scope: round 3 took two
+attempts (v1 INVALID with zero preemptions, the
+growth-vs-free-rate lesson now on record; v2 VALID, prediction 5
+graded: aggregate flat as predicted, the >= 15-point headline missed
+at +1.8, class ordering priority > lifo > cost as designed); the
+§2.12 overlap restructure landed with its toy suite green first run,
+and round 4 passed its equivalence gate while FAILING prediction 6
+everywhere (overlap costs 0.5-2.6% at 5090 step times; DEFAULT OFF;
+one intermittent flex+overlap delivery collapse flagged, not
+chased). §6 graded, §10 complete, records/PLAN.md/viz/memory synced.
+Remaining, all the author's: the H100 day (deferred "another day";
+prediction 6's real test rides with it), the §9.8
+CUDA-default-attention decision (numbers ready), the Paged-KV viz
+tab ask, the longctx kernel gap, the collapse follow-up.**
 
 ## 1. Goal
 
@@ -676,6 +681,46 @@ key) so overload queues in the scheduler rather than 429ing, client
 cap 240 under it. Validity gate hardened: preemptions_total > 0 on
 every cell, no generator warnings, or stop after the first cell.
 
+### Round 3 v2 (chunk 11), 2026-08-30: the goodput round, VALID
+
+Run on the 5090 at 0f440be (box push dbd71dd, run dir
+`...T225535_0f440be_goodput-5090`; full matrix in ~27 min). Both
+validity gates held: preemptions_total > 0 in EVERY cell and zero
+generator warnings; n_errors 0, every request completed through
+evictions, no NaN, no cold compiles (num_kv_blocks stays out of
+shape space, as designed).
+
+The two rates split roles. 3 rps (below saturation): scarcity binds
+even here (9 preemptions per repeat, ~115-token mean replay prefix)
+but is NON-DISCRIMINATING: all three policies picked byte-identical
+victims (identical counts, tokens, goodput 0.995) under mild,
+deterministic pressure. It stands as the existence proof that an
+undercommitted pool preempts below the knee without hurting anyone
+(goodput 0.995, TTFT p99 0.32 s). 5 rps (past the knee) is the
+discriminating cell: aggregate flat across policies (1865/1888/1887,
+~1.2% spread) while the CLASS SPLIT moves exactly where victim
+selection should move it: `priority` protects the minority high
+class best (p2 0.707 vs p0 0.471), `lifo` is the gentler middle
+(0.689/0.510), `cost` is worst for the high class (0.537/0.471) —
+it keeps expensive rows regardless of class, which mostly means old
+low-priority rows. Mean replay prefixes 76-88 tokens at 5 rps: every
+re-prefill fits one 512-token chunk, so eviction's dominant cost is
+re-queue wait, not compute (prediction 4's rider, now with numbers).
+Caveat on record: TTFT p50 CV ~157-160% across repeats on the 5 rps
+cells (tiny 0.17 s base; p99 ~11.5 s is the meaningful queue
+number).
+
+PREDICTION 5 GRADED, kept as written: the flat-aggregate clause
+PASSES (~1.2% <= 2%); the headline clause FAILS as written (priority
+raises high-class goodput +1.8 points over lifo, not >= 15: LIFO's
+newest-victim rule is nearly class-blind under mixed arrivals, so
+there was far less high-class damage to prevent than predicted); the
+cost clause FAILS (cost is worst on TOTAL goodput too, 0.515 vs
+lifo's 0.550, though its high-class half holds trivially). The
+ordering came out as designed even where the magnitudes did not:
+priority > lifo > cost for the protected class, at a low-class price
+(p0 0.471 vs lifo's 0.510).
+
 ### Round 4 (chunk 12), 2026-08-30: overlap on/off x {padded, paged}
 
 Run on the 5090 at b3040f2 (box push 0f440be; run dirs
@@ -723,6 +768,36 @@ window). Immaterial to the round's decision (overlap loses even on
 its clean cells) and to correctness (equivalence gate passed); it
 matters only if overlap is ever revisited, so it is flagged, not
 chased.
+
+### §6 predictions, graded (2026-08-30, 5090 scope; the H100 day is deferred)
+
+1. **Parity cost is small: PASS with a carve-out.** In range on every
+   cell except the pre-accepted longctx B <= 2 kernel cells (the
+   flex-vs-cuDNN decode gap, deferred by the author at round 1).
+2. **The warm bill shrinks: PASS.** Sweep 315 -> 20 shapes, decode
+   graphs 80 -> 5 (measured, chunk 6); paged warm-up under padded's at
+   the standard geometry; capture 0.1 s.
+3. **The capacity headline: PASS except one clause.** >= 48 concurrent
+   and 1.53x >= 1.5x both hold (5479 tok/s at 64 slots on 16-slot KV
+   parity, no deadlock); the kv_fill_mean >= 60% clause FAILED as
+   written (short_chat frees too fast to bind it; round 3 v1 then
+   showed the deeper version of the same lesson).
+4. **Preemption is correct and priced: PASS.** Token-identical greedy
+   streams through evictions (suite + oracle), zero errors through 90
+   evictions/repeat at 5 rps, and mean replay prefixes of 76-115
+   tokens always fit one prefill chunk: re-queue wait dominates, not
+   recompute.
+5. **Policies move goodput, not throughput: FAIL as written, direction
+   confirmed.** Aggregate flat (~1.2%) as predicted; the class
+   ordering (priority > lifo > cost for the protected class) came out
+   as designed; but +1.8 points over lifo, not >= 15 (lifo is nearly
+   class-blind under mixed arrivals), and cost lost on total goodput
+   too.
+6. **Overlap pays where dispatch does: FAIL on the 5090.** Overlap
+   costs 0.5-2.6% everywhere at 4-6 ms steps; the graphs+compile
+   stack left no dispatch slack to hide. The H100 32B half of the
+   prediction (27.5 ms dispatch-bound steps) is untested and rides
+   with the deferred H100 day.
 
 ### Chunk log
 
@@ -1080,3 +1155,51 @@ phase start; Mac/CPU counts).
     eviction step now also runs the unblocked rows' forward instead
     of being wasted, which is what prediction 4 wants. Class markers
     off, every test unmarked; suite 653 + 5 chaos.
+11. Round 3, the goodput round (2026-08-30, two attempts, both on
+    record in §10). Local half c7c1915: `priority_mix` mixed-priority
+    cells (seeded per-request draws, its own RNG stream), per-class
+    goodput (`goodput_by_priority`) with median roll-up, and
+    goodput_5090.toml with the §9.3 straw SLO pair adopted on record.
+    v1 ran mechanically clean and INVALID (zero preemptions): the
+    machine's own shortage absorbers soaked an 8x block undercommit
+    into the admission queue; the lesson (eviction needs per-request
+    growth that outruns the free rate after admission) went into §10
+    and the v2 header. v2 (b1f89b6: 512-token generations over the
+    64-block minimum pool, knee-bracketing rates, the new
+    max_inflight serve key so overload queues in the scheduler) ran
+    VALID: preemptions in every cell, prediction 5 graded in §10
+    (flat aggregate PASSES, the >= 15-point headline FAILS at +1.8,
+    ordering as designed). Box pushes b3040f2 (v1) + dbd71dd (v2).
+12. Overlap scheduling + round 4 (2026-08-30, delegated; §10's
+    round-4 section is the record). The §2.12 split: launch plans
+    from positions the previous launch advanced, scatters the
+    previous step's GPU-resident samples into the decode inputs (one
+    vectorized kernel), rides sampling's D2H on a side stream behind
+    an event; reap finalizes one step late with an `emits` flag
+    frozen at launch; a late-detected finish rolls its bonus decode
+    back dead-marked and position-un-advanced; abort-in-flight
+    dead-marks; eviction defers to a settled machine, so the §4
+    in-flight hazards never open. Serial staging extracted verbatim
+    to `_stage_forward` (the one serial-path touch, flagged).
+    tests/test_overlap_scheduler.py: serial equivalence
+    token-for-token on both layouts (ToyStepper as the padded
+    oracle, the weight-shared tiny Qwen3 pair on paged), late-stop
+    rollback, deferred-finalize timing, trailing-reap idle contract,
+    abort-in-flight, and the chunk-9 exhaustion shape with overlap
+    on; all green first run, suite 667 + 5 chaos. Round 4 (box push
+    0f440be): equivalence gate PASSED on-device; prediction 6 FAILED
+    everywhere on the 5090 (overlap costs 0.5-2.6%; no dispatch
+    slack left to hide at 4-6 ms steps; the H100 half is deferred);
+    overlap stays DEFAULT OFF; one intermittent flex+overlap
+    delivery collapse under bench load flagged as follow-up, not
+    chased (correctness unaffected).
+13. Close-out (2026-08-30/31). §10 complete for the 5090 rounds; §6
+    graded (5090 scope); PLAN.md Phase 4 Status synced;
+    serve.example.toml carries the Phase-4 knobs; viz Roadmap card
+    synced (authorized 2026-08-31); memory updated. Deferred /
+    still open, all by the author's explicit word: the H100 day
+    ("another day"; §6.6's H100 half and the 32B scale check ride
+    with it), the §9.8 CUDA-default-attention decision (numbers
+    ready in §10, the author's call), the Paged-KV viz tab (open
+    ask, not authorized), the longctx B <= 2 flex kernel gap, and
+    the chunk-12 intermittent collapse follow-up.

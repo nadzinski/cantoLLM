@@ -716,10 +716,33 @@ reproduces it under a swapped arrival order), fixed by the author's
 chosen rule: the scheduler now replans in the same step after each
 eviction, so planning itself proves someone can advance and an
 eviction step does useful forward work.
-Open: chunks 11–13: the round-3 goodput run (SLO pair still the
-author's §9.3 call), overlap with round 4, H100 close-out; the
-deferred flex decode-kernel tuning at longctx B <= 2 stays on the
-list for close-out or a torch upgrade.
+Chunks 11–13 closed 2026-08-30/31 at 5090 scope. Round 3 (goodput,
+mixed-priority open loop over an undercommitted pool) took two
+attempts: v1 was mechanically clean but invalid with zero preemptions
+(the recorded lesson: eviction needs per-request growth that outruns
+the free rate after admission; undercommitting blocks against short
+generations just moves scarcity into the admission queue); v2
+(512-token generations over the minimum pool) ran valid with
+evictions in every cell and graded prediction 5: aggregate tok/s flat
+across policies as predicted, the class ordering came out as designed
+(priority protects the high class best, cost worst), but the
+headline margin missed (+1.8 points over lifo, not the predicted 15;
+lifo's newest-victim rule is nearly class-blind under mixed
+arrivals). Chunk 12 landed the overlap restructure (launch/reap
+split, GPU-resident decode inputs, side-stream D2H, finalize one step
+late with bonus-decode rollback), token-identical to the serial loop
+on both layouts; round 4 passed that equivalence gate on-device but
+FAILED prediction 6 everywhere on the 5090: overlap costs 0.5–2.6%
+at 4–6 ms steps because the graphs+compile stack leaves no CPU
+dispatch slack to hide, so overlap ships DEFAULT OFF; the prediction's
+H100 half (dispatch-bound 27.5 ms steps) is untested. §6 fully graded
+at 5090 scope and §10 complete in paged-kv-plan.md.
+Open, all by the author's word: the H100 day (deferred to another
+day; prediction 6's real test and the 32B scale check ride with it);
+the §9.8 CUDA-default-attention decision (numbers ready); the
+Paged-KV viz tab ask; the longctx B <= 2 flex decode-kernel tuning;
+and an intermittent flex+overlap delivery collapse under bench load
+(flagged with diagnosis in §10, correctness unaffected).
 
 - KV blocks of fixed size (16 tokens is the vLLM default) in a single preallocated pool.
 - Per-request block table mapping logical token positions → block IDs.
