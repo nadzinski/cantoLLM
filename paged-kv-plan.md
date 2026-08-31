@@ -499,8 +499,11 @@ Also on record from the first run:
   eye on.
 - Harness gap: the §7 "Flex-kernel-ran counter > 0" gate has no
   counter in bench run.json; the suite's profiler test covers the
-  silent-fallback risk out-of-band. Candidate small bench addition,
-  the author's call.
+  silent-fallback risk out-of-band. RESOLVED (the author's call,
+  2026-08-30): no in-bench counter. The suite's profiler test plus
+  the decode step-time signature (which is what caught this round's
+  regression) stand as the gate's working form; the §7 wording reads
+  accordingly.
 
 ### Round 1 rerun at cb1a04a (2026-08-30): cliff dead, 4 cells still
 ### outside the gate; residual is a kernel-side flex-vs-cuDNN gap
@@ -617,8 +620,10 @@ Graded, not tuned, per the house rule. (TTFT CV warnings 6.7-14.6% on
 the capacity cells: arrival jitter at high fan-in, on record.)
 
 Open from the rounds: the longctx B <= 2 flex decode-kernel gap
-(template/split tuning, deferred by the author's round-1 call), and
-the §7 flex-kernel-ran counter's in-bench encoding.
+(template/split tuning, deferred by the author's round-1 call). The
+flex-kernel-ran counter question is settled: no in-bench counter (the
+author, 2026-08-30); the suite's profiler test and the step-time
+signature are the gate's working form.
 
 ### Chunk log
 
