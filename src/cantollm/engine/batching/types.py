@@ -66,6 +66,16 @@ class CBSequence:
     slot_idx: int | None = None
     position: int = 0
     output_token_ids: list[int] = field(default_factory=list)
+    replay_prefix_token_ids: list[int] | None = None
+    """Tokens currently being replayed to rebuild an evicted KV cache.
+
+    This is the original prompt followed by every token already emitted for
+    the request. It is separate from ``prompt_token_ids`` so the client's
+    original input remains unchanged, and separate from ``output_token_ids``
+    so replaying tokens does not make them look newly generated.
+
+    ``None`` means this sequence is using its original prompt normally.
+    """
     block_table: list[int] = field(default_factory=list)
     """Physical KV blocks this sequence owns, in logical order: the host
     truth of the paged mapping (paged-kv-plan.md §3); the device tensors
@@ -73,19 +83,26 @@ class CBSequence:
     the scheduler's block reservation; every block returns to the
     allocator on finish or abort."""
 
+    @property
+    def prefill_token_ids(self) -> list[int]:
+        """Input prefix whose KV entries are currently being populated."""
+        if self.replay_prefix_token_ids is not None:
+            return self.replay_prefix_token_ids
+        return self.prompt_token_ids
+
     def is_prefilling(self) -> bool:
-        return self.position < len(self.prompt_token_ids)
+        return self.position < len(self.prefill_token_ids)
 
     @property
     def remaining_prompt(self) -> int:
-        """Prompt tokens the model hasn't consumed yet."""
-        return max(0, len(self.prompt_token_ids) - self.position)
+        """Current prefill-prefix tokens the model hasn't consumed yet."""
+        return max(0, len(self.prefill_token_ids) - self.position)
 
     def input_tokens_at(self, start: int, n: int) -> list[int]:
         """The next `n` input tokens from position `start`: prompt tokens
         while prefilling; after that, the single last generated token."""
-        if start < len(self.prompt_token_ids):
-            return self.prompt_token_ids[start : start + n]
+        if start < len(self.prefill_token_ids):
+            return self.prefill_token_ids[start : start + n]
         assert n == 1, "decode rows consume exactly one token"
         return self.output_token_ids[-1:]
 

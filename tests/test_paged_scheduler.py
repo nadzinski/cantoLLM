@@ -2,9 +2,9 @@
 
 The chunk's first exit gate: toy-stepper-style block accounting with no
 leaks: promotion takes a first block, planning reserves through each
-row's grant, finish/abort return everything, shortage trims grants
-instead of overcommitting, and a genuinely stuck pool fails loudly
-(preemption is chunk 9's answer). The forward here is a stub returning
+row's grant, finish/abort return everything, shortage trims grants,
+and a genuinely stuck pool preempts one sequence so the batch can continue.
+The forward here is a stub returning
 constant logits: chunk 4's equivalence suite already proved the attend,
 so these tests isolate the scheduling; the engine-level oracle
 (test_paged_engine_oracle.py) is the second gate and runs the real
@@ -343,10 +343,11 @@ class TestBlockAccounting:
         assert scheduler.is_idle()
         assert starved_steps >= 1, "the shortage never actually starved b"
 
-    def test_true_deadlock_raises_loudly(self):
-        # Both rows parked on block boundaries, zero free, nothing
-        # finishing: no step can differ from the last, so the scheduler
-        # must say so instead of spinning (preemption is chunk 9).
+    def test_true_deadlock_preempts_and_completes(self):
+        # Both rows eventually park on block boundaries with no free block.
+        # The newest active row, "b", must be evicted and reset for replay,
+        # allowing "a" to finish and release enough blocks for both requests
+        # to complete.
         scheduler, _ = make_paged_scheduler(
             max_seq_len=16, num_kv_blocks=4, max_tokens_per_step=16,
             max_batch=2,
@@ -354,11 +355,22 @@ class TestBlockAccounting:
         scheduler.add_request(make_request("a", [1, 2, 3, 4], max_tokens=8))
         scheduler.add_request(make_request("b", [5, 6, 7, 8, 9, 10, 11, 12],
                                            max_tokens=8))
-        with pytest.raises(RuntimeError, match="paged KV deadlock"):
-            for _ in range(50):
-                if scheduler.is_idle():
-                    break
-                scheduler.step()
+        for _ in range(50):
+            scheduler.step()
+            assert_no_leaks(scheduler)
+            if scheduler.queued and scheduler.queued[0].request_id == "b":
+                break
+        else:
+            raise AssertionError("block-starved sequence was not preempted")
+
+        victim = scheduler.queued[0]
+        assert victim.position == 0
+        assert victim.slot_idx is None
+        assert victim.block_table == []
+        assert victim.replay_prefix_token_ids == (
+            victim.prompt_token_ids + victim.output_token_ids
+        )
+        run_to_completion(scheduler)
 
 
 # ── The meta the forward receives ────────────────────────────────────

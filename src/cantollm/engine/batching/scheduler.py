@@ -26,12 +26,12 @@ from dataclasses import dataclass
 
 import torch
 
+from cantollm.engine import sampler
 from cantollm.engine.batching.allocator import BlockAllocator, SlotAllocator
 from cantollm.engine.batching.config import BatchingConfig
 from cantollm.engine.batching.paging import PagedStepState
 from cantollm.engine.batching.shaping import shape_step
 from cantollm.engine.batching.types import BatchedForwardFn, CBSequence
-from cantollm.engine import sampler
 from cantollm.engine.types import InferenceRequest, TokenEvent
 from cantollm.kv_pool import KVPool
 from cantollm.models.attention.protocol import BatchMeta
@@ -255,6 +255,25 @@ class ContinuousBatchingScheduler:
                 self.block_allocator.free(block)
             seq.block_table.clear()
 
+    def _preempt_sequence(self, seq: CBSequence) -> None:
+        """Evict ``seq`` and queue it to rebuild its KV cache later.
+
+        Preserve the client-visible output ledger, but reset the model-side
+        state: resumption re-prefills the original prompt plus every token
+        already emitted. Preemption itself emits no client event.
+        """
+        self.active.remove(seq)
+        self._release_kv(seq)
+        seq.slot_idx = None
+        seq.replay_prefix_token_ids = seq.prompt_token_ids + seq.output_token_ids
+        seq.position = 0
+        # Resume evicted work before admitting requests that arrived later.
+        self.queued.appendleft(seq)
+
+    def _preempt_lifo(self) -> None:
+        """Preempt the most recently admitted active sequence."""
+        self._preempt_sequence(self.active[-1])
+
     def is_idle(self) -> bool:
         """Nothing queued, nothing active, nothing pending. (The shell
         blocks while this is True — see the contract note up top.)"""
@@ -286,17 +305,9 @@ class ContinuousBatchingScheduler:
         rows = self._plan_step()
         if not rows:
             if self.active:
-                # Every active row starved for blocks and nothing can free
-                # one: no row advances, so no future step differs from
-                # this one. Fail loudly rather than spin; eviction under
-                # shortage is chunk 9's (paged-kv-plan.md §4).
-                raise RuntimeError(
-                    "paged KV deadlock: every active row is waiting for a "
-                    "block and none can be freed (preemption lands in "
-                    "chunk 9)"
-                )
+                self._preempt_lifo()
             # Only pending events to flush (abort acks, rejections) — no
-            # active sequences means no forward pass this step.
+            # forward pass this step. Preemption also emits nothing.
             return events
 
         input_ids = self._build_input_ids(rows)
@@ -331,7 +342,7 @@ class ContinuousBatchingScheduler:
         # is all-prefill or all-decode.
         prefill = sum(
             r.num_new for r in rows
-            if r.start_pos < len(r.sequence.prompt_token_ids)
+            if r.start_pos < len(r.sequence.prefill_token_ids)
         )
         self.last_step_plan = (
             len(rows), prefill, sum(r.num_new for r in rows) - prefill
