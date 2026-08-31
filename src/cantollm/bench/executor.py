@@ -27,7 +27,11 @@ from cantollm.bench import env as bench_env
 from cantollm.bench import metrics
 from cantollm.bench.config import Cell, RunConfig, ServerVariant, serve_argv
 from cantollm.bench.history import DEFAULT_HISTORY_DIR, RunDir, make_run_id
-from cantollm.bench.loadgen import run_closed_loop, run_open_loop
+from cantollm.bench.loadgen import (
+    draw_priorities,
+    run_closed_loop,
+    run_open_loop,
+)
 from cantollm.bench.records import RequestRecord, append_jsonl_gz
 from cantollm.bench.server_ctl import (
     AttachedServer,
@@ -298,6 +302,9 @@ async def _run_cell(
         handle.repeat_index = repeat
         scraper.overflowed = False
         prompts = workload.iterator(seed=seed + repeat, limit=prompt_limit)
+        priorities = draw_priorities(
+            options.get("priority_mix"), cell.requests, seed + repeat
+        )
 
         if cell.mode == "closed":
             result = await run_closed_loop(
@@ -306,6 +313,7 @@ async def _run_cell(
                 cell_id=cell.cell_id, repeat=repeat,
                 abort=handle.abort_event,
                 on_record=lambda r: _tick(handle),
+                priorities=priorities,
             )
         else:
             result = await run_open_loop(
@@ -317,6 +325,7 @@ async def _run_cell(
                 cell_id=cell.cell_id, repeat=repeat,
                 abort=handle.abort_event,
                 on_record=lambda r: _tick(handle),
+                priorities=priorities,
             )
 
         await scraper.scrape_once()

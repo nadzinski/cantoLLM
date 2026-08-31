@@ -34,6 +34,21 @@ class LoadResult:
     aborted: bool = False
 
 
+def draw_priorities(
+    mix: dict[int, float] | None, total: int, seed: int
+) -> list[int] | None:
+    """Seeded per-request priorities from a priority_mix weight table
+    (normalized {priority: weight}, from bench config parsing); None when
+    the cell has no mix. Its own RNG stream, so the assignment is
+    reproducible per repeat and independent of the prompt iterator."""
+    if not mix:
+        return None
+    rng = random.Random(f"priority-mix-{seed}")
+    values = sorted(mix)
+    weights = [mix[v] for v in values]
+    return rng.choices(values, weights=weights, k=int(total))
+
+
 async def run_closed_loop(
     send,
     prompts,                      # iterator of Prompt (endless, seeded)
@@ -45,6 +60,7 @@ async def run_closed_loop(
     excluded: bool = False,
     abort: asyncio.Event | None = None,
     on_record=None,
+    priorities: list[int] | None = None,   # per-index priority (priority_mix)
 ) -> LoadResult:
     result = LoadResult()
     counter = iter(range(total_requests))
@@ -62,10 +78,11 @@ async def run_closed_loop(
             index = await next_index()
             if index is None:
                 return
+            extra = {"priority": priorities[index]} if priorities else {}
             record, text = await send(
                 next(prompts),
                 cell_id=cell_id, repeat=repeat, request_index=index,
-                excluded=excluded,
+                excluded=excluded, **extra,
             )
             _collect(result, record, text, on_record)
 
@@ -88,6 +105,7 @@ async def run_open_loop(
     abort: asyncio.Event | None = None,
     on_record=None,
     drain_timeout_s: float = 300.0,
+    priorities: list[int] | None = None,   # per-index priority (priority_mix)
 ) -> LoadResult:
     if rate_rps <= 0:
         raise ValueError("rate_rps must be > 0")
@@ -100,10 +118,11 @@ async def run_open_loop(
 
     async def fire(index: int, t_scheduled: float) -> None:
         try:
+            extra = {"priority": priorities[index]} if priorities else {}
             record, text = await send(
                 next(prompts),
                 cell_id=cell_id, repeat=repeat, request_index=index,
-                t_scheduled=t_scheduled, excluded=excluded,
+                t_scheduled=t_scheduled, excluded=excluded, **extra,
             )
             _collect(result, record, text, on_record)
         finally:

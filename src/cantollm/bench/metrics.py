@@ -105,14 +105,27 @@ def summarize_repeat(
         # Denominator = every measured request: an errored or unfinished
         # request misses its SLO by definition. The ITL clause is vacuous
         # for a request too short to have gaps (single-chunk output).
-        met = sum(
-            1
-            for r in ok
-            if r.ttft_s is not None
-            and r.ttft_s <= slo_ttft_s
-            and (r.client_itl_p99_s is None or r.client_itl_p99_s <= slo_itl_p99_s)
-        )
-        s.goodput = met / len(measured)
+        def meets(r: RequestRecord) -> bool:
+            return (
+                r.ok
+                and r.ttft_s is not None
+                and r.ttft_s <= slo_ttft_s
+                and (r.client_itl_p99_s is None
+                     or r.client_itl_p99_s <= slo_itl_p99_s)
+            )
+
+        s.goodput = sum(1 for r in ok if meets(r)) / len(measured)
+        # Per-priority-class slices (round 3's judge: prediction 5 compares
+        # high-priority goodput across victim policies). String keys so the
+        # dict survives the JSON round trip unchanged.
+        classes = {r.priority for r in measured}
+        if len(classes) > 1:
+            s.goodput_by_priority = {}
+            for cls in sorted(classes):
+                members = [r for r in measured if r.priority == cls]
+                s.goodput_by_priority[str(cls)] = (
+                    sum(1 for r in members if meets(r)) / len(members)
+                )
 
     for r in measured:
         if r.finish_reason:
@@ -193,6 +206,17 @@ def median_across_repeats(summaries: list[RepeatSummary]) -> dict:
     for name in numeric:
         values = [getattr(s, name) for s in summaries if getattr(s, name) is not None]
         out[name] = statistics.median(values) if values else None
+
+    # Dict-valued roll-up: median per priority class across the repeats
+    # that saw that class.
+    class_values: dict[str, list[float]] = {}
+    for s in summaries:
+        for cls, value in (s.goodput_by_priority or {}).items():
+            class_values.setdefault(cls, []).append(value)
+    out["goodput_by_priority"] = (
+        {cls: statistics.median(v) for cls, v in sorted(class_values.items())}
+        if class_values else None
+    )
 
     warnings = [w for s in summaries for w in s.warnings]
     for name, label in (("aggregate_tok_s", "aggregate tok/s"), ("ttft_p50", "TTFT p50")):

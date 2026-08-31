@@ -16,9 +16,11 @@ import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-# v2 (Phase 4 chunk 10): additive; per-chunk client arrival timestamps
+# v2 (Phase 4 chunks 10-11): additive; per-chunk client arrival timestamps
 # (t_chunks) with the derived per-request client_itl_p99_s, the goodput
-# inputs of paged-kv-plan.md §2.11.
+# inputs of paged-kv-plan.md §2.11, and the request's `priority` so
+# summaries can slice goodput per class (no v2 records existed before
+# `priority` joined, so it folds into v2 rather than bumping again).
 RESULTS_SCHEMA_VERSION = 2
 
 
@@ -46,6 +48,7 @@ class RequestRecord:
     input_tokens: int = 0
     output_tokens: int = 0
     reasoning_tokens: int = 0
+    priority: int = 0        # what the request was sent with (§2.10)
     finish_reason: str | None = None
     error: str | None = None
     http_status: int | None = None
@@ -127,6 +130,9 @@ class RepeatSummary:
     # Goodput under a joint client-experienced SLO pair (paged-kv-plan.md
     # §2.11); None when the cell configures no SLOs.
     goodput: float | None = None
+    # Per-priority-class goodput ({str(priority): fraction}); only on
+    # mixed-priority cells, the round-3 judge for prediction 5.
+    goodput_by_priority: dict[str, float] | None = None
     # Eviction totals over the repeat's engine window (stats schema v3);
     # None when the scraped steps predate the counters.
     preemptions_total: int | None = None

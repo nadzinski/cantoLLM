@@ -68,9 +68,12 @@ _POINT_DEFAULTS = {
     "seed": 0,
     "prompt_limit": None,   # cap prompts drawn from the workload (None = all)
     # Request priority sent with every request of the point (paged-kv-plan.md
-    # §2.10; 0 keeps today's bodies byte-identical). Mixed-priority workloads
-    # are separate points sharing one open-loop window (round 3, chunk 11).
+    # §2.10; 0 keeps today's bodies byte-identical).
     "priority": 0,
+    # Mixed-priority cells (round 3, chunk 11): {priority: weight} table,
+    # e.g. {0 = 4, 2 = 1}; each request draws its priority from it with the
+    # repeat's seed. Mutually exclusive with a nonzero `priority`.
+    "priority_mix": None,
     # Joint client-experienced SLO pair (§2.11). Set both or neither; with
     # both set, summaries carry goodput. Straw defaults for 0.6B are
     # TTFT <= 0.5 s and per-request ITL p99 <= 0.1 s (§9.3, hers to call).
@@ -98,6 +101,37 @@ _SERVE_FLAG_KEYS = (
 
 class ConfigError(ValueError):
     pass
+
+
+def _normalize_priority_mix(raw, point_idx: int) -> dict[int, float]:
+    """TOML table keys arrive as strings; normalize to {int: float} and
+    validate against the API's documented priority bounds."""
+    if not isinstance(raw, dict) or not raw:
+        raise ConfigError(
+            f"points[{point_idx}] priority_mix must be a non-empty "
+            "{priority: weight} table"
+        )
+    mix: dict[int, float] = {}
+    for key, weight in raw.items():
+        try:
+            value = int(key)
+        except (TypeError, ValueError):
+            raise ConfigError(
+                f"points[{point_idx}] priority_mix key {key!r} is not an "
+                "integer priority"
+            )
+        if not -2 <= value <= 2:
+            raise ConfigError(
+                f"points[{point_idx}] priority_mix priority {value} is "
+                "outside the API bounds -2..2"
+            )
+        if not isinstance(weight, (int, float)) or weight <= 0:
+            raise ConfigError(
+                f"points[{point_idx}] priority_mix weight for {value} "
+                "must be a positive number"
+            )
+        mix[value] = float(weight)
+    return mix
 
 
 @dataclass(frozen=True)
@@ -295,6 +329,15 @@ def _expand_point(
             f"points[{point_idx}] sets one of slo_ttft_s/slo_itl_p99_s "
             "without the other; goodput needs the pair"
         )
+    if options["priority_mix"] is not None:
+        options["priority_mix"] = _normalize_priority_mix(
+            options["priority_mix"], point_idx
+        )
+        if options["priority"]:
+            raise ConfigError(
+                f"points[{point_idx}] sets both priority and priority_mix; "
+                "a mixed cell draws every request's priority from the mix"
+            )
 
     cells = []
     for level in levels:

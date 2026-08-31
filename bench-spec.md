@@ -96,7 +96,10 @@ thinking tokens count; Qwen3 leads with them) → per-chunk arrival times → `t
   a TTFT SLO and a per-request client-ITL-p99 SLO, the pair set per bench point
   (`slo_ttft_s` / `slo_itl_p99_s`, both or neither). Errored and unfinished requests
   count in the denominator; a request too short to have chunk gaps satisfies the ITL
-  clause vacuously. Meaningful on open-loop cells only (§2).
+  clause vacuously. Meaningful on open-loop cells only (§2). A mixed-priority point
+  (`priority_mix = {priority = weight, ...}`: each request draws its priority with the
+  repeat's seed) additionally reports `goodput_by_priority` per class — round 3's
+  judge for the victim-policy comparison.
 - **Token counts** from the server's `usage` object (`stream_options.include_usage` on
   the OpenAI dialect), not client-side counting.
 - **Finish-reason distribution** and **error counts** per cell.

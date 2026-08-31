@@ -198,3 +198,26 @@ def test_serve_argv_preemption_policy():
     }})
     joined = " ".join(serve_argv(parse_run_config(cfg).cells[0].server))
     assert "--preemption-policy priority" in joined
+
+
+def test_priority_mix_normalized_and_validated():
+    # TOML table keys arrive as strings; parsing normalizes to int keys.
+    cfg = deep({"points": [
+        {"workload": "w", "mode": "open", "rate_rps": [2.0],
+         "total_requests": 10, "priority_mix": {"0": 4, "2": 1}},
+    ]})
+    mix = parse_run_config(cfg).cells[0].options["priority_mix"]
+    assert mix == {0: 4.0, 2: 1.0}
+
+    for bad in (
+        {"priority_mix": {"hi": 1}},          # non-integer key
+        {"priority_mix": {"3": 1}},           # outside API bounds
+        {"priority_mix": {"0": 0}},           # non-positive weight
+        {"priority_mix": {}},                 # empty
+        {"priority_mix": {"0": 1}, "priority": 1},   # both set
+    ):
+        with pytest.raises(ConfigError):
+            parse_run_config(deep({"points": [
+                {"workload": "w", "mode": "closed", "concurrency": [1],
+                 "requests_per_level": 8, **bad},
+            ]}))

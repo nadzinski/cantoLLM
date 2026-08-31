@@ -169,3 +169,52 @@ def test_open_loop_abort_cancels_inflight():
     result = asyncio.run(main())
     assert result.aborted
     assert len(result.records) < 50
+
+
+def test_draw_priorities_seeded_and_optional():
+    from cantollm.bench.loadgen import draw_priorities
+
+    assert draw_priorities(None, 10, 0) is None
+    assert draw_priorities({}, 10, 0) is None
+    a = draw_priorities({0: 4.0, 2: 1.0}, 200, 7)
+    b = draw_priorities({0: 4.0, 2: 1.0}, 200, 7)
+    assert a == b                       # same seed, same assignment
+    assert set(a) == {0, 2}
+    assert a != draw_priorities({0: 4.0, 2: 1.0}, 200, 8)
+    # The 4:1 weighting should be visible at n=200.
+    assert 0.6 < a.count(0) / len(a) < 0.95
+
+
+def test_priorities_thread_through_both_loops():
+    seen: dict[int, int] = {}
+
+    class PrioritySender(ScriptedSender):
+        async def __call__(self, prompt, *, request_index, priority=None, **kw):
+            seen[request_index] = priority
+            return await super().__call__(
+                prompt, request_index=request_index, **kw
+            )
+
+    sender = PrioritySender(latency=0.001)
+    priorities = [2, 0, 0, 2, 0, 0]
+
+    async def main():
+        await run_closed_loop(
+            sender, prompts(), concurrency=2, total_requests=6,
+            cell_id="c", repeat=0, priorities=priorities,
+        )
+
+    asyncio.run(main())
+    assert seen == dict(enumerate(priorities))
+
+    seen.clear()
+
+    async def main_open():
+        await run_open_loop(
+            sender, prompts(), rate_rps=500.0, arrivals="fixed",
+            total_requests=6, max_inflight=8, seed=0,
+            cell_id="c", repeat=0, priorities=priorities,
+        )
+
+    asyncio.run(main_open())
+    assert seen == dict(enumerate(priorities))

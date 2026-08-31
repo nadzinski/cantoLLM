@@ -55,6 +55,7 @@ def build_sender(client: httpx.AsyncClient, options: SendOptions):
         request_index: int,
         t_scheduled: float | None = None,
         excluded: bool = False,
+        priority: int | None = None,
     ) -> tuple[RequestRecord, str | None]:
         record = RequestRecord(
             cell_id=cell_id,
@@ -65,6 +66,10 @@ def build_sender(client: httpx.AsyncClient, options: SendOptions):
             t_scheduled=t_scheduled,
             t_send=time.perf_counter(),
             excluded=excluded,
+            # Per-request override beats the cell constant: mixed-priority
+            # cells (priority_mix) assign per request; the record keeps
+            # what was sent so summaries can slice goodput per class.
+            priority=options.priority if priority is None else priority,
         )
         text: str | None = None
         try:
@@ -97,8 +102,8 @@ async def _send_openai(
         "stream_options": {"include_usage": True},
         "ignore_eos": options.ignore_eos,
     }
-    if options.priority:
-        body["priority"] = options.priority
+    if record.priority:
+        body["priority"] = record.priority
     parts: list[str] = []
     async with client.stream("POST", "/v1/chat/completions", json=body) as resp:
         record.t_headers = time.perf_counter()
@@ -152,8 +157,8 @@ async def _send_anthropic(
         "stream": True,
         "ignore_eos": options.ignore_eos,
     }
-    if options.priority:
-        body["priority"] = options.priority
+    if record.priority:
+        body["priority"] = record.priority
     if prompt.system:
         body["system"] = prompt.system
 

@@ -205,3 +205,42 @@ def test_median_rolls_up_goodput_and_preemptions():
     out = median_across_repeats([a, b])
     assert out["goodput"] == pytest.approx(0.5)
     assert out["preemptions_total"] is None
+
+
+def test_goodput_by_priority_slices_mixed_cells():
+    def with_priority(r: RequestRecord, priority: int) -> RequestRecord:
+        r.priority = priority
+        return r
+
+    records = [
+        with_priority(rec_chunks(0, ttft=0.4, gaps=[0.05]), 2),   # hi, meets
+        with_priority(rec_chunks(1, ttft=0.6, gaps=[0.05]), 2),   # hi, TTFT miss
+        with_priority(rec_chunks(2, ttft=0.4, gaps=[0.05]), 0),   # lo, meets
+        with_priority(rec_chunks(3, ttft=0.6, gaps=[0.05]), 0),   # lo, miss
+        with_priority(rec_chunks(4, ttft=0.7, gaps=[0.05]), 0),   # lo, miss
+    ]
+    s = summarize_repeat(0, records, slo_ttft_s=0.5, slo_itl_p99_s=0.1)
+    assert s.goodput == pytest.approx(2 / 5)
+    assert s.goodput_by_priority == {
+        "0": pytest.approx(1 / 3), "2": pytest.approx(1 / 2),
+    }
+    # Single-class cells report no per-class breakdown.
+    uniform = [rec_chunks(i, ttft=0.4, gaps=[0.05]) for i in range(3)]
+    assert summarize_repeat(
+        0, uniform, slo_ttft_s=0.5, slo_itl_p99_s=0.1
+    ).goodput_by_priority is None
+
+
+def test_median_rolls_up_goodput_by_priority():
+    def summary(hi: float, lo: float):
+        s = summarize_repeat(0, [rec_chunks(0, ttft=0.4, gaps=[0.05])],
+                             slo_ttft_s=0.5, slo_itl_p99_s=0.1)
+        s.goodput_by_priority = {"2": hi, "0": lo}
+        return s
+
+    out = median_across_repeats([summary(0.9, 0.5), summary(0.7, 0.3)])
+    assert out["goodput_by_priority"] == {
+        "0": pytest.approx(0.4), "2": pytest.approx(0.8),
+    }
+    plain = summarize_repeat(0, [rec_chunks(0, ttft=0.4, gaps=[0.05])])
+    assert median_across_repeats([plain])["goodput_by_priority"] is None

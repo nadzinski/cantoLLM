@@ -180,3 +180,29 @@ def test_priority_rides_the_body_when_nonzero():
         )
         assert record.ok
         assert engine.last_request.priority == 0
+
+
+def test_per_request_priority_override():
+    # priority_mix's per-request path: the override beats the cell
+    # constant, reaches the engine, and lands on the record.
+    engine = FakeEngine(script=_script("ok"))
+    tokenizer = FakeTokenizer(
+        id_to_text={2000 + i: chr(ord("a") + i) for i in range(26)}
+    )
+    registry = FakeRegistry(entries={"test-model": (engine, FakeRuntime(tokenizer))})
+    app = create_app(registry)
+
+    async def main():
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            send = build_sender(client, SendOptions(
+                model="test-model", max_tokens=2, ignore_eos=True,
+            ))
+            return await send(
+                PROMPT, cell_id="c", repeat=0, request_index=0, priority=2,
+            )
+
+    record, _ = asyncio.run(main())
+    assert record.ok
+    assert record.priority == 2
+    assert engine.last_request.priority == 2
