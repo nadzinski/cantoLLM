@@ -10,15 +10,12 @@ complete) the validated results with §6's predictions graded.
 `flex-spike-results.md` is this doc's gates annex: the kernel route was decided
 there, on the 5090, before any of this was designed.
 
-**Status: chunks 1–6 complete (chunk 6 closed 2026-08-30: paged
-vocabulary, paged warm-up, per-family mask caching, whole-impl compile;
-recompile and mask-construction gates green on CPU, counts 315→20 /
-80→5 measured). Chunk 7 underway 2026-08-30: `--attention flex` wired
-end-to-end (da0d76c; flex implies the paged stack, §2.8 guard at the
-serve surface, --block-size/--num-kv-blocks knobs, round-1 configs
-`ab_5090_paged{,_longctx,_default}.toml` with predictions and gates in
-their headers); the 5090 round is dispatched to the box session,
-results land in §10 when it reports.**
+**Status: chunks 1–7 complete (chunk 7 closed 2026-08-30: flex wired
+end-to-end, three 5090 runs; the batch-dim/flex-decoding cliff found
+and fixed, sweep trimmed to one forward per family; round-1 gate miss
+on 4 cells ACCEPTED by the author — attributed kernel-side
+flex-vs-cuDNN decode gap, tuning deferred; §10 is the record). Next:
+chunk 8, CUDA graphs on paged decode + 5090 round 2.**
 
 ## 1. Goal
 
@@ -543,7 +540,33 @@ reachable (length-1 exists only in the (1, 1) family; any b >= 2 step
 carries at least two real tokens, and a lone 1-token row lands at
 width 1). Fixed 72ccaf0: one forward per family, reachability
 enforced by a zero-post-Ready-compile traffic test including the
-lone-row decode; trimmed bills to be measured on the box.
+lone-row decode; trimmed bills measured below.
+
+Round-1 close-out probes (box record
+`bench/history/2026-08-31T004900_72ccaf0_paged-followups/`):
+- Trimmed bills at 72ccaf0: cold Ready 368 s (sweep 347.4; the ~69 s
+  over round 1's 299 is the ~5 per-family static decode artifacts,
+  real cold work the shared symbolic artifact never paid), warm 79 s
+  (fully recovered from 144). Reachability held on hardware: a
+  concurrent burst then a lone (1, 1)-family decode, zero recompile
+  lines after Ready.
+- Residual split (production path, 3000-token prompts, mean of 10
+  decode steps): flex B=1 wall 5.52 ms = GPU 3.91 + host 1.61; B=4
+  wall 9.78 = GPU 6.63 + host 3.15; sdpa B=1 4.05 = 2.22 + 1.84; B=4
+  5.14 = 3.98 + 1.15. So the B=1 gap is ENTIRELY kernel time (the
+  flex attention template runs ~2.12 ms/step vs cuDNN's ~0.47
+  including mask prep, ~4x), and the B=4 gap is 57% kernel + 43%
+  flex-side host (+2.0 ms/step, dominated by fill's per-element
+  device table writes and mask dispatch). Consequence for chunk 8:
+  graphs plus a bulk-copy fill absorb the host share at B >= 2 and
+  nothing at B=1; the kernel share (template/split tuning at decode
+  geometries) is the open target beyond this phase's graphs work.
+
+VERDICT (the author's, 2026-08-30): round-1 gate miss ACCEPTED on the
+4 standing cells (multi_turn -15.1%, longctx -17.2/-26.6/-10.4);
+proceed to chunk 8. The misses are attributed (kernel-side
+flex-vs-cuDNN decode gap) and stand on record for round 2's grading;
+kernel tuning is deferred, not dropped.
 
 ### Chunk log
 
@@ -740,3 +763,27 @@ phase start; Mac/CPU counts).
    with round 1. Touches flagged for review: flex.py (the relocation
    above; index translation and numerics untouched) and scheduler.py
    (the fill call gains `meta.num_new_max`). Suite 600 + 5 chaos.
+7. 5090 round 1 (2026-08-30, closed same day; §10 above is the full
+   record). Local half da0d76c: `--attention flex` implies the paged
+   stack end to end (main.py §2.8 exit, graphs default-off pre-chunk-8,
+   --block-size/--num-kv-blocks knobs through CLI/TOML/bench,
+   build_runtime block_size plumbing, assembly layout/method mismatch
+   guard both ways), round-1 configs
+   `ab_5090_paged{,_longctx,_default}.toml` (three arms across three
+   files; the bench schema is one matrix per file). The round itself
+   ran three times on the box: first run FAILED the -10% gate on 4/7
+   cells with a 4x multi-row decode cliff; attribution (proven on CPU
+   via traced-graph placeholders) was automatic dynamic promoting the
+   batch dim on the second family, disqualifying Inductor's
+   flex-decoding kernel (`static_batch`); fixed cb1a04a (per-family
+   static batch + mask-tensor pins + a placeholder-inspecting
+   regression pin verified red pre-fix). Rerun: cliff dead, 3 cells
+   recovered, 4 still out; probes split the residual (B=1 all kernel,
+   B=4 57/43 kernel/host) and the warm-bill doubling was fixed by the
+   one-forward-per-family sweep (72ccaf0, reachability argued and
+   enforced: length-1 maps exist only in (1,1)). Gate miss accepted by
+   the author; kernel tuning deferred on record. Also learned: the §7
+   flex-kernel-ran counter is unmeasurable by kernel NAME on torch
+   2.10 (fused names come from the fusion group, not the winning
+   template); the step-scaling signature is the working substitute.
+   Suite 609 + 5 chaos.
