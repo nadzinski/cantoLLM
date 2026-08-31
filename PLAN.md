@@ -701,18 +701,25 @@ scaffolding, suites, the twin, and the scheduler paged mode delegated.
 Prior scope notes stand: the flash-proper restructure moved here from
 Phase 3; the 2026-07-19 review added overlap scheduling, preemption
 policies, per-request priority, and the goodput-under-joint-SLO metric.
-Chunk 10's delegated half landed the same day: per-request `priority`
-through both API dialects and the IPC boundary, priority-sorted
-promotion (stable, FCFS within a class), the `preemption_policy` knob
-through config/CLI/bench, preemption counters in the stats stream,
-per-chunk client timestamps with a per-request ITL tail, and the
-goodput metric with per-point SLO keys; the victim-policy suite is
-pre-landed red for the author's session.
-Open: the author's `priority` and `cost` victim policies (chunk 10's
-hand-written half), then chunks 11–13: the round-3 goodput run,
-overlap with round 4, H100 close-out; the deferred flex decode-kernel
-tuning at longctx B <= 2 stays on the list for close-out or a torch
-upgrade.
+Chunk 10 closed the same day, both halves: delegated, per-request
+`priority` through both API dialects and the IPC boundary,
+priority-sorted promotion (stable, FCFS within a class), the
+`preemption_policy` knob through config/CLI/bench, preemption counters
+in the stats stream, per-chunk client timestamps with a per-request
+ITL tail, and the goodput metric with per-point SLO keys; hand-written,
+the `priority` (lowest wins, LIFO tiebreak) and `cost` (fewest KV
+tokens lost) victim selectors red→green against the pre-landed suite.
+That suite also exposed a machine-level livelock latent since chunk 9
+(an eviction's freed block raced back to the re-admitted victim by the
+next step's promotion, starving the row it was meant to unblock; lifo
+reproduces it under a swapped arrival order), fixed by the author's
+chosen rule: the scheduler now replans in the same step after each
+eviction, so planning itself proves someone can advance and an
+eviction step does useful forward work.
+Open: chunks 11–13: the round-3 goodput run (SLO pair still the
+author's §9.3 call), overlap with round 4, H100 close-out; the
+deferred flex decode-kernel tuning at longctx B <= 2 stays on the
+list for close-out or a torch upgrade.
 
 - KV blocks of fixed size (16 tokens is the vLLM default) in a single preallocated pool.
 - Per-request block table mapping logical token positions → block IDs.

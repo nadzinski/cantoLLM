@@ -7,13 +7,15 @@ Two halves, one file:
   promotion (stable by priority, FCFS within a class, a preempted
   victim resumes at the front of its class but behind higher classes)
   and the preemption counters the stats collector reads.
-- PRE-LANDED RED: TestPriorityVictimPolicy and TestCostVictimPolicy are
-  THE DEFINITION OF DONE FOR THE HAND-WRITTEN VICTIM POLICIES (the
-  author's chunk-10 session). Their class-level strict xfail markers
-  (raises=NotImplementedError, so a partial implementation fails
-  loudly instead of quietly xfailing, the chunk-2 lesson) come off as
-  each policy lands; every test then runs unmarked. The `lifo` policy
-  is the chunk-9 machine and needs no new selector.
+- TestPriorityVictimPolicy and TestCostVictimPolicy were pre-landed
+  RED as the definition of done for the hand-written victim policies;
+  the author's selectors landed and the class-level strict xfail
+  markers (raises=NotImplementedError, the loud-partial-work guard)
+  came off in the same session. The `lifo` policy is the chunk-9
+  machine and needed no new selector. The red half also caught a
+  machine-level livelock (evict, then next step's promotion hands the
+  freed block back to the re-admitted victim), fixed by the same-step
+  evict-and-replan retry in step().
 
 Policy contracts under test (§2.10):
 - `priority`: evict the lowest-priority active sequence; LIFO
@@ -26,8 +28,6 @@ The toy layer reuses the chunk-5/chunk-9 helpers: ConstantForward
 scheduling isolation, the 4-block 16-token exhaustion geometry, and
 drive_until_evicted's victim probe.
 """
-
-import pytest
 
 from cantollm.engine.batching.stats import StepStatsCollector
 from tests.test_cb_scheduler import make_request
@@ -146,12 +146,6 @@ class TestPreemptionCounters:
         assert any(st.preemptions == 0 for st in steps)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=NotImplementedError,
-    reason="P4 chunk 10: the hand-written 'priority' victim policy is "
-    "not implemented",
-)
 class TestPriorityVictimPolicy:
     def test_victim_is_lowest_priority_not_newest(self):
         scheduler, _ = make_paged_scheduler(
@@ -175,19 +169,15 @@ class TestPriorityVictimPolicy:
         run_to_completion(scheduler, max_steps=100)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=NotImplementedError,
-    reason="P4 chunk 10: the hand-written 'cost' victim policy is not "
-    "implemented",
-)
 class TestCostVictimPolicy:
     def test_victim_is_cheapest_recompute(self):
+        # One block more than the exhaustion geometry: at 4 blocks both
+        # rows freeze at position 8 (an exact boundary tie, tiebreak
+        # unspecified); the 5th block lets "b" reach 12 before the jam,
+        # so "a" (position 8) is STRICTLY cheaper. LIFO would evict "b".
         scheduler, _ = make_paged_scheduler(
-            **POOL_KW, preemption_policy="cost"
+            **{**POOL_KW, "num_kv_blocks": 5}, preemption_policy="cost"
         )
-        # PROMPT_A (4 tokens) stays behind PROMPT_B (8) at every step,
-        # so "a" is always the cheaper re-prefill; LIFO would evict "b".
         exhaust(scheduler)
         drive_until_evicted(scheduler, "a")
         victim = next(s for s in scheduler.queued if s.request_id == "a")

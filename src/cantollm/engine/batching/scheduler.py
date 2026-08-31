@@ -307,17 +307,21 @@ class ContinuousBatchingScheduler:
         lowest-priority active sequence, LIFO (newest-admitted) tiebreak
         among equal-lowest. Never picks a higher-priority row while a
         lower one is active."""
-        raise NotImplementedError(
-            "victim policy 'priority' is the author's chunk-10 session"
-        )
+        victim = None
+        for seq in self.active:
+            if victim is None or victim.priority >= seq.priority:
+                victim = seq
+        return victim
 
     def _select_victim_cost(self) -> CBSequence:
         """[HAND, chunk 10] The `cost` victim policy (§2.10): the active
         sequence with the fewest KV tokens to lose, i.e. the cheapest
         recompute (the smallest consumed position)."""
-        raise NotImplementedError(
-            "victim policy 'cost' is the author's chunk-10 session"
-        )
+        victim = None
+        for seq in self.active:
+            if victim is None or victim.position >= seq.position:
+                victim = seq
+        return victim
 
     def is_idle(self) -> bool:
         """Nothing queued, nothing active, nothing pending. (The shell
@@ -348,11 +352,21 @@ class ContinuousBatchingScheduler:
         self._promote_queued()
 
         rows = self._plan_step()
+        # Same-step retry under total starvation: evict, then REPLAN, so
+        # the freed blocks go to the rows the eviction was meant to
+        # unblock. Deferring the benefit to the next step livelocks: its
+        # promotion runs first and hands the freed block straight back to
+        # the re-admitted victim (found by chunk 10's swapped-arrival
+        # policy tests; the loop is bounded by len(active), and a lone
+        # survivor can always advance, so it terminates with rows or with
+        # nothing active). Planning itself is the can-anyone-advance
+        # oracle; eviction still emits nothing.
+        while not rows and self.active:
+            self._preempt_one()
+            rows = self._plan_step() if self.active else []
         if not rows:
-            if self.active:
-                self._preempt_one()
             # Only pending events to flush (abort acks, rejections) — no
-            # forward pass this step. Preemption also emits nothing.
+            # forward pass this step.
             return events
 
         input_ids = self._build_input_ids(rows)

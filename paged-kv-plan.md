@@ -16,17 +16,18 @@ slot freed, requeue at the queue front with the prompt+emitted replay
 prefix, eviction emits nothing) and updated the chunk-5 deadlock pin
 deliberately in the same commit; all 6 pre-landed preemption tests
 went green including the §2.9 greedy-token-identical oracle, strict
-xfail removed, suite 624). Chunk 10's delegated half landed the same
-day: `priority` through both dialects (bounded -2..2, the §9.2 straw;
-beta header still open) and the IPC pickle, stable priority-sorted
-promotion (FCFS within a class, victim front-of-class preserved), the
-`preemption_policy` knob end to end (config/CLI/serve.toml/bench),
-preemption counters through stats schema v3, per-chunk client
-timestamps + `client_itl_p99_s` (results schema v2), goodput +
-SLO point keys, and tests/test_victim_policies.py with its policy
-classes PRE-LANDED RED (4 strict xfails via the selector stubs'
-NotImplementedError). Next: the author's session, `priority` and
-`cost` victim policies red→green; then chunk 11, round 3.**
+xfail removed, suite 624). Chunk 10 complete same day: the delegated
+half (priority through both dialects + IPC, sorted promotion, the
+`preemption_policy` knob, stats v3 preemption counters, per-chunk
+client timestamps + goodput + SLO point keys, policy suite pre-landed
+RED), then the author's hand-written `priority` and `cost` selectors
+red→green. The red half also caught a MACHINE-LEVEL LIVELOCK latent
+since chunk 9 (evict frees one block; next step's promotion re-admits
+the victim and hands the block straight back; lifo livelocks
+identically under the swapped arrival order), fixed by her call:
+same-step evict-and-replan retry in step(), planning as the
+can-anyone-advance oracle. Markers off, suite 653 + 5 chaos. Next:
+chunk 11, round 3 (goodput_5090.toml; §9.3 SLO pair still hers).**
 
 ## 1. Goal
 
@@ -961,7 +962,31 @@ phase start; Mac/CPU counts).
     promotion incl. overtake/front-of-class, counters, collector
     diffs) and the policy classes PRE-LANDED RED: 4 strict xfails
     (raises=NotImplementedError so partial work fails loudly),
-    verified red via the stubs. Suite 649 + 4 xfail + 5 chaos. The
-    chunk completes with the author's session: `priority` (lowest
-    priority, LIFO tiebreak) and `cost` (fewest KV tokens lost)
-    selectors red→green, class markers off.
+    verified red via the stubs. Suite 649 + 4 xfail + 5 chaos.
+    Completed same day, the author's session: both selectors
+    hand-written as min-scans over `active` with `>=` keeping the
+    newest (so the LIFO tiebreak falls out of iteration order); one
+    typo fix handed back. The pre-landed red half then earned its
+    keep twice. (1) The cost test's exhaust-order scenario found the
+    test itself over-specified: both rows freeze at block-boundary
+    position 8, an exact tie, and the newest-wins tiebreak evicts
+    "b"; the test moved to a 5-block geometry where "a" is strictly
+    cheaper (8 vs 12), a deliberate pre-landed-suite edit. (2) The
+    swapped-arrival cost test exposed a MACHINE-LEVEL LIVELOCK latent
+    since chunk 9, which lifo reproduces identically (verified by
+    trace: 28 evictions in 60 steps, the survivor pinned at 12): the
+    victim frees one block, and the NEXT step's promotion runs before
+    planning, re-admits the victim from the queue front, and hands
+    the freed block straight back; the starved row never advances.
+    The chunk-9 suite never met it because its single arrival order
+    makes the newest row the block-rich one. Fix (her call among
+    evict-until-progress / same-step retry / hold-back-the-victim,
+    implementation handed back): same-step evict-and-replan in
+    step(): planning retries after each eviction, so freed blocks go
+    to the rows the eviction was meant to unblock and `_plan_step`
+    itself is the can-anyone-advance oracle (no duplicated
+    reservation arithmetic, no re-admission state). The loop is
+    bounded by len(active); a lone survivor always advances. An
+    eviction step now also runs the unblocked rows' forward instead
+    of being wasted, which is what prediction 4 wants. Class markers
+    off, every test unmarked; suite 653 + 5 chaos.
