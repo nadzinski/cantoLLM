@@ -1,0 +1,1226 @@
+{
+  "schema_version": 2,
+  "run_id": "2026-08-30T220602_c7c1915_goodput-5090",
+  "status": "done",
+  "started": "2026-08-30T22:06:02",
+  "finished": "2026-08-30T22:24:19",
+  "env": {
+    "git_sha": "c7c1915bb41ce877c18a39e9300117c5f66ddbab",
+    "git_dirty": false,
+    "platform": "Linux-7.0.0-28-generic-x86_64-with-glibc2.39",
+    "hostname": "behemoth",
+    "python": "3.11.13",
+    "torch": "2.10.0+cu128",
+    "device_name": "NVIDIA GeForce RTX 5090",
+    "cpu_count": 32
+  },
+  "config": {
+    "name": "goodput-5090",
+    "schema_version": 1,
+    "server": {
+      "model": "0.6B",
+      "engine": "batched",
+      "device": "cuda",
+      "port": 8377,
+      "health_timeout_s": 900,
+      "max_batch": 64,
+      "batch_max_seq_len": 4096,
+      "max_tokens_per_step": 512,
+      "attention": "flex",
+      "num_kv_blocks": 128,
+      "shape_buckets": true,
+      "warmup_shapes": true,
+      "torch_compile": true,
+      "cuda_graphs": true
+    },
+    "defaults": {
+      "dialect": "openai",
+      "max_tokens": 128,
+      "ignore_eos": true,
+      "temperature": 0.0,
+      "warmup_requests": 8,
+      "repeats": 3,
+      "seed": 0
+    },
+    "points": [
+      {
+        "workload": "short_chat",
+        "mode": "open",
+        "arrivals": "poisson",
+        "rate_rps": [
+          30,
+          45
+        ],
+        "total_requests": 400,
+        "max_inflight": 240,
+        "priority_mix": {
+          "0": 4,
+          "2": 1
+        },
+        "slo_ttft_s": 0.5,
+        "slo_itl_p99_s": 0.1
+      }
+    ]
+  },
+  "attach_url": null,
+  "cells": [
+    {
+      "cell_id": "s0-p0-o30",
+      "server": {
+        "attention": "flex",
+        "batch_max_seq_len": 4096,
+        "cuda_graphs": true,
+        "device": "cuda",
+        "engine": "batched",
+        "health_timeout_s": 900,
+        "in_process": false,
+        "max_batch": 64,
+        "max_tokens_per_step": 512,
+        "model": "0.6B",
+        "num_kv_blocks": 128,
+        "port": 8377,
+        "preemption_policy": "lifo",
+        "respawn": "per-server-config",
+        "shape_buckets": true,
+        "torch_compile": true,
+        "warmup_shapes": true
+      },
+      "workload": "short_chat",
+      "mode": "open",
+      "level": 30.0,
+      "arrivals": "poisson",
+      "requests": 400,
+      "max_inflight": 240,
+      "options": {
+        "dialect": "openai",
+        "max_tokens": 128,
+        "ignore_eos": true,
+        "temperature": 0.0,
+        "top_p": 1.0,
+        "warmup_requests": 8,
+        "repeats": 3,
+        "seed": 0,
+        "prompt_limit": null,
+        "priority": 0,
+        "priority_mix": {
+          "0": 4.0,
+          "2": 1.0
+        },
+        "slo_ttft_s": 0.5,
+        "slo_itl_p99_s": 0.1
+      },
+      "status": "done",
+      "reason": null,
+      "repeats": [
+        {
+          "repeat": 0,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 21.99936560005881,
+          "ttft_p50": 3.144008171511814,
+          "ttft_p90": 7.144293613848277,
+          "ttft_p99": 7.584355085990391,
+          "completion_p50": 6.782258843071759,
+          "completion_p99": 10.10565468388144,
+          "aggregate_tok_s": 2327.339839284417,
+          "request_tok_s_p50": 38.76348715914851,
+          "client_itl_mean_s": 0.02413957693298736,
+          "dispatch_lag_p99": 0.002631341551896182,
+          "engine_itl_p50": 0.006910229101777077,
+          "engine_itl_p99": 0.09677330440608567,
+          "step_dur_p50": 0.00528740999288857,
+          "step_dur_p99": 0.06052892728475853,
+          "occupancy_mean": 0.6961037543655413,
+          "kv_fill_mean": 0.5891224835610085,
+          "queue_depth_max": 36,
+          "goodput": 0.165,
+          "goodput_by_priority": {
+            "0": 0.15047021943573669,
+            "2": 0.2222222222222222
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": []
+        },
+        {
+          "repeat": 1,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 21.257018927950412,
+          "ttft_p50": 3.529695871518925,
+          "ttft_p90": 7.040857687825337,
+          "ttft_p99": 7.756452334651257,
+          "completion_p50": 6.8259703300427645,
+          "completion_p99": 10.10561200672295,
+          "aggregate_tok_s": 2408.616192775657,
+          "request_tok_s_p50": 40.16630549039064,
+          "client_itl_mean_s": 0.023907424895300008,
+          "dispatch_lag_p99": 0.003220788214821365,
+          "engine_itl_p50": 0.0070027499459683895,
+          "engine_itl_p99": 0.09386491208104784,
+          "step_dur_p50": 0.006059630075469613,
+          "step_dur_p99": 0.060666658100672066,
+          "occupancy_mean": 0.860006201275691,
+          "kv_fill_mean": 0.7273037462349398,
+          "queue_depth_max": 36,
+          "goodput": 0.09,
+          "goodput_by_priority": {
+            "0": 0.0749185667752443,
+            "2": 0.13978494623655913
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": []
+        },
+        {
+          "repeat": 2,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 21.324876225786284,
+          "ttft_p50": 3.025807854370214,
+          "ttft_p90": 6.1299528778297825,
+          "ttft_p99": 7.012753410600125,
+          "completion_p50": 6.36129870347213,
+          "completion_p99": 9.364024824337102,
+          "aggregate_tok_s": 2400.9518019189427,
+          "request_tok_s_p50": 41.250164599268984,
+          "client_itl_mean_s": 0.022589255514798512,
+          "dispatch_lag_p99": 0.0030263112811371668,
+          "engine_itl_p50": 0.006753529887646437,
+          "engine_itl_p99": 0.07417775679147015,
+          "step_dur_p50": 0.004598330007866025,
+          "step_dur_p99": 0.06057660201564431,
+          "occupancy_mean": 0.7866536094012311,
+          "kv_fill_mean": 0.6868130727126469,
+          "queue_depth_max": 37,
+          "goodput": 0.195,
+          "goodput_by_priority": {
+            "0": 0.1751592356687898,
+            "2": 0.26744186046511625
+          },
+          "preemptions_total": 1,
+          "preempted_tokens_total": 68,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": []
+        }
+      ],
+      "median": {
+        "n_repeats": 3,
+        "ttft_p50": 3.144008171511814,
+        "ttft_p90": 7.040857687825337,
+        "ttft_p99": 7.584355085990391,
+        "completion_p50": 6.782258843071759,
+        "completion_p99": 10.10561200672295,
+        "aggregate_tok_s": 2400.9518019189427,
+        "request_tok_s_p50": 40.16630549039064,
+        "client_itl_mean_s": 0.023907424895300008,
+        "engine_itl_p50": 0.006910229101777077,
+        "engine_itl_p99": 0.09386491208104784,
+        "step_dur_p50": 0.00528740999288857,
+        "step_dur_p99": 0.06057660201564431,
+        "occupancy_mean": 0.7866536094012311,
+        "kv_fill_mean": 0.6868130727126469,
+        "wall_s": 21.324876225786284,
+        "goodput": 0.165,
+        "preemptions_total": 0,
+        "preempted_tokens_total": 0,
+        "goodput_by_priority": {
+          "0": 0.15047021943573669,
+          "2": 0.2222222222222222
+        },
+        "warnings": [
+          "TTFT p50 CV 8.2% across repeats exceeds 5%"
+        ],
+        "finish_reasons": {
+          "length": 1200
+        },
+        "n_errors": 0
+      },
+      "spawn_to_ready_s": 489.90071471896954,
+      "load_seconds": 488.3061175290495
+    },
+    {
+      "cell_id": "s0-p0-o45",
+      "server": {
+        "attention": "flex",
+        "batch_max_seq_len": 4096,
+        "cuda_graphs": true,
+        "device": "cuda",
+        "engine": "batched",
+        "health_timeout_s": 900,
+        "in_process": false,
+        "max_batch": 64,
+        "max_tokens_per_step": 512,
+        "model": "0.6B",
+        "num_kv_blocks": 128,
+        "port": 8377,
+        "preemption_policy": "lifo",
+        "respawn": "per-server-config",
+        "shape_buckets": true,
+        "torch_compile": true,
+        "warmup_shapes": true
+      },
+      "workload": "short_chat",
+      "mode": "open",
+      "level": 45.0,
+      "arrivals": "poisson",
+      "requests": 400,
+      "max_inflight": 240,
+      "options": {
+        "dialect": "openai",
+        "max_tokens": 128,
+        "ignore_eos": true,
+        "temperature": 0.0,
+        "top_p": 1.0,
+        "warmup_requests": 8,
+        "repeats": 3,
+        "seed": 0,
+        "prompt_limit": null,
+        "priority": 0,
+        "priority_mix": {
+          "0": 4.0,
+          "2": 1.0
+        },
+        "slo_ttft_s": 0.5,
+        "slo_itl_p99_s": 0.1
+      },
+      "status": "done",
+      "reason": null,
+      "repeats": [
+        {
+          "repeat": 0,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 21.34622582513839,
+          "ttft_p50": 5.106487535405904,
+          "ttft_p90": 10.06498886202462,
+          "ttft_p99": 10.78357908011414,
+          "completion_p50": 8.638427956961095,
+          "completion_p99": 13.435687454680446,
+          "aggregate_tok_s": 2398.5504706740385,
+          "request_tok_s_p50": 39.17641748760723,
+          "client_itl_mean_s": 0.024265896314723,
+          "dispatch_lag_p99": 1.418380663068965,
+          "engine_itl_p50": 0.0070461800787597895,
+          "engine_itl_p99": 0.08044479773379853,
+          "step_dur_p50": 0.005696984473615885,
+          "step_dur_p99": 0.06061217865673825,
+          "occupancy_mean": 0.7668635670731707,
+          "kv_fill_mean": 0.6498065483279345,
+          "queue_depth_max": 36,
+          "goodput": 0.155,
+          "goodput_by_priority": {
+            "0": 0.1536050156739812,
+            "2": 0.16049382716049382
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": [
+            "dispatch lag p99 1418ms \u2014 load generator overloaded",
+            "open-loop max_inflight cap hit"
+          ]
+        },
+        {
+          "repeat": 1,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 20.75482440413907,
+          "ttft_p50": 4.735353621537797,
+          "ttft_p90": 9.790103329904378,
+          "ttft_p99": 10.521103798837864,
+          "completion_p50": 8.258206126396544,
+          "completion_p99": 13.05043424558593,
+          "aggregate_tok_s": 2466.89632265881,
+          "request_tok_s_p50": 40.498726965872734,
+          "client_itl_mean_s": 0.023636747034794583,
+          "dispatch_lag_p99": 1.412241146850865,
+          "engine_itl_p50": 0.007028710097074509,
+          "engine_itl_p99": 0.2081745252362493,
+          "step_dur_p50": 0.006003059912472963,
+          "step_dur_p99": 0.060681152949109675,
+          "occupancy_mean": 0.8750673975557153,
+          "kv_fill_mean": 0.7365984172807333,
+          "queue_depth_max": 36,
+          "goodput": 0.035,
+          "goodput_by_priority": {
+            "0": 0.026058631921824105,
+            "2": 0.06451612903225806
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": [
+            "dispatch lag p99 1412ms \u2014 load generator overloaded",
+            "open-loop max_inflight cap hit"
+          ]
+        },
+        {
+          "repeat": 2,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 21.14814321300946,
+          "ttft_p50": 5.054794535506517,
+          "ttft_p90": 9.862236448423937,
+          "ttft_p99": 10.371442839202937,
+          "completion_p50": 8.515921709593385,
+          "completion_p99": 13.140097988215276,
+          "aggregate_tok_s": 2421.0163267905186,
+          "request_tok_s_p50": 39.785815580334194,
+          "client_itl_mean_s": 0.024040154435847866,
+          "dispatch_lag_p99": 1.5094785442063583,
+          "engine_itl_p50": 0.0070979290176182985,
+          "engine_itl_p99": 0.12524988091783903,
+          "step_dur_p50": 0.0061360199470072985,
+          "step_dur_p99": 0.06059932751813904,
+          "occupancy_mean": 0.8835216874084919,
+          "kv_fill_mean": 0.7461445083729868,
+          "queue_depth_max": 36,
+          "goodput": 0.1375,
+          "goodput_by_priority": {
+            "0": 0.12738853503184713,
+            "2": 0.1744186046511628
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": [
+            "dispatch lag p99 1509ms \u2014 load generator overloaded",
+            "open-loop max_inflight cap hit"
+          ]
+        }
+      ],
+      "median": {
+        "n_repeats": 3,
+        "ttft_p50": 5.054794535506517,
+        "ttft_p90": 9.862236448423937,
+        "ttft_p99": 10.521103798837864,
+        "completion_p50": 8.515921709593385,
+        "completion_p99": 13.140097988215276,
+        "aggregate_tok_s": 2421.0163267905186,
+        "request_tok_s_p50": 39.785815580334194,
+        "client_itl_mean_s": 0.024040154435847866,
+        "engine_itl_p50": 0.0070461800787597895,
+        "engine_itl_p99": 0.12524988091783903,
+        "step_dur_p50": 0.006003059912472963,
+        "step_dur_p99": 0.06061217865673825,
+        "occupancy_mean": 0.8750673975557153,
+        "kv_fill_mean": 0.7365984172807333,
+        "wall_s": 21.14814321300946,
+        "goodput": 0.1375,
+        "preemptions_total": 0,
+        "preempted_tokens_total": 0,
+        "goodput_by_priority": {
+          "0": 0.12738853503184713,
+          "2": 0.16049382716049382
+        },
+        "warnings": [
+          "dispatch lag p99 1418ms \u2014 load generator overloaded",
+          "open-loop max_inflight cap hit",
+          "dispatch lag p99 1412ms \u2014 load generator overloaded",
+          "open-loop max_inflight cap hit",
+          "dispatch lag p99 1509ms \u2014 load generator overloaded",
+          "open-loop max_inflight cap hit"
+        ],
+        "finish_reasons": {
+          "length": 1200
+        },
+        "n_errors": 0
+      },
+      "spawn_to_ready_s": 489.90071471896954,
+      "load_seconds": 488.3061175290495
+    },
+    {
+      "cell_id": "s1-p0-o30",
+      "server": {
+        "attention": "flex",
+        "batch_max_seq_len": 4096,
+        "cuda_graphs": true,
+        "device": "cuda",
+        "engine": "batched",
+        "health_timeout_s": 900,
+        "in_process": false,
+        "max_batch": 64,
+        "max_tokens_per_step": 512,
+        "model": "0.6B",
+        "num_kv_blocks": 128,
+        "port": 8377,
+        "preemption_policy": "priority",
+        "respawn": "per-server-config",
+        "shape_buckets": true,
+        "torch_compile": true,
+        "warmup_shapes": true
+      },
+      "workload": "short_chat",
+      "mode": "open",
+      "level": 30.0,
+      "arrivals": "poisson",
+      "requests": 400,
+      "max_inflight": 240,
+      "options": {
+        "dialect": "openai",
+        "max_tokens": 128,
+        "ignore_eos": true,
+        "temperature": 0.0,
+        "top_p": 1.0,
+        "warmup_requests": 8,
+        "repeats": 3,
+        "seed": 0,
+        "prompt_limit": null,
+        "priority": 0,
+        "priority_mix": {
+          "0": 4.0,
+          "2": 1.0
+        },
+        "slo_ttft_s": 0.5,
+        "slo_itl_p99_s": 0.1
+      },
+      "status": "done",
+      "reason": null,
+      "repeats": [
+        {
+          "repeat": 0,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 21.917688188841566,
+          "ttft_p50": 3.2595155090093613,
+          "ttft_p90": 7.165041200583801,
+          "ttft_p99": 7.51949122354621,
+          "completion_p50": 6.755807997076772,
+          "completion_p99": 10.029031313664746,
+          "aggregate_tok_s": 2336.0127929033247,
+          "request_tok_s_p50": 38.967524833589145,
+          "client_itl_mean_s": 0.024054939031635785,
+          "dispatch_lag_p99": 0.00292155775707215,
+          "engine_itl_p50": 0.006821910850703716,
+          "engine_itl_p99": 0.09621681252028713,
+          "step_dur_p50": 0.005311035551130772,
+          "step_dur_p99": 0.06085202219663187,
+          "occupancy_mean": 0.6968586292200233,
+          "kv_fill_mean": 0.5897454826879002,
+          "queue_depth_max": 36,
+          "goodput": 0.21,
+          "goodput_by_priority": {
+            "0": 0.20376175548589343,
+            "2": 0.2345679012345679
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": []
+        },
+        {
+          "repeat": 1,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 21.36430261284113,
+          "ttft_p50": 3.627022133907303,
+          "ttft_p90": 7.250410877191461,
+          "ttft_p99": 7.966150028174741,
+          "completion_p50": 6.974392485921271,
+          "completion_p99": 10.25808210441377,
+          "aggregate_tok_s": 2396.521006458033,
+          "request_tok_s_p50": 39.592061491485445,
+          "client_itl_mean_s": 0.02390576954861813,
+          "dispatch_lag_p99": 0.0027455447684042148,
+          "engine_itl_p50": 0.006940989987924695,
+          "engine_itl_p99": 0.1204168580006808,
+          "step_dur_p50": 0.006043130066245794,
+          "step_dur_p99": 0.06084524548612535,
+          "occupancy_mean": 0.8522337545126354,
+          "kv_fill_mean": 0.717513960965704,
+          "queue_depth_max": 36,
+          "goodput": 0.185,
+          "goodput_by_priority": {
+            "0": 0.1758957654723127,
+            "2": 0.21505376344086022
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": []
+        },
+        {
+          "repeat": 2,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 21.17965960991569,
+          "ttft_p50": 2.797886588028632,
+          "ttft_p90": 6.1036405811551955,
+          "ttft_p99": 6.883737888000905,
+          "completion_p50": 6.1605147030204535,
+          "completion_p99": 9.233388682985678,
+          "aggregate_tok_s": 2417.413732939772,
+          "request_tok_s_p50": 41.05918693538871,
+          "client_itl_mean_s": 0.02236669630132612,
+          "dispatch_lag_p99": 0.004880425045266747,
+          "engine_itl_p50": 0.006734649883583188,
+          "engine_itl_p99": 0.0681117199850273,
+          "step_dur_p50": 0.004617071012035012,
+          "step_dur_p99": 0.06083863598294556,
+          "occupancy_mean": 0.7805749005116543,
+          "kv_fill_mean": 0.6791139985432064,
+          "queue_depth_max": 37,
+          "goodput": 0.27,
+          "goodput_by_priority": {
+            "0": 0.25796178343949044,
+            "2": 0.313953488372093
+          },
+          "preemptions_total": 1,
+          "preempted_tokens_total": 65,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": []
+        }
+      ],
+      "median": {
+        "n_repeats": 3,
+        "ttft_p50": 3.2595155090093613,
+        "ttft_p90": 7.165041200583801,
+        "ttft_p99": 7.51949122354621,
+        "completion_p50": 6.755807997076772,
+        "completion_p99": 10.029031313664746,
+        "aggregate_tok_s": 2396.521006458033,
+        "request_tok_s_p50": 39.592061491485445,
+        "client_itl_mean_s": 0.02390576954861813,
+        "engine_itl_p50": 0.006821910850703716,
+        "engine_itl_p99": 0.09621681252028713,
+        "step_dur_p50": 0.005311035551130772,
+        "step_dur_p99": 0.06084524548612535,
+        "occupancy_mean": 0.7805749005116543,
+        "kv_fill_mean": 0.6791139985432064,
+        "wall_s": 21.36430261284113,
+        "goodput": 0.21,
+        "preemptions_total": 0,
+        "preempted_tokens_total": 0,
+        "goodput_by_priority": {
+          "0": 0.20376175548589343,
+          "2": 0.2345679012345679
+        },
+        "warnings": [
+          "TTFT p50 CV 12.9% across repeats exceeds 5%"
+        ],
+        "finish_reasons": {
+          "length": 1200
+        },
+        "n_errors": 0
+      },
+      "spawn_to_ready_s": 99.63928178185597,
+      "load_seconds": 97.87668242119253
+    },
+    {
+      "cell_id": "s1-p0-o45",
+      "server": {
+        "attention": "flex",
+        "batch_max_seq_len": 4096,
+        "cuda_graphs": true,
+        "device": "cuda",
+        "engine": "batched",
+        "health_timeout_s": 900,
+        "in_process": false,
+        "max_batch": 64,
+        "max_tokens_per_step": 512,
+        "model": "0.6B",
+        "num_kv_blocks": 128,
+        "port": 8377,
+        "preemption_policy": "priority",
+        "respawn": "per-server-config",
+        "shape_buckets": true,
+        "torch_compile": true,
+        "warmup_shapes": true
+      },
+      "workload": "short_chat",
+      "mode": "open",
+      "level": 45.0,
+      "arrivals": "poisson",
+      "requests": 400,
+      "max_inflight": 240,
+      "options": {
+        "dialect": "openai",
+        "max_tokens": 128,
+        "ignore_eos": true,
+        "temperature": 0.0,
+        "top_p": 1.0,
+        "warmup_requests": 8,
+        "repeats": 3,
+        "seed": 0,
+        "prompt_limit": null,
+        "priority": 0,
+        "priority_mix": {
+          "0": 4.0,
+          "2": 1.0
+        },
+        "slo_ttft_s": 0.5,
+        "slo_itl_p99_s": 0.1
+      },
+      "status": "done",
+      "reason": null,
+      "repeats": [
+        {
+          "repeat": 0,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 20.98654197785072,
+          "ttft_p50": 5.170887942425907,
+          "ttft_p90": 9.63961602705531,
+          "ttft_p99": 10.437022537726444,
+          "completion_p50": 8.236258404911496,
+          "completion_p99": 13.000739190629682,
+          "aggregate_tok_s": 2439.6587133810176,
+          "request_tok_s_p50": 40.543351213975264,
+          "client_itl_mean_s": 0.02382639897566043,
+          "dispatch_lag_p99": 1.3001985276257617,
+          "engine_itl_p50": 0.007005811203271151,
+          "engine_itl_p99": 0.12118781097233232,
+          "step_dur_p50": 0.005374875385314226,
+          "step_dur_p99": 0.06086058242945,
+          "occupancy_mean": 0.7645062424789411,
+          "kv_fill_mean": 0.6499435479890568,
+          "queue_depth_max": 36,
+          "goodput": 0.075,
+          "goodput_by_priority": {
+            "0": 0.06896551724137931,
+            "2": 0.09876543209876543
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": [
+            "dispatch lag p99 1300ms \u2014 load generator overloaded",
+            "open-loop max_inflight cap hit"
+          ]
+        },
+        {
+          "repeat": 1,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 21.001887561986223,
+          "ttft_p50": 4.972774800378829,
+          "ttft_p90": 9.768339813128113,
+          "ttft_p99": 10.533848102043844,
+          "completion_p50": 8.41493291594088,
+          "completion_p99": 13.320557031698991,
+          "aggregate_tok_s": 2437.8761122725405,
+          "request_tok_s_p50": 40.21308521282805,
+          "client_itl_mean_s": 0.0239131094125699,
+          "dispatch_lag_p99": 1.6363271988276389,
+          "engine_itl_p50": 0.006959745893254876,
+          "engine_itl_p99": 0.19679061773699066,
+          "step_dur_p50": 0.005905404919758439,
+          "step_dur_p99": 0.06090759824030101,
+          "occupancy_mean": 0.8729321479122435,
+          "kv_fill_mean": 0.7368623661978061,
+          "queue_depth_max": 36,
+          "goodput": 0.1575,
+          "goodput_by_priority": {
+            "0": 0.1563517915309446,
+            "2": 0.16129032258064516
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": [
+            "dispatch lag p99 1636ms \u2014 load generator overloaded",
+            "open-loop max_inflight cap hit"
+          ]
+        },
+        {
+          "repeat": 2,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 21.58166111097671,
+          "ttft_p50": 5.237696918076836,
+          "ttft_p90": 10.086312891636044,
+          "ttft_p99": 10.652136782496235,
+          "completion_p50": 8.55847719439771,
+          "completion_p99": 13.529040544230957,
+          "aggregate_tok_s": 2372.3845785883004,
+          "request_tok_s_p50": 39.21809257513949,
+          "client_itl_mean_s": 0.024576321522829923,
+          "dispatch_lag_p99": 1.5756495987204833,
+          "engine_itl_p50": 0.007047203136608005,
+          "engine_itl_p99": 0.13074403005885002,
+          "step_dur_p50": 0.006115784868597984,
+          "step_dur_p99": 0.06094692814629525,
+          "occupancy_mean": 0.8831129807692307,
+          "kv_fill_mean": 0.7444288265070266,
+          "queue_depth_max": 36,
+          "goodput": 0.0875,
+          "goodput_by_priority": {
+            "0": 0.08280254777070063,
+            "2": 0.10465116279069768
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": [
+            "dispatch lag p99 1576ms \u2014 load generator overloaded",
+            "open-loop max_inflight cap hit"
+          ]
+        }
+      ],
+      "median": {
+        "n_repeats": 3,
+        "ttft_p50": 5.170887942425907,
+        "ttft_p90": 9.768339813128113,
+        "ttft_p99": 10.533848102043844,
+        "completion_p50": 8.41493291594088,
+        "completion_p99": 13.320557031698991,
+        "aggregate_tok_s": 2437.8761122725405,
+        "request_tok_s_p50": 40.21308521282805,
+        "client_itl_mean_s": 0.0239131094125699,
+        "engine_itl_p50": 0.007005811203271151,
+        "engine_itl_p99": 0.13074403005885002,
+        "step_dur_p50": 0.005905404919758439,
+        "step_dur_p99": 0.06090759824030101,
+        "occupancy_mean": 0.8729321479122435,
+        "kv_fill_mean": 0.7368623661978061,
+        "wall_s": 21.001887561986223,
+        "goodput": 0.0875,
+        "preemptions_total": 0,
+        "preempted_tokens_total": 0,
+        "goodput_by_priority": {
+          "0": 0.08280254777070063,
+          "2": 0.10465116279069768
+        },
+        "warnings": [
+          "dispatch lag p99 1300ms \u2014 load generator overloaded",
+          "open-loop max_inflight cap hit",
+          "dispatch lag p99 1636ms \u2014 load generator overloaded",
+          "open-loop max_inflight cap hit",
+          "dispatch lag p99 1576ms \u2014 load generator overloaded",
+          "open-loop max_inflight cap hit"
+        ],
+        "finish_reasons": {
+          "length": 1200
+        },
+        "n_errors": 0
+      },
+      "spawn_to_ready_s": 99.63928178185597,
+      "load_seconds": 97.87668242119253
+    },
+    {
+      "cell_id": "s2-p0-o30",
+      "server": {
+        "attention": "flex",
+        "batch_max_seq_len": 4096,
+        "cuda_graphs": true,
+        "device": "cuda",
+        "engine": "batched",
+        "health_timeout_s": 900,
+        "in_process": false,
+        "max_batch": 64,
+        "max_tokens_per_step": 512,
+        "model": "0.6B",
+        "num_kv_blocks": 128,
+        "port": 8377,
+        "preemption_policy": "cost",
+        "respawn": "per-server-config",
+        "shape_buckets": true,
+        "torch_compile": true,
+        "warmup_shapes": true
+      },
+      "workload": "short_chat",
+      "mode": "open",
+      "level": 30.0,
+      "arrivals": "poisson",
+      "requests": 400,
+      "max_inflight": 240,
+      "options": {
+        "dialect": "openai",
+        "max_tokens": 128,
+        "ignore_eos": true,
+        "temperature": 0.0,
+        "top_p": 1.0,
+        "warmup_requests": 8,
+        "repeats": 3,
+        "seed": 0,
+        "prompt_limit": null,
+        "priority": 0,
+        "priority_mix": {
+          "0": 4.0,
+          "2": 1.0
+        },
+        "slo_ttft_s": 0.5,
+        "slo_itl_p99_s": 0.1
+      },
+      "status": "done",
+      "reason": null,
+      "repeats": [
+        {
+          "repeat": 0,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 22.148593256017193,
+          "ttft_p50": 3.3577798415208235,
+          "ttft_p90": 7.291296468419024,
+          "ttft_p99": 7.733502679306548,
+          "completion_p50": 6.9163046655012295,
+          "completion_p99": 10.254754677517338,
+          "aggregate_tok_s": 2311.6592285647894,
+          "request_tok_s_p50": 38.64966885690532,
+          "client_itl_mean_s": 0.02432157654250609,
+          "dispatch_lag_p99": 0.00366137797711417,
+          "engine_itl_p50": 0.006923998007550836,
+          "engine_itl_p99": 0.12055368488654494,
+          "step_dur_p50": 0.005335605936124921,
+          "step_dur_p99": 0.06082871203310788,
+          "occupancy_mean": 0.6967457775189284,
+          "kv_fill_mean": 0.5895429465683241,
+          "queue_depth_max": 36,
+          "goodput": 0.1575,
+          "goodput_by_priority": {
+            "0": 0.15673981191222572,
+            "2": 0.16049382716049382
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": []
+        },
+        {
+          "repeat": 1,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 20.92183242086321,
+          "ttft_p50": 3.269245146540925,
+          "ttft_p90": 6.744869589176961,
+          "ttft_p99": 7.484315335536375,
+          "completion_p50": 6.517167886951938,
+          "completion_p99": 9.748293213646393,
+          "aggregate_tok_s": 2447.204382965206,
+          "request_tok_s_p50": 40.98577071900688,
+          "client_itl_mean_s": 0.023480264820423393,
+          "dispatch_lag_p99": 0.0032921544741839085,
+          "engine_itl_p50": 0.006964297033846378,
+          "engine_itl_p99": 0.10489455971867045,
+          "step_dur_p50": 0.006118500139564276,
+          "step_dur_p99": 0.06092921981588006,
+          "occupancy_mean": 0.8577792553191489,
+          "kv_fill_mean": 0.7252985095301419,
+          "queue_depth_max": 36,
+          "goodput": 0.185,
+          "goodput_by_priority": {
+            "0": 0.17263843648208468,
+            "2": 0.22580645161290322
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": []
+        },
+        {
+          "repeat": 2,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 21.79393581300974,
+          "ttft_p50": 2.852682032971643,
+          "ttft_p90": 6.614714448177256,
+          "ttft_p99": 7.479379248926414,
+          "completion_p50": 6.240674841101281,
+          "completion_p99": 9.915497250256594,
+          "aggregate_tok_s": 2349.277360422275,
+          "request_tok_s_p50": 39.506396683082244,
+          "client_itl_mean_s": 0.02307484518143983,
+          "dispatch_lag_p99": 0.002661896569188684,
+          "engine_itl_p50": 0.006811605067923665,
+          "engine_itl_p99": 0.08104742391500729,
+          "step_dur_p50": 0.004739586962386966,
+          "step_dur_p99": 0.06084815699141473,
+          "occupancy_mean": 0.7735210065320665,
+          "kv_fill_mean": 0.6672258898084917,
+          "queue_depth_max": 37,
+          "goodput": 0.2075,
+          "goodput_by_priority": {
+            "0": 0.1942675159235669,
+            "2": 0.2558139534883721
+          },
+          "preemptions_total": 1,
+          "preempted_tokens_total": 65,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": []
+        }
+      ],
+      "median": {
+        "n_repeats": 3,
+        "ttft_p50": 3.269245146540925,
+        "ttft_p90": 6.744869589176961,
+        "ttft_p99": 7.484315335536375,
+        "completion_p50": 6.517167886951938,
+        "completion_p99": 9.915497250256594,
+        "aggregate_tok_s": 2349.277360422275,
+        "request_tok_s_p50": 39.506396683082244,
+        "client_itl_mean_s": 0.023480264820423393,
+        "engine_itl_p50": 0.006923998007550836,
+        "engine_itl_p99": 0.10489455971867045,
+        "step_dur_p50": 0.005335605936124921,
+        "step_dur_p99": 0.06084815699141473,
+        "occupancy_mean": 0.7735210065320665,
+        "kv_fill_mean": 0.6672258898084917,
+        "wall_s": 21.79393581300974,
+        "goodput": 0.185,
+        "preemptions_total": 0,
+        "preempted_tokens_total": 0,
+        "goodput_by_priority": {
+          "0": 0.17263843648208468,
+          "2": 0.22580645161290322
+        },
+        "warnings": [
+          "TTFT p50 CV 8.5% across repeats exceeds 5%"
+        ],
+        "finish_reasons": {
+          "length": 1200
+        },
+        "n_errors": 0
+      },
+      "spawn_to_ready_s": 100.35736780008301,
+      "load_seconds": 98.75930765317753
+    },
+    {
+      "cell_id": "s2-p0-o45",
+      "server": {
+        "attention": "flex",
+        "batch_max_seq_len": 4096,
+        "cuda_graphs": true,
+        "device": "cuda",
+        "engine": "batched",
+        "health_timeout_s": 900,
+        "in_process": false,
+        "max_batch": 64,
+        "max_tokens_per_step": 512,
+        "model": "0.6B",
+        "num_kv_blocks": 128,
+        "port": 8377,
+        "preemption_policy": "cost",
+        "respawn": "per-server-config",
+        "shape_buckets": true,
+        "torch_compile": true,
+        "warmup_shapes": true
+      },
+      "workload": "short_chat",
+      "mode": "open",
+      "level": 45.0,
+      "arrivals": "poisson",
+      "requests": 400,
+      "max_inflight": 240,
+      "options": {
+        "dialect": "openai",
+        "max_tokens": 128,
+        "ignore_eos": true,
+        "temperature": 0.0,
+        "top_p": 1.0,
+        "warmup_requests": 8,
+        "repeats": 3,
+        "seed": 0,
+        "prompt_limit": null,
+        "priority": 0,
+        "priority_mix": {
+          "0": 4.0,
+          "2": 1.0
+        },
+        "slo_ttft_s": 0.5,
+        "slo_itl_p99_s": 0.1
+      },
+      "status": "done",
+      "reason": null,
+      "repeats": [
+        {
+          "repeat": 0,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 21.325210168026388,
+          "ttft_p50": 5.362010145094246,
+          "ttft_p90": 9.884249817370437,
+          "ttft_p99": 10.729839250023943,
+          "completion_p50": 8.527449089568108,
+          "completion_p99": 13.3431406357768,
+          "aggregate_tok_s": 2400.9142042016497,
+          "request_tok_s_p50": 39.297558162296795,
+          "client_itl_mean_s": 0.024217152014767977,
+          "dispatch_lag_p99": 1.5764986473484894,
+          "engine_itl_p50": 0.007132083177566528,
+          "engine_itl_p99": 0.08440897867549073,
+          "step_dur_p50": 0.005677253007888794,
+          "step_dur_p99": 0.06085225935094059,
+          "occupancy_mean": 0.7636294947303162,
+          "kv_fill_mean": 0.6444193206806029,
+          "queue_depth_max": 36,
+          "goodput": 0.1525,
+          "goodput_by_priority": {
+            "0": 0.1536050156739812,
+            "2": 0.14814814814814814
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": [
+            "dispatch lag p99 1576ms \u2014 load generator overloaded",
+            "open-loop max_inflight cap hit"
+          ]
+        },
+        {
+          "repeat": 1,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 20.885007893899456,
+          "ttft_p50": 4.996944351005368,
+          "ttft_p90": 9.71399633428082,
+          "ttft_p99": 10.656660736575718,
+          "completion_p50": 8.159145557554439,
+          "completion_p99": 13.252682577022352,
+          "aggregate_tok_s": 2451.5193032297393,
+          "request_tok_s_p50": 39.90313768289123,
+          "client_itl_mean_s": 0.023727092081011737,
+          "dispatch_lag_p99": 1.5286234494904052,
+          "engine_itl_p50": 0.007145133102312684,
+          "engine_itl_p99": 0.16047235811129212,
+          "step_dur_p50": 0.00577034754678607,
+          "step_dur_p99": 0.060929037034511566,
+          "occupancy_mean": 0.882727696743555,
+          "kv_fill_mean": 0.7525063337432157,
+          "queue_depth_max": 36,
+          "goodput": 0.1475,
+          "goodput_by_priority": {
+            "0": 0.1465798045602606,
+            "2": 0.15053763440860216
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": [
+            "dispatch lag p99 1529ms \u2014 load generator overloaded",
+            "open-loop max_inflight cap hit"
+          ]
+        },
+        {
+          "repeat": 2,
+          "n_requests": 400,
+          "n_ok": 400,
+          "n_errors": 0,
+          "wall_s": 20.952821707818657,
+          "ttft_p50": 5.060900745913386,
+          "ttft_p90": 9.730787270097062,
+          "ttft_p99": 10.309332733952905,
+          "completion_p50": 8.479992900043726,
+          "completion_p99": 12.964627551210578,
+          "aggregate_tok_s": 2443.5849602487883,
+          "request_tok_s_p50": 40.091558011660766,
+          "client_itl_mean_s": 0.023782546264018614,
+          "dispatch_lag_p99": 1.41033570198575,
+          "engine_itl_p50": 0.0070510010700672865,
+          "engine_itl_p99": 0.1233560920227319,
+          "step_dur_p50": 0.0061228040140122175,
+          "step_dur_p99": 0.060922235180623834,
+          "occupancy_mean": 0.8776272123893806,
+          "kv_fill_mean": 0.7387126371220502,
+          "queue_depth_max": 36,
+          "goodput": 0.1175,
+          "goodput_by_priority": {
+            "0": 0.10509554140127389,
+            "2": 0.16279069767441862
+          },
+          "preemptions_total": 0,
+          "preempted_tokens_total": 0,
+          "finish_reasons": {
+            "length": 400
+          },
+          "warnings": [
+            "dispatch lag p99 1410ms \u2014 load generator overloaded",
+            "open-loop max_inflight cap hit"
+          ]
+        }
+      ],
+      "median": {
+        "n_repeats": 3,
+        "ttft_p50": 5.060900745913386,
+        "ttft_p90": 9.730787270097062,
+        "ttft_p99": 10.656660736575718,
+        "completion_p50": 8.479992900043726,
+        "completion_p99": 13.252682577022352,
+        "aggregate_tok_s": 2443.5849602487883,
+        "request_tok_s_p50": 39.90313768289123,
+        "client_itl_mean_s": 0.023782546264018614,
+        "engine_itl_p50": 0.007132083177566528,
+        "engine_itl_p99": 0.1233560920227319,
+        "step_dur_p50": 0.00577034754678607,
+        "step_dur_p99": 0.060922235180623834,
+        "occupancy_mean": 0.8776272123893806,
+        "kv_fill_mean": 0.7387126371220502,
+        "wall_s": 20.952821707818657,
+        "goodput": 0.1475,
+        "preemptions_total": 0,
+        "preempted_tokens_total": 0,
+        "goodput_by_priority": {
+          "0": 0.1465798045602606,
+          "2": 0.15053763440860216
+        },
+        "warnings": [
+          "dispatch lag p99 1576ms \u2014 load generator overloaded",
+          "open-loop max_inflight cap hit",
+          "dispatch lag p99 1529ms \u2014 load generator overloaded",
+          "open-loop max_inflight cap hit",
+          "dispatch lag p99 1410ms \u2014 load generator overloaded",
+          "open-loop max_inflight cap hit"
+        ],
+        "finish_reasons": {
+          "length": 1200
+        },
+        "n_errors": 0
+      },
+      "spawn_to_ready_s": 100.35736780008301,
+      "load_seconds": 98.75930765317753
+    }
+  ]
+}
