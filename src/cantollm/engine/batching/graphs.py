@@ -41,7 +41,7 @@ static buffers ARE the step tables: the scheduler's `PagedStepState`
 buffers (tables, inverse, start_pos, the padded decode write map) are
 persistent and rewritten in place by `fill()` each step, so a recording
 that baked their addresses reads every later step's values with NO
-marshal on the table side — `fill()` is the marshal. This wrapper only
+marshal on the table side: `fill()` is the marshal. This wrapper only
 copies the meta-side tensors (input_ids, positions, slots, start_pos,
 num_new) into its own static buffers per replay. `_replayable` verifies
 by address that a step's seeded tables and write map really are the

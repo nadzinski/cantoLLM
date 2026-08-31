@@ -14,8 +14,14 @@ there, on the 5090, before any of this was designed.
 end-to-end, three 5090 runs; the batch-dim/flex-decoding cliff found
 and fixed, sweep trimmed to one forward per family; round-1 gate miss
 on 4 cells ACCEPTED by the author — attributed kernel-side
-flex-vs-cuDNN decode gap, tuning deferred; §10 is the record). Next:
-chunk 8, CUDA graphs on paged decode + 5090 round 2.**
+flex-vs-cuDNN decode gap, tuning deferred; §10 is the record). Chunk 8
+implementation landed 2026-08-30 (4367cb6): graphs keyed (batch, 1),
+fill() is the replay marshal over a persistent padded decode map +
+CPU-staged bulk copies, capture bakes the step-state buffers, wiring
+and defaults open, round-2 configs
+`ab_5090_paged_full{,_longctx}.toml` + `capacity_5090_paged.toml`
+written with prediction-1/-3 gates in their headers. The 5090 round 2
+is dispatched to the box; §10 takes the results.**
 
 ## 1. Goal
 
