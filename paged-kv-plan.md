@@ -26,8 +26,16 @@ since chunk 9 (evict frees one block; next step's promotion re-admits
 the victim and hands the block straight back; lifo livelocks
 identically under the swapped arrival order), fixed by her call:
 same-step evict-and-replan retry in step(), planning as the
-can-anyone-advance oracle. Markers off, suite 653 + 5 chaos. Next:
-chunk 11, round 3 (goodput_5090.toml; §9.3 SLO pair still hers).**
+can-anyone-advance oracle. Markers off, suite 653 + 5 chaos.
+Chunks 11+12 local halves landed same day (c7c1915, 9cf0c3e):
+priority_mix mixed-priority cells + per-class goodput +
+goodput_5090.toml (the §9.3 straw SLO pair adopted on record), and the
+§2.12 overlap restructure (launch/reap split, device-resident decode
+inputs, side-stream D2H, finalize one step late with bonus-decode
+rollback; serial equivalence token-for-token on both layouts in
+tests/test_overlap_scheduler.py) + round-4 configs
+ab_5090_overlap{,_longctx}.toml. Rounds 3 and 4 running on the box
+(the 5090-agent session); §10 gets their records as they land.**
 
 ## 1. Goal
 

@@ -24,6 +24,14 @@ max_tokens_per_step = 256
 # torch_compile = true
 # torch_compile_strategy = "dynamic"
 
+# Paged KV + scheduling under scarcity (Phase 4). attention = "flex"
+# selects the block-indexed paged pool (and, on CUDA, requires
+# torch_compile); the other keys only apply with it.
+# block_size = 64               # tokens per KV block (compiled-kernel floor)
+# num_kv_blocks = 1024          # pool capacity; default: parity (never evicts)
+# preemption_policy = "lifo"    # victim under exhaustion: lifo | priority | cost
+# overlap_scheduling = true     # launch/reap split: plan N+1 while N runs
+
 # Production hygiene (Phase 3.5)
 drain_timeout = 30.0            # SIGTERM/Ctrl-C: seconds to drain in-flight
 watchdog_timeout = 60.0         # hung-engine kill threshold; 0 disables
