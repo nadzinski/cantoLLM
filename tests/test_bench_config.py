@@ -221,3 +221,11 @@ def test_priority_mix_normalized_and_validated():
                 {"workload": "w", "mode": "closed", "concurrency": [1],
                  "requests_per_level": 8, **bad},
             ]}))
+
+
+def test_serve_argv_max_inflight():
+    # Open-loop overload rounds must queue in the SCHEDULER, not 429 at
+    # the admission cap (default 4x max_batch); the key raises it.
+    cfg = deep({"server": {"max_batch": 16, "max_inflight": 256}})
+    joined = " ".join(serve_argv(parse_run_config(cfg).cells[0].server))
+    assert "--max-inflight 256" in joined

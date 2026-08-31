@@ -95,7 +95,7 @@ _SERVER_DEFAULTS = {
 _SERVE_FLAG_KEYS = (
     "model", "engine", "device", "max_batch", "batch_max_seq_len",
     "max_tokens_per_step", "attention", "torch_compile_strategy",
-    "block_size", "num_kv_blocks", "preemption_policy",
+    "block_size", "num_kv_blocks", "preemption_policy", "max_inflight",
 )
 
 
