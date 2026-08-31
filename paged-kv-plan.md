@@ -449,7 +449,7 @@ failures only.
 
 Appended per round as they complete.
 
-### Round 1 (chunk 7): first run 2026-08-30, gate FAILED, cause found and fixed, rerun in flight
+### Round 1 (chunk 7): first run 2026-08-30, gate FAILED, cause found and fixed, rerun below
 
 Run on the 5090 at 2ac397f (box session; bench/history commit 9e20637:
 `ab-5090-paged`, `ab-5090-paged-longctx`, `ab-5090-paged-default`).
@@ -501,6 +501,49 @@ Also on record from the first run:
   counter in bench run.json; the suite's profiler test covers the
   silent-fallback risk out-of-band. Candidate small bench addition,
   the author's call.
+
+### Round 1 rerun at cb1a04a (2026-08-30): cliff dead, 4 cells still
+### outside the gate; residual is a kernel-side flex-vs-cuDNN gap
+
+Box push 1754322 (run dirs `...T171735_cb1a04a_ab-5090-paged`,
+`...T172251_cb1a04a_ab-5090-paged-longctx`; round-1 dirs and the
+default arm stand as baselines). Suite on the box 619 + 5 chaos green
+including the new regression pin; zero recompiles after Ready,
+including under B=3 concurrent long-prompt greedy traffic; no NaN.
+
+The fix confirmed behaviorally: longctx decode step_p50 went 4.70 ->
+18.65 -> ~21.6 ms (c=1/2/4, first run) to 4.72 -> 8.00 -> ~12.8 ms,
+smooth sub-linear scaling restored, and a production-path timing probe
+(3000-token prompts) measured B=1 5.63 ms vs B=3 9.53 ms where round 1
+had ~4.7 -> ~19 flat. Kernel-name identity turned out UNMEASURABLE on
+this build: Inductor 2.10 names fused kernels after the fusion group's
+aten ops, not the winning template, so main-vs-decoding cannot be told
+apart by name (the §7 counter gate needs a different encoding; the
+step-scaling signature is the working substitute).
+
+Rerun A/B (median of 3; delta = flex vs padded compile-no-graphs):
+short_chat c=4 +4.6% PASS, c=16 -4.6% PASS (was -9.8), code c=8 -9.1%
+PASS (was -10.9), multi_turn c=8 -15.1% FAIL (was -17.8); long_context
+c=1 -17.2% FAIL (unchanged; B=1 never had the bug), c=2 -26.6% FAIL
+(was -53.6), c=4 -10.4% FAIL by a hair (was -30.3).
+
+Reading of the residual (the box's, endorsed here): flex decode now
+carries roughly +0.6 to +2.7 ms per step over sdpa, growing with
+rows and KV; c=1's identical -17.2% across both rounds floors it as a
+kernel-side gap (compiled Flex decode vs cuDNN at long-KV decode on
+this build), not scheduling. Chunk 8's graphs should absorb the launch
+share; the kernel share (template tuning, BLOCK sizes, split-KV
+parameters at these geometries) is the open attribution target, with a
+GPU-busy-vs-host split probe dispatched to divide the two.
+
+Warm-bill follow-up: per-family static artifacts doubled the bills
+(cold 299 -> 602 s, warm 72 -> 144 s) because the sweep warmed BOTH
+map-length populations per family while bucketing makes exactly one
+reachable (length-1 exists only in the (1, 1) family; any b >= 2 step
+carries at least two real tokens, and a lone 1-token row lands at
+width 1). Fixed 72ccaf0: one forward per family, reachability
+enforced by a zero-post-Ready-compile traffic test including the
+lone-row decode; trimmed bills to be measured on the box.
 
 ### Chunk log
 
