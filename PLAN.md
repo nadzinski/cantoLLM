@@ -811,7 +811,7 @@ author's call of 2026-08-31.
   the ordering or wakeup at fault. Prerequisite to ever revisiting
   overlap.
 - **The H100 day**: the deferred scale check, one day, same protocol as
-  h100-plan.md — rounds 1/2/4 cell subset at 0.6B and 32B. Prediction
+  h100-plan.md (rounds 1/2/4 cell subset at 0.6B and 32B). Prediction
   6's real test lives here (overlap on dispatch-bound 27.5 ms steps),
   and both items above get re-posed on the new hardware (the decode
   kernel re-tunes, the collapse window changes shape).
