@@ -39,10 +39,11 @@ one intermittent flex+overlap delivery collapse flagged, not
 chased). §6 graded, §10 complete, records/PLAN.md/viz/memory synced.
 THE DEFAULT FLIPPED 2026-08-31 (§9.8 resolved -> §2.14, the author's
 call): flex + paged at parity capacity is the CUDA serve default;
-longctx-heavy serving pins sdpa; pre-flip configs pinned. Remaining:
-the H100 day (deferred "another day"; prediction 6's real test rides
-with it), the Paged-KV viz tab (the author builds it later), the
-longctx kernel gap, the chunk-12 collapse follow-up.**
+longctx-heavy serving pins sdpa; pre-flip configs pinned. Phase 4 is
+COMPLETE: the three follow-ups moved to PLAN.md's new Phase 4.1
+(2026-08-31, her order): decode-kernel tuning, then the flex+overlap
+collapse debug, then the H100 day. Still open on this phase: the
+Paged-KV viz tab (the author builds it later).**
 
 ## 1. Goal
 

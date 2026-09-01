@@ -628,8 +628,10 @@ unchanged (plausibly the new request path).
 memory management lesson — and overlap scheduling with execution so the CPU plans step
 N+1 while the GPU runs step N.
 
-**Status (2026-08-30):** Done: chunks 1–9 of `paged-kv-plan.md`'s 13
-(that doc's chunk log is the detailed record). The paged foundations are in:
+**Status (2026-08-31):** Complete. All 13 chunks of `paged-kv-plan.md`
+done at 5090 scope (that doc's chunk log and §10 are the detailed
+record); the three follow-ups moved to Phase 4.1 at the close, see the
+end of this Status. The paged foundations are in:
 KVPool protocol + config knobs (chunk 1), flat `PagedKVPool` + the
 hand-written `BlockAllocator` (chunk 2), block tables / seeded `PagedTables`
 on `BatchMeta` + pre-landed suites (chunk 3), and chunk 4, the hand-written
@@ -745,11 +747,11 @@ impossible at parity), with long-context-heavy serving documented to
 pin `--attention sdpa` until the flex decode-kernel gap closes;
 pre-flip bench configs pinned sdpa so re-runs reproduce what they
 measured; padded stays the Mac/CPU default and the control arm.
-Open: the H100 day (deferred to another day; prediction 6's real test
-and the 32B scale check ride with it); the Paged-KV viz tab (the
-author builds it later); the longctx B <= 2 flex decode-kernel
-tuning; and an intermittent flex+overlap delivery collapse under
-bench load (flagged with diagnosis in §10, correctness unaffected).
+Moved out 2026-08-31 (the author's order): the longctx decode-kernel
+tuning, the flex+overlap collapse debug, and the H100 day (prediction
+6's real test and the 32B scale check ride with it) are now Phase
+4.1, to run in that order. Still open here: the Paged-KV viz tab (the
+author builds it later).
 
 - KV blocks of fixed size (16 tokens is the vLLM default) in a single preallocated pool.
 - Per-request block table mapping logical token positions → block IDs.
@@ -782,6 +784,37 @@ metric — fraction of requests meeting a TTFT + ITL SLO pair — which is the n
 preemption and priority policies actually move (aggregate tok/s barely sees them).
 
 ---
+
+## Phase 4.1 — Paged-stack follow-ups
+
+**Goal:** the three items Phase 4 closed without, in the order they
+should run: make flex competitive at the geometry its default carve-out
+covers, clear the one known overlap bug, then re-pose both questions on
+dispatch-bound hardware.
+
+**Status (2026-08-31):** Not started. Created at Phase 4's close-out
+from its open list (moves noted in Phase 4's Status); ordering is the
+author's call of 2026-08-31.
+
+- **Tune the flex decode kernel** for long-context small-batch decode
+  (the B ≤ 2 cells, worst −26.6%, ~1 ms/step of pure kernel time vs
+  cuDNN): sweep Inductor's flex-decoding template knobs via
+  `kernel_options` (split-KV factor, KV block size, warps/stages) on the
+  box against the longctx cells; a torch upgrade whose heuristics learned
+  sm_120 is the alternate exit. Closing this retires the "pin sdpa for
+  long-context-heavy serving" carve-out on the §2.14 default.
+- **Debug the intermittent flex+overlap collapse** (round 4's bimodal
+  cells: four requests running a full generation alone, tokens right but
+  late): stitch timestamps across the delivery path (engine emit, bridge
+  dequeue, loop dispatch, SSE write, client receive) on a looping repro
+  of the collapsing cell, find where a subset of finish events sits, fix
+  the ordering or wakeup at fault. Prerequisite to ever revisiting
+  overlap.
+- **The H100 day**: the deferred scale check, one day, same protocol as
+  h100-plan.md — rounds 1/2/4 cell subset at 0.6B and 32B. Prediction
+  6's real test lives here (overlap on dispatch-bound 27.5 ms steps),
+  and both items above get re-posed on the new hardware (the decode
+  kernel re-tunes, the collapse window changes shape).
 
 ## Phase 5 — Prefix caching + cache-aware routing
 
